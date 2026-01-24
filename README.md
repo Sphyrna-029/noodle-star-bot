@@ -24,8 +24,11 @@ You can also type !help category for more info on a category.
 ```
 
 ### Build
+```
 docker build -t noodle_bot . 
+```
 
-
-### Run 
+### Run
+```
 docker run -d --name noodle_bot -e DISCORD_BOT_TOKEN='' -v /$PWD/:/bot noodlebot
+```
