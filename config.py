@@ -73,7 +73,7 @@ SHOP_ITEMS = {
         "aliases": ["gold pickaxe", "pickaxe"],
     },
     "helmet": {
-        "price": 100,
+        "price": 50,
         "db_column": "helmet",
         "consumable": True,
         "emoji": "🪖",
@@ -82,7 +82,7 @@ SHOP_ITEMS = {
         "aliases": ["helmet", "mining helmet"],
     },
     "sword": {
-        "price": 300,
+        "price": 75,
         "db_column": "sword",
         "consumable": True,
         "emoji": "⚔️",
@@ -96,7 +96,7 @@ SHOP_ITEMS = {
         "consumable": True,
         "emoji": "🥔",
         "display_name": "Raw Potato",
-        "description": "Reduces mining cooldown to 5 minutes. Single use. Use: `!mine potato`",
+        "description": "Mine early after 5 min instead of waiting 30 min. Single use. Use: `!mine potato`",
         "aliases": ["raw potato", "potato"],
     },
     "golden_mushroom": {
