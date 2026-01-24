@@ -22,3 +22,10 @@ Good noodle star discord bot that lets users earn good noodle stars and gamble t
 Type !help command for more info on a command.
 You can also type !help category for more info on a category.
 ```
+
+### Build
+docker build -t noodle_bot . 
+
+
+### Run 
+docker run -d --name noodle_bot -e DISCORD_BOT_TOKEN='' -v /$PWD/:/bot noodlebot
