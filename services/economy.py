@@ -1,9 +1,12 @@
 """Economy service for balance management."""
 
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from typing import List, Tuple
 
+from config import BANKING_DEPOSIT_COOLDOWN_MINUTES, BANKING_WITHDRAW_COOLDOWN_MINUTES
 from database.repository import UserRepository
+from utils.formatters import format_time_remaining
 
 
 @dataclass
@@ -89,6 +92,20 @@ class EconomyService:
         current_stars = self.repo.get_user_stars(user_id, username)
         current_bank = self.repo.get_user_bank(user_id)
 
+        # Check deposit cooldown
+        last_deposit = self.repo.get_last_deposit(user_id)
+        if last_deposit is not None:
+            time_since = datetime.now() - last_deposit
+            cooldown = timedelta(minutes=BANKING_DEPOSIT_COOLDOWN_MINUTES)
+            if time_since < cooldown:
+                remaining = cooldown - time_since
+                return BalanceResult(
+                    success=False,
+                    message=f"You must wait **{format_time_remaining(remaining)}** before depositing again!",
+                    wallet=current_stars,
+                    bank=current_bank,
+                )
+
         # Handle "all" keyword
         if isinstance(amount, str) and amount.lower() == "all":
             if current_stars <= 0:
@@ -132,6 +149,7 @@ class EconomyService:
 
         self.repo.update_user_stars(user_id, username, new_stars)
         self.repo.update_user_bank(user_id, username, new_bank)
+        self.repo.update_last_deposit(user_id)
 
         return BalanceResult(
             success=True,
@@ -154,6 +172,20 @@ class EconomyService:
         """
         current_stars = self.repo.get_user_stars(user_id, username)
         current_bank = self.repo.get_user_bank(user_id)
+
+        # Check withdraw cooldown
+        last_withdraw = self.repo.get_last_withdraw(user_id)
+        if last_withdraw is not None:
+            time_since = datetime.now() - last_withdraw
+            cooldown = timedelta(minutes=BANKING_WITHDRAW_COOLDOWN_MINUTES)
+            if time_since < cooldown:
+                remaining = cooldown - time_since
+                return BalanceResult(
+                    success=False,
+                    message=f"You must wait **{format_time_remaining(remaining)}** before withdrawing again!",
+                    wallet=current_stars,
+                    bank=current_bank,
+                )
 
         # Handle "all" keyword
         if isinstance(amount, str) and amount.lower() == "all":
@@ -198,6 +230,7 @@ class EconomyService:
 
         self.repo.update_user_stars(user_id, username, new_stars)
         self.repo.update_user_bank(user_id, username, new_bank)
+        self.repo.update_last_withdraw(user_id)
 
         return BalanceResult(
             success=True,
