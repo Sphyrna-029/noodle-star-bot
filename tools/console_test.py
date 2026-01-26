@@ -8,6 +8,7 @@ import os
 import re
 import shlex
 import sys
+import asyncio
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -25,9 +26,10 @@ if sys.platform == "win32":
     except Exception:
         pass  # Ignore if reconfigure not available
 
-from config import COMMAND_PREFIX, SHOP_ITEMS
+from config import COMMAND_PREFIX, FISHING_BAIT_TIERS, SHOP_ITEMS
 from database.migrations import MigrationManager
 from services.economy import EconomyService
+from services.fishing import FishingService, FishingState
 from services.gambling import GamblingService
 from services.mining import MiningService
 from services.shop import ShopService
@@ -114,9 +116,13 @@ class ConsoleBot:
     def __init__(self):
         # Services
         self.economy = EconomyService()
+        self.fishing = FishingService()
         self.gambling = GamblingService()
         self.mining = MiningService()
         self.shop = ShopService()
+
+        # Set up fishing bite callback
+        self.fishing.set_bite_callback(self._on_fishing_bite)
 
         # Simulated users - can add more with !adduser
         self.users: dict[str, MockMember] = {
@@ -125,6 +131,20 @@ class ConsoleBot:
             "mod": MockMember(id=9999, name="Moderator"),
         }
         self.current_user = self.users["user1"]
+
+    async def _on_fishing_bite(self, user_id: int, channel_id: int, pull_window: int):
+        """Callback for fishing bite notifications."""
+        # Find user by ID
+        user_name = "Unknown"
+        for user in self.users.values():
+            if user.id == user_id:
+                user_name = user.name
+                break
+
+        if pull_window == -1:
+            print(f"\n*** FISHING: @{user_name}, the fish got away! You didn't pull in time. ***\n")
+        else:
+            print(f"\n*** FISHING: @{user_name}, you feel a tug! Type !pull within {pull_window} seconds! ***\n")
 
     def print_help(self):
         """Print help message."""
@@ -157,6 +177,13 @@ BOT COMMANDS (use ! prefix):
 
   Mining:
     !mine [potato|mushroom]       - Mine for minerals
+
+  Fishing:
+    !fish                         - Cast your line (uses equipped bait)
+    !pull                         - Reel in when you feel a bite
+    !fishing                      - Check fishing status
+    !use bait <type>              - Equip bait (worm|herring|sturgeon)
+    !baitshop                     - View bait stats
 
   Shop:
     !store                        - View shop items
@@ -492,6 +519,157 @@ BOT COMMANDS (use ! prefix):
                 embed.description = "*Empty - Visit the !store to buy items!*"
             await ctx.send(embed=embed)
 
+        # Fishing commands
+        elif cmd == "fish":
+            # If already fishing, do nothing (don't allow re-equip/cast)
+            session = self.fishing.get_session(self.current_user.id)
+            if session is not None:
+                await ctx.send("FISHING: You're already fishing! Wait for the current attempt or use !fishing to check status.")
+                for msg in ctx.messages:
+                    print(msg)
+                return
+
+            # Allow optional bait argument: !fish <bait>
+            if args:
+                bait_choice = args[0]
+                equip_result = self.fishing.equip_bait(
+                    self.current_user.id, str(self.current_user), bait_choice
+                )
+                if not equip_result.success:
+                    await ctx.send(f"FISHING: {equip_result.message}")
+                    # don't proceed to cast if equip failed
+                    for msg in ctx.messages:
+                        print(msg)
+                    return
+                else:
+                    await ctx.send(f"FISHING: {equip_result.message}")
+
+            result = await self.fishing.cast_line(
+                self.current_user.id,
+                str(self.current_user),
+                0,  # channel_id not needed for console
+            )
+            if not result.success:
+                await ctx.send(f"FISHING: {result.message}")
+            else:
+                await ctx.send(f"FISHING: {result.message}")
+
+        elif cmd == "pull":
+            result = self.fishing.pull_line(self.current_user.id, str(self.current_user))
+            if not result.success:
+                await ctx.send(f"FISHING: {result.message}")
+            else:
+                if result.stars_earned > 0:
+                    rarity_prefix = ""
+                    if result.catch_rarity == "legendary":
+                        rarity_prefix = "LEGENDARY! "
+                    elif result.catch_rarity == "rare":
+                        rarity_prefix = "RARE! "
+                    await ctx.send(
+                        f"FISHING: {rarity_prefix}Caught {result.catch_emoji} **{result.catch_name}**!\n"
+                        f"  Earned **{result.stars_earned}** stars!\n"
+                        f"  New balance: **{result.new_balance}** stars"
+                    )
+                else:
+                    await ctx.send(
+                        f"FISHING: Caught {result.catch_emoji} **{result.catch_name}**!\n"
+                        f"  *It's worthless junk...*\n"
+                        f"  Balance: **{result.new_balance}** stars"
+                    )
+
+        elif cmd == "fishing":
+            status = self.fishing.get_status(self.current_user.id, str(self.current_user))
+            lines = [f"FISHING STATUS for {self.current_user.name}:"]
+
+            # Equipped bait
+            if status.equipped_bait:
+                bait_info = FISHING_BAIT_TIERS[status.equipped_bait]
+                lines.append(f"  Equipped: {bait_info['emoji']} {bait_info['display_name']}")
+            else:
+                lines.append("  Equipped: None (will use Worm)")
+
+            if status.is_fishing:
+                if status.state == FishingState.WAITING:
+                    lines.append("  Status: Waiting for a bite...")
+                    if status.time_until_bite is not None:
+                        if status.time_until_bite > 60:
+                            lines.append("  Hint: Be patient...")
+                        elif status.time_until_bite > 10:
+                            lines.append("  Hint: Should be soon...")
+                        else:
+                            lines.append("  Hint: Any moment now!")
+                elif status.state == FishingState.BITING:
+                    lines.append("  Status: ** A FISH IS BITING! **")
+                    if status.time_until_expires is not None:
+                        lines.append(f"  Time left: **{status.time_until_expires}s** to !pull!")
+            else:
+                lines.append("  Status: Not fishing")
+                if status.cooldown_remaining and status.cooldown_remaining > 0:
+                    mins = status.cooldown_remaining // 60
+                    secs = status.cooldown_remaining % 60
+                    if mins > 0:
+                        lines.append(f"  Cooldown: {mins}m {secs}s")
+                    else:
+                        lines.append(f"  Cooldown: {secs}s")
+                else:
+                    lines.append("  Ready to fish! Use !fish")
+
+            await ctx.send("\n".join(lines))
+
+        elif cmd == "baitshop":
+            lines = ["BAIT SHOP:", "  Buy bait from !store, equip with !use bait <type>", ""]
+            for bait_key, bait_info in FISHING_BAIT_TIERS.items():
+                min_wait, max_wait = bait_info["bite_wait"]
+                lines.append(f"  {bait_info['emoji']} {bait_info['display_name']} ({bait_key}):")
+                lines.append(f"    Bite wait: {min_wait}-{max_wait}s")
+                lines.append(f"    Pull window: {bait_info['pull_window']}s")
+                lines.append(f"    Rare boost: {bait_info['rare_boost']}x")
+                lines.append("")
+            await ctx.send("\n".join(lines))
+
+        elif cmd == "use":
+            if not args:
+                await ctx.send("Usage: !use bait <worm|herring|sturgeon>")
+            elif args[0].lower() == "bait":
+                if len(args) < 2:
+                    lines = ["Specify bait type:"]
+                    for bait_key, bait_info in FISHING_BAIT_TIERS.items():
+                        lines.append(f"  {bait_info['emoji']} {bait_info['display_name']} ({bait_key})")
+                    lines.append("\nUsage: !use bait <type>")
+                    await ctx.send("\n".join(lines))
+                else:
+                    result = self.fishing.equip_bait(
+                        self.current_user.id,
+                        str(self.current_user),
+                        args[1],
+                    )
+                    if not result.success:
+                        await ctx.send(f"Error: {result.message}")
+                    else:
+                        await ctx.send(result.message)
+            else:
+                await ctx.send(f"Unknown item type: {args[0]}. Try: bait")
+
+        elif cmd == "equip":
+            # Alias for !use
+            if not args:
+                await ctx.send("Usage: !equip bait <worm|herring|sturgeon>")
+            elif args[0].lower() == "bait":
+                if len(args) < 2:
+                    await ctx.send("Usage: !equip bait <worm|herring|sturgeon>")
+                else:
+                    result = self.fishing.equip_bait(
+                        self.current_user.id,
+                        str(self.current_user),
+                        args[1],
+                    )
+                    if not result.success:
+                        await ctx.send(f"Error: {result.message}")
+                    else:
+                        await ctx.send(result.message)
+            else:
+                await ctx.send(f"Unknown item type: {args[0]}. Try: bait")
+
         # Moderator commands
         elif cmd == "addstar":
             if len(args) < 2:
@@ -550,9 +728,13 @@ BOT COMMANDS (use ! prefix):
         self.print_help()
         print(f"Current user: {self.current_user.name}\n")
 
+        loop = asyncio.get_running_loop()
         while True:
             try:
-                user_input = input(f"[{self.current_user.name}] > ").strip()
+                user_input = await loop.run_in_executor(
+                    None, input, f"[{self.current_user.name}] > "
+                )
+                user_input = user_input.strip()
             except (EOFError, KeyboardInterrupt):
                 print("\nGoodbye!")
                 break
@@ -592,7 +774,7 @@ def main():
         print(f"\nError: {e}")
         import traceback
         traceback.print_exc()
-        input("\nPress Enter to exit...")
+        # Removed blocking prompt to keep automated tester usable
 
 
 if __name__ == "__main__":
@@ -602,4 +784,4 @@ if __name__ == "__main__":
         print(f"\nFatal error: {e}")
         import traceback
         traceback.print_exc()
-        input("\nPress Enter to exit...")
+        # Removed blocking prompt to keep automated tester usable

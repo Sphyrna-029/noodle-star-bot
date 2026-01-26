@@ -6,6 +6,7 @@ from typing import Optional
 
 from config import (
     COINFLIP_WIN_MULTIPLIER,
+    COINFLIP_MIN_BET,
     DUEL_DICE_SIDES,
     GAMBLE_DICE_SIDES,
     GAMBLE_MULTIPLIERS,
@@ -122,10 +123,13 @@ class GamblingService:
         multiplier = self._select_multiplier()
         roll = random.randint(1, GAMBLE_DICE_SIDES)
 
+        # Deduct the bet immediately (consistent behavior)
+        deducted_balance = current_stars - amount
+
         # Check if won
         if roll == GAMBLE_WIN_TARGET:
             winnings = int(amount * multiplier)
-            new_balance = current_stars + winnings
+            new_balance = deducted_balance + winnings
             self.repo.update_user_stars(user_id, username, new_balance)
 
             return GambleResult(
@@ -134,11 +138,11 @@ class GamblingService:
                 message="WIN",
                 roll=roll,
                 multiplier=multiplier,
-                amount_changed=winnings,
+                amount_changed=winnings - amount,
                 new_balance=new_balance,
             )
         else:
-            new_balance = current_stars - amount
+            new_balance = deducted_balance
             self.repo.update_user_stars(user_id, username, new_balance)
 
             return GambleResult(
@@ -147,7 +151,7 @@ class GamblingService:
                 message="LOSE",
                 roll=roll,
                 multiplier=multiplier,
-                amount_changed=amount,
+                amount_changed=-amount,
                 new_balance=new_balance,
             )
 
@@ -190,11 +194,11 @@ class GamblingService:
         elif choice == "t":
             choice = "tails"
 
-        if amount <= 0:
+        if amount < COINFLIP_MIN_BET:
             return CoinflipResult(
                 success=False,
                 won=False,
-                message="You must bet at least 1 noodle star!",
+                message=f"Minimum bet for coinflip is {COINFLIP_MIN_BET} noodle stars!",
             )
 
         if current_stars <= 0:
@@ -214,9 +218,12 @@ class GamblingService:
         # Flip the coin
         result = random.choice(["heads", "tails"])
 
+        # Deduct the bet immediately
+        deducted_balance = current_stars - amount
+
         if result == choice:
             winnings = int(amount * COINFLIP_WIN_MULTIPLIER)
-            new_balance = current_stars + winnings
+            new_balance = deducted_balance + winnings
             self.repo.update_user_stars(user_id, username, new_balance)
 
             return CoinflipResult(
@@ -224,11 +231,11 @@ class GamblingService:
                 won=True,
                 message="WIN",
                 result=result,
-                amount_changed=winnings,
+                amount_changed=winnings - amount,
                 new_balance=new_balance,
             )
         else:
-            new_balance = current_stars - amount
+            new_balance = deducted_balance
             self.repo.update_user_stars(user_id, username, new_balance)
 
             return CoinflipResult(
@@ -236,7 +243,7 @@ class GamblingService:
                 won=False,
                 message="LOSE",
                 result=result,
-                amount_changed=amount,
+                amount_changed=-amount,
                 new_balance=new_balance,
             )
 
