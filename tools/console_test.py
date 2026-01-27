@@ -213,6 +213,7 @@ BOT COMMANDS (use ! prefix):
     !inventory [@user]            - Check inventory
 
   Trading:
+    !trade help                        - Show trade help menu
     !trade @user [offer] for [request] - Propose a trade
     !trade accept                      - Accept a pending trade
     !trade cancel                      - Cancel your current trade
@@ -648,10 +649,24 @@ BOT COMMANDS (use ! prefix):
 
         # Trading commands
         elif cmd == "trade":
-            if not args:
+            if not args or args[0].lower() == "help":
                 await ctx.send(
-                    "Usage: !trade @user [items] for [items], "
-                    "!trade accept, or !trade cancel"
+                    "TRADE HELP:\n"
+                    "  Propose:  !trade @user <your offer> for <their offer>\n"
+                    "            Example: !trade @Bob 50 stars 1 sword for 2 helmet\n"
+                    "  Gift:     !trade @user <offer>  (no 'for', opponent still accepts)\n"
+                    "            Example: !trade @Bob 100 stars\n"
+                    "  Accept:   !trade accept\n"
+                    "  Cancel:   !trade cancel\n"
+                    "\n"
+                    "  How it works:\n"
+                    "    1. Propose a trade to another player.\n"
+                    "    2. They have 60 seconds to accept or it expires.\n"
+                    "    3. After accepting, 10-second countdown (either side can cancel).\n"
+                    "    4. Trade executes automatically after the countdown.\n"
+                    "\n"
+                    "  Tradeable: stars, helmets, swords, potatoes, golden mushrooms,\n"
+                    "             gold pickaxes, and all bait types."
                 )
             elif args[0].lower() == "accept":
                 result = self.trading.accept_trade(
