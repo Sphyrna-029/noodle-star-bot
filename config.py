@@ -39,8 +39,8 @@ MINING_POTATO_COOLDOWN_MINUTES = 5
 # Mushroom = instant (no cooldown)
 
 # Banking - Cooldowns (in minutes)
-BANKING_DEPOSIT_COOLDOWN_MINUTES = 60
-BANKING_WITHDRAW_COOLDOWN_MINUTES = 60
+BANKING_DEPOSIT_COOLDOWN_MINUTES = 3
+BANKING_WITHDRAW_COOLDOWN_MINUTES = 3
 
 # Mining - Disaster
 MINING_DISASTER_CHANCE = 0.10  # 10%
@@ -120,7 +120,7 @@ SHOP_ITEMS = {
         "consumable": True,
         "emoji": "🪱",
         "display_name": "Worm Bait",
-        "description": "Basic bait. Fast bite (15-60s), large pull window (60s). Consistent returns. Use: `!use bait worm`",
+        "description": "Basic bait. Quick bites, generous reaction time. Steady and reliable. Use: `!fish worm`",
         "aliases": ["worm", "worm bait", "bait worm"],
     },
     "bait_herring": {
@@ -129,7 +129,7 @@ SHOP_ITEMS = {
         "consumable": True,
         "emoji": "🐟",
         "display_name": "Herring Bait",
-        "description": "Medium bait. Better fish, longer bite (90-180s), tighter window (35s). Use: `!use bait herring`",
+        "description": "Medium bait. Attracts better fish, but requires more patience and faster reflexes. Use: `!fish herring`",
         "aliases": ["herring", "herring bait", "bait herring"],
     },
     "bait_sturgeon": {
@@ -138,7 +138,7 @@ SHOP_ITEMS = {
         "consumable": True,
         "emoji": "🐋",
         "display_name": "Sturgeon Bait",
-        "description": "Premium bait. Best fish odds, long bite (5-8min), tiny window (20s). High risk/reward! Use: `!use bait sturgeon`",
+        "description": "Premium bait. Best odds for rare catches, but long waits and a very tight reaction window. High risk/reward! Use: `!fish sturgeon`",
         "aliases": ["sturgeon", "sturgeon bait", "bait sturgeon"],
     },
 }
@@ -160,21 +160,21 @@ FISHING_BAIT_TIERS = {
         "display_name": "Worm",
         "bite_wait": (15, 60),
         "pull_window": 60,
-        "rare_boost": 0.4924,
+        "rare_boost": 0.4692,
     },
     "herring": {
         "emoji": "🐟",
         "display_name": "Herring",
         "bite_wait": (90, 180),
         "pull_window": 35,
-        "rare_boost": 2.009,
+        "rare_boost": 1.6955,
     },
     "sturgeon": {
         "emoji": "🐋",
         "display_name": "Sturgeon",
         "bite_wait": (300, 480),
         "pull_window": 20,
-        "rare_boost": 9.964,
+        "rare_boost": 4.6728,
     },
 }
 

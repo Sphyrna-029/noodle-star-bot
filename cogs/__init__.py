@@ -6,6 +6,7 @@ from .gambling import GamblingCog
 from .mining import MiningCog
 from .moderator import ModeratorCog
 from .shop import ShopCog
+from .trading import TradingCog
 
 __all__ = [
     "EconomyCog",
@@ -14,4 +15,5 @@ __all__ = [
     "MiningCog",
     "ModeratorCog",
     "ShopCog",
+    "TradingCog",
 ]
