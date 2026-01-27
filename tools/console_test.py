@@ -29,10 +29,11 @@ if sys.platform == "win32":
 from config import COMMAND_PREFIX, FISHING_BAIT_TIERS, SHOP_ITEMS
 from database.migrations import MigrationManager
 from services.economy import EconomyService
-from services.fishing import FishingService, FishingState
+from services.fishing import FishingService, FishingState, get_fishing_conditions
 from services.gambling import GamblingService
 from services.mining import MiningService
 from services.shop import ShopService
+from services.trading import TradeService, TradeState, TRADE_COUNTDOWN_SECONDS
 
 
 # =============================================================================
@@ -120,9 +121,13 @@ class ConsoleBot:
         self.gambling = GamblingService()
         self.mining = MiningService()
         self.shop = ShopService()
+        self.trading = TradeService()
 
         # Set up fishing bite callback
         self.fishing.set_bite_callback(self._on_fishing_bite)
+
+        # Set up trading callback
+        self.trading.set_trade_callback(self._on_trade_event)
 
         # Simulated users - can add more with !adduser
         self.users: dict[str, MockMember] = {
@@ -145,6 +150,24 @@ class ConsoleBot:
             print(f"\n*** FISHING: @{user_name}, the fish got away! You didn't pull in time. ***\n")
         else:
             print(f"\n*** FISHING: @{user_name}, you feel a tug! Type !pull within {pull_window} seconds! ***\n")
+
+    async def _on_trade_event(self, event, proposer_id, channel_id, session, extra=""):
+        """Callback for trade notifications."""
+        if event == "timeout":
+            print(
+                f"\n*** TRADE: Trade between {session.proposer_name} and "
+                f"{session.opponent_name} expired (no response). ***\n"
+            )
+        elif event == "completed":
+            proposer_gives = self.trading.format_offer(session.proposer_offer)
+            opponent_gives = self.trading.format_offer(session.opponent_offer)
+            print(
+                f"\n*** TRADE COMPLETE! ***\n"
+                f"  {session.proposer_name} gave: {proposer_gives}\n"
+                f"  {session.opponent_name} gave: {opponent_gives}\n"
+            )
+        elif event == "failed":
+            print(f"\n*** TRADE FAILED: {extra} ***\n")
 
     def print_help(self):
         """Print help message."""
@@ -179,16 +202,20 @@ BOT COMMANDS (use ! prefix):
     !mine [potato|mushroom]       - Mine for minerals
 
   Fishing:
-    !fish                         - Cast your line (uses equipped bait)
+    !fish [bait]                  - Cast your line (auto-selects if one bait type)
     !pull                         - Reel in when you feel a bite
     !fishing                      - Check fishing status
-    !use bait <type>              - Equip bait (worm|herring|sturgeon)
     !baitshop                     - View bait stats
 
   Shop:
     !store                        - View shop items
     !buy <item>                   - Buy an item
     !inventory [@user]            - Check inventory
+
+  Trading:
+    !trade @user [offer] for [request] - Propose a trade
+    !trade accept                      - Accept a pending trade
+    !trade cancel                      - Cancel your current trade
 
   Moderator:
     !addstar @user <amount>       - Add stars to user
@@ -521,33 +548,13 @@ BOT COMMANDS (use ! prefix):
 
         # Fishing commands
         elif cmd == "fish":
-            # If already fishing, do nothing (don't allow re-equip/cast)
-            session = self.fishing.get_session(self.current_user.id)
-            if session is not None:
-                await ctx.send("FISHING: You're already fishing! Wait for the current attempt or use !fishing to check status.")
-                for msg in ctx.messages:
-                    print(msg)
-                return
-
-            # Allow optional bait argument: !fish <bait>
-            if args:
-                bait_choice = args[0]
-                equip_result = self.fishing.equip_bait(
-                    self.current_user.id, str(self.current_user), bait_choice
-                )
-                if not equip_result.success:
-                    await ctx.send(f"FISHING: {equip_result.message}")
-                    # don't proceed to cast if equip failed
-                    for msg in ctx.messages:
-                        print(msg)
-                    return
-                else:
-                    await ctx.send(f"FISHING: {equip_result.message}")
-
+            # Pass bait type directly to cast_line (auto-selects if only one type)
+            bait_type = args[0] if args else None
             result = await self.fishing.cast_line(
                 self.current_user.id,
                 str(self.current_user),
                 0,  # channel_id not needed for console
+                bait_type=bait_type,
             )
             if not result.success:
                 await ctx.send(f"FISHING: {result.message}")
@@ -580,13 +587,18 @@ BOT COMMANDS (use ! prefix):
         elif cmd == "fishing":
             status = self.fishing.get_status(self.current_user.id, str(self.current_user))
             lines = [f"FISHING STATUS for {self.current_user.name}:"]
+            lines.append(f"  * {get_fishing_conditions()} *")
 
-            # Equipped bait
-            if status.equipped_bait:
-                bait_info = FISHING_BAIT_TIERS[status.equipped_bait]
-                lines.append(f"  Equipped: {bait_info['emoji']} {bait_info['display_name']}")
+            # Show available bait
+            available_baits = self.fishing.get_available_baits(self.current_user.id)
+            if available_baits:
+                bait_strs = []
+                for bt, count in available_baits:
+                    info = FISHING_BAIT_TIERS[bt]
+                    bait_strs.append(f"{info['emoji']} {bt} x{count}")
+                lines.append(f"  Your bait: {', '.join(bait_strs)}")
             else:
-                lines.append("  Equipped: None (will use Worm)")
+                lines.append("  Your bait: None - buy from !store")
 
             if status.is_fishing:
                 if status.state == FishingState.WAITING:
@@ -617,58 +629,85 @@ BOT COMMANDS (use ! prefix):
             await ctx.send("\n".join(lines))
 
         elif cmd == "baitshop":
-            lines = ["BAIT SHOP:", "  Buy bait from !store, equip with !use bait <type>", ""]
+            lines = ["BAIT SHOP:", "  Buy bait from !store, then use !fish <bait> to cast"]
+            lines.append(f"  * {get_fishing_conditions()} *")
+            lines.append("")
+            bait_descriptions = {
+                "worm": {"bite": "Quick", "window": "Generous", "rarity": "Standard"},
+                "herring": {"bite": "Moderate", "window": "Tight", "rarity": "Improved"},
+                "sturgeon": {"bite": "Very slow", "window": "Very tight", "rarity": "Excellent"},
+            }
             for bait_key, bait_info in FISHING_BAIT_TIERS.items():
-                min_wait, max_wait = bait_info["bite_wait"]
+                desc = bait_descriptions.get(bait_key, {})
                 lines.append(f"  {bait_info['emoji']} {bait_info['display_name']} ({bait_key}):")
-                lines.append(f"    Bite wait: {min_wait}-{max_wait}s")
-                lines.append(f"    Pull window: {bait_info['pull_window']}s")
-                lines.append(f"    Rare boost: {bait_info['rare_boost']}x")
+                lines.append(f"    Bite speed: {desc.get('bite', '?')}")
+                lines.append(f"    Reaction window: {desc.get('window', '?')}")
+                lines.append(f"    Rare catch odds: {desc.get('rarity', '?')}")
                 lines.append("")
             await ctx.send("\n".join(lines))
 
-        elif cmd == "use":
+        # Trading commands
+        elif cmd == "trade":
             if not args:
-                await ctx.send("Usage: !use bait <worm|herring|sturgeon>")
-            elif args[0].lower() == "bait":
-                if len(args) < 2:
-                    lines = ["Specify bait type:"]
-                    for bait_key, bait_info in FISHING_BAIT_TIERS.items():
-                        lines.append(f"  {bait_info['emoji']} {bait_info['display_name']} ({bait_key})")
-                    lines.append("\nUsage: !use bait <type>")
-                    await ctx.send("\n".join(lines))
+                await ctx.send(
+                    "Usage: !trade @user [items] for [items], "
+                    "!trade accept, or !trade cancel"
+                )
+            elif args[0].lower() == "accept":
+                result = self.trading.accept_trade(
+                    self.current_user.id, str(self.current_user)
+                )
+                if not result.success:
+                    await ctx.send(f"TRADE: {result.message}")
                 else:
-                    result = self.fishing.equip_bait(
-                        self.current_user.id,
-                        str(self.current_user),
-                        args[1],
+                    session = result.session
+                    proposer_gives = self.trading.format_offer(session.proposer_offer)
+                    opponent_gives = self.trading.format_offer(session.opponent_offer)
+                    await ctx.send(
+                        f"TRADE ACCEPTED! Countdown started ({TRADE_COUNTDOWN_SECONDS}s).\n"
+                        f"  {session.proposer_name} gives: {proposer_gives}\n"
+                        f"  {session.opponent_name} gives: {opponent_gives}\n"
+                        f"  Either party can !trade cancel to abort."
+                    )
+            elif args[0].lower() == "cancel":
+                result = self.trading.cancel_trade(self.current_user.id)
+                if not result.success:
+                    await ctx.send(f"TRADE: {result.message}")
+                else:
+                    session = result.session
+                    await ctx.send(
+                        f"TRADE CANCELLED by {self.current_user.name}.\n"
+                        f"  (was between {session.proposer_name} and {session.opponent_name})"
+                    )
+            else:
+                # Propose trade: !trade @user [offer args...]
+                opponent = self.find_user_by_mention(args[0])
+                if not opponent:
+                    await ctx.send(f"User '{args[0]}' not found.")
+                elif opponent.bot:
+                    await ctx.send("You can't trade with a bot.")
+                else:
+                    offer_args = args[1:]  # everything after the @mention
+                    result = self.trading.propose_trade(
+                        proposer_id=self.current_user.id,
+                        proposer_name=str(self.current_user),
+                        opponent_id=opponent.id,
+                        opponent_name=str(opponent),
+                        channel_id=0,
+                        args=offer_args,
                     )
                     if not result.success:
-                        await ctx.send(f"Error: {result.message}")
+                        await ctx.send(f"TRADE: {result.message}")
                     else:
-                        await ctx.send(result.message)
-            else:
-                await ctx.send(f"Unknown item type: {args[0]}. Try: bait")
-
-        elif cmd == "equip":
-            # Alias for !use
-            if not args:
-                await ctx.send("Usage: !equip bait <worm|herring|sturgeon>")
-            elif args[0].lower() == "bait":
-                if len(args) < 2:
-                    await ctx.send("Usage: !equip bait <worm|herring|sturgeon>")
-                else:
-                    result = self.fishing.equip_bait(
-                        self.current_user.id,
-                        str(self.current_user),
-                        args[1],
-                    )
-                    if not result.success:
-                        await ctx.send(f"Error: {result.message}")
-                    else:
-                        await ctx.send(result.message)
-            else:
-                await ctx.send(f"Unknown item type: {args[0]}. Try: bait")
+                        session = result.session
+                        proposer_gives = self.trading.format_offer(session.proposer_offer)
+                        opponent_gets = self.trading.format_offer(session.opponent_offer)
+                        await ctx.send(
+                            f"TRADE PROPOSAL to {opponent.name}:\n"
+                            f"  {session.proposer_name} gives: {proposer_gives}\n"
+                            f"  {session.opponent_name} gives: {opponent_gets}\n"
+                            f"  {opponent.name}, type !trade accept or !trade cancel (60s timeout)"
+                        )
 
         # Moderator commands
         elif cmd == "addstar":
