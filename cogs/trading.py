@@ -68,31 +68,77 @@ class TradingCog(commands.Cog):
 
     @commands.command(name="trade")
     async def trade(self, ctx, *, args: str = ""):
-        """
-        Trade stars and items with another player.
-
-        Usage:
-        - `!trade @user 50 stars 1 sword for 2 helmet` — propose a trade
-        - `!trade accept` — accept a pending trade
-        - `!trade cancel` — cancel your current trade
-        """
+        """Trade stars and items with another player. Use `!trade help` for details."""
         parts = args.split() if args else []
 
         if not parts:
-            await ctx.send(
-                "Usage: `!trade @user [items] for [items]`, "
-                "`!trade accept`, or `!trade cancel`"
-            )
+            await self._handle_help(ctx)
             return
 
         action = parts[0].lower()
 
-        if action == "accept":
+        if action == "help":
+            await self._handle_help(ctx)
+        elif action == "accept":
             await self._handle_accept(ctx)
         elif action == "cancel":
             await self._handle_cancel(ctx)
         else:
             await self._handle_propose(ctx, parts)
+
+    async def _handle_help(self, ctx):
+        """Send the trade help embed."""
+        embed = discord.Embed(
+            title="Trading Help",
+            description="Trade stars and items with other players.",
+            color=discord.Color.blue(),
+        )
+        embed.add_field(
+            name="Propose a trade",
+            value=(
+                "`!trade @user <your offer> for <their offer>`\n"
+                "Example: `!trade @Bob 50 stars 1 sword for 2 helmet`"
+            ),
+            inline=False,
+        )
+        embed.add_field(
+            name="One-sided gift",
+            value=(
+                "Omit `for` to offer a gift (opponent still must accept).\n"
+                "Example: `!trade @Bob 100 stars`"
+            ),
+            inline=False,
+        )
+        embed.add_field(
+            name="Accept / Cancel",
+            value=(
+                "`!trade accept` — accept a trade sent to you\n"
+                "`!trade cancel` — cancel your current trade"
+            ),
+            inline=False,
+        )
+        embed.add_field(
+            name="How it works",
+            value=(
+                "1. You propose a trade to another player.\n"
+                "2. They have **60 seconds** to accept or it expires.\n"
+                "3. After accepting, there's a **10-second countdown** "
+                "where either side can still cancel.\n"
+                "4. The trade executes automatically after the countdown."
+            ),
+            inline=False,
+        )
+        embed.add_field(
+            name="Tradeable items",
+            value=(
+                "Stars, helmets, swords, potatoes, golden mushrooms, "
+                "gold pickaxes, and all bait types. "
+                "Use the same names as the `!store`."
+            ),
+            inline=False,
+        )
+        embed.set_footer(text="You can only be in one trade at a time.")
+        await ctx.send(embed=embed)
 
     async def _handle_propose(self, ctx, parts: list[str]):
         """Handle a trade proposal."""
