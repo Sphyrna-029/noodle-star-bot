@@ -3,8 +3,8 @@
 import discord
 from discord.ext import commands
 
-from config import FISHING_BAIT_TIERS, FISHING_COOLDOWN_SECONDS
-from services.fishing import FishingService, FishingState
+from config import FISHING_BAIT_TIERS
+from services.fishing import FishingService, FishingState, get_fishing_conditions
 
 
 class FishingCog(commands.Cog):
@@ -74,34 +74,15 @@ class FishingCog(commands.Cog):
     async def fish(self, ctx, bait: str = None):
         """Cast your fishing line and wait for a bite.
 
-        Usage: `!fish` or `!fish <bait>` to equip bait then cast.
+        Usage:
+        - `!fish` - Auto-selects bait if you only have one type
+        - `!fish <bait>` - Use specific bait (worm, herring, sturgeon)
         """
-        # If a bait type was provided, ensure user is not already fishing first
-        if bait:
-            session = self.fishing.get_session(ctx.author.id)
-            if session is not None:
-                await ctx.send(
-                    f"🎣 {ctx.author.mention}, you're already fishing! Wait for the current attempt or use `!fishing` to check status."
-                )
-                return
-
-            equip_result = self.fishing.equip_bait(
-                ctx.author.id,
-                str(ctx.author),
-                bait,
-            )
-
-            if not equip_result.success:
-                await ctx.send(f"🎣 {ctx.author.mention}, {equip_result.message}")
-                return
-
-            # Inform user of equip success
-            await ctx.send(f"✅ {ctx.author.mention}, {equip_result.message}")
-
         result = await self.fishing.cast_line(
             ctx.author.id,
             str(ctx.author),
             ctx.channel.id,
+            bait_type=bait,
         )
 
         if not result.success:
@@ -158,18 +139,25 @@ class FishingCog(commands.Cog):
             color=discord.Color.blue(),
         )
 
-        # Equipped bait
-        if status.equipped_bait:
-            bait_info = FISHING_BAIT_TIERS[status.equipped_bait]
+        # Show vague conditions hint
+        embed.description = f"*{get_fishing_conditions()}*"
+
+        # Show available bait
+        available_baits = self.fishing.get_available_baits(ctx.author.id)
+        if available_baits:
+            bait_list = []
+            for bait_type, count in available_baits:
+                info = FISHING_BAIT_TIERS[bait_type]
+                bait_list.append(f"{info['emoji']} {info['display_name']} x{count}")
             embed.add_field(
-                name="Equipped Bait",
-                value=f"{bait_info['emoji']} {bait_info['display_name']}",
+                name="Your Bait",
+                value="\n".join(bait_list),
                 inline=True,
             )
         else:
             embed.add_field(
-                name="Equipped Bait",
-                value="None (will use Worm)",
+                name="Your Bait",
+                value="None - buy from `!store`",
                 inline=True,
             )
 
@@ -239,78 +227,47 @@ class FishingCog(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @commands.command(name="use")
-    async def use_item(self, ctx, item_type: str = None, item_name: str = None):
-        """Equip bait for fishing. Usage: !use bait <worm|herring|sturgeon>"""
-        if item_type is None:
-            await ctx.send(
-                f"❌ {ctx.author.mention}, please specify what to use!\n"
-                f"Example: `!use bait worm`"
-            )
-            return
-
-        item_type = item_type.lower().strip()
-
-        if item_type == "bait":
-            if item_name is None:
-                # Show available bait types
-                bait_list = []
-                for bait_key, bait_info in FISHING_BAIT_TIERS.items():
-                    bait_list.append(
-                        f"{bait_info['emoji']} **{bait_info['display_name']}** (`{bait_key}`)"
-                    )
-                await ctx.send(
-                    f"🎣 {ctx.author.mention}, specify which bait to equip:\n"
-                    + "\n".join(bait_list)
-                    + "\n\nExample: `!use bait herring`"
-                )
-                return
-
-            result = self.fishing.equip_bait(
-                ctx.author.id,
-                str(ctx.author),
-                item_name,
-            )
-
-            if not result.success:
-                await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
-                return
-
-            await ctx.send(f"✅ {ctx.author.mention}, {result.message}")
-
-        else:
-            await ctx.send(
-                f"❌ {ctx.author.mention}, unknown item type `{item_type}`!\n"
-                f"Available: `bait`"
-            )
-
-    @commands.command(name="equip")
-    async def equip(self, ctx, item_type: str = None, item_name: str = None):
-        """Alias for !use. Equip bait for fishing."""
-        await self.use_item(ctx, item_type, item_name)
-
     @commands.command(name="baitshop")
     async def bait_shop(self, ctx):
         """View available bait and their effects."""
         embed = discord.Embed(
             title="🎣 Bait Shop",
-            description="Buy bait from `!store`, then equip with `!use bait <type>`",
+            description=f"Buy bait from `!store`, then use `!fish <bait>` to cast\n\n*{get_fishing_conditions()}*",
             color=discord.Color.blue(),
         )
 
+        # Vague descriptors for each bait tier (don't reveal exact numbers)
+        bait_descriptions = {
+            "worm": {
+                "bite": "Quick",
+                "window": "Generous",
+                "rarity": "Standard",
+            },
+            "herring": {
+                "bite": "Moderate",
+                "window": "Tight",
+                "rarity": "Improved",
+            },
+            "sturgeon": {
+                "bite": "Very slow",
+                "window": "Very tight",
+                "rarity": "Excellent",
+            },
+        }
+
         for bait_key, bait_info in FISHING_BAIT_TIERS.items():
-            min_wait, max_wait = bait_info["bite_wait"]
+            desc = bait_descriptions.get(bait_key, {})
             embed.add_field(
                 name=f"{bait_info['emoji']} {bait_info['display_name']}",
                 value=(
-                    f"**Bite wait:** {min_wait}-{max_wait}s\n"
-                    f"**Pull window:** {bait_info['pull_window']}s\n"
-                    f"**Rare boost:** {bait_info['rare_boost']}x"
+                    f"**Bite speed:** {desc.get('bite', '?')}\n"
+                    f"**Reaction window:** {desc.get('window', '?')}\n"
+                    f"**Rare catch odds:** {desc.get('rarity', '?')}"
                 ),
                 inline=True,
             )
 
-        embed.set_footer(text=f"Fishing cooldown: {FISHING_COOLDOWN_SECONDS}s between attempts")
+        embed.set_footer(text="Better bait costs more, but attracts rarer fish!")
         await ctx.send(embed=embed)
 
 

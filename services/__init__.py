@@ -5,6 +5,7 @@ from .fishing import FishingService
 from .gambling import GamblingService
 from .mining import MiningService
 from .shop import ShopService
+from .trading import TradeService
 
 __all__ = [
     "EconomyService",
@@ -12,4 +13,5 @@ __all__ = [
     "GamblingService",
     "MiningService",
     "ShopService",
+    "TradeService",
 ]
