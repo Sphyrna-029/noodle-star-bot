@@ -4,7 +4,10 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import List, Tuple
 
-from config import BANKING_DEPOSIT_COOLDOWN_MINUTES, BANKING_WITHDRAW_COOLDOWN_MINUTES
+from config import (
+    BANKING_DEPOSIT_COOLDOWN_MINUTES,
+    BANKING_WITHDRAW_COOLDOWN_MINUTES,
+)
 from database.repository import UserRepository
 from utils.formatters import format_time_remaining
 

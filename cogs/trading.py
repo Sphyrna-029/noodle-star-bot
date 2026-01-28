@@ -186,6 +186,9 @@ class TradingCog(commands.Cog):
             return
 
         session = result.session
+        if session is None:
+            return await ctx.send(f"{ctx.author.mention}, an error occurred while creating the trade session.")
+
         proposer_gives = self.trading.format_offer(session.proposer_offer)
         opponent_gets = self.trading.format_offer(session.opponent_offer)
 
@@ -221,6 +224,9 @@ class TradingCog(commands.Cog):
             return
 
         session = result.session
+        if session is None:
+            return await ctx.send(f"{ctx.author.mention}, an error occurred while creating the trade session.")
+
         proposer_gives = self.trading.format_offer(session.proposer_offer)
         opponent_gives = self.trading.format_offer(session.opponent_offer)
 
@@ -245,6 +251,9 @@ class TradingCog(commands.Cog):
             return
 
         session = result.session
+        if session is None:
+            return await ctx.send(f"{ctx.author.mention}, an error occurred while cancelling the trade.")
+
         embed = discord.Embed(
             title="Trade Cancelled",
             description=(

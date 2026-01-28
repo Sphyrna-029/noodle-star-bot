@@ -45,31 +45,30 @@ class ShopService:
             items.append(
                 ShopItem(
                     key=key,
-                    price=data["price"],
-                    db_column=data["db_column"],
-                    consumable=data["consumable"],
-                    emoji=data["emoji"],
-                    display_name=data["display_name"],
-                    description=data["description"],
+                    price=data.price,
+                    db_column=data.db_column,
+                    consumable=data.consumable,
+                    emoji=data.emoji,
+                    display_name=data.display_name,
+                    description=data.description,
                 )
             )
         return items
 
     def get_item(self, item_name: str) -> Optional[ShopItem]:
         """Get a shop item by name or alias."""
-        item_data = get_item_by_alias(item_name)
-        if item_data is None:
-            return None
-
-        return ShopItem(
-            key=item_data["key"],
-            price=item_data["price"],
-            db_column=item_data["db_column"],
-            consumable=item_data["consumable"],
-            emoji=item_data["emoji"],
-            display_name=item_data["display_name"],
-            description=item_data["description"],
-        )
+        match = get_item_by_alias(item_name)
+        if match is not None:
+            key, shop_item = match
+            return ShopItem(
+                key=key,
+                price=shop_item.price,
+                db_column=shop_item.db_column,
+                consumable=shop_item.consumable,
+                emoji=shop_item.emoji,
+                display_name=shop_item.display_name,
+                description=shop_item.description,
+            )
 
     def buy(self, user_id: int, username: str, item_name: str) -> PurchaseResult:
         """
@@ -152,25 +151,25 @@ class ShopService:
             items.append("⛏️ **Gold Pickaxe** (Permanent)")
 
         if inventory["helmet"] > 0:
-            items.append(f'🪖 **Mining Helmet** x{inventory["helmet"]}')
+            items.append(f"🪖 **Mining Helmet** x{inventory['helmet']}")
 
         if inventory["sword"] > 0:
-            items.append(f'⚔️ **Sword** x{inventory["sword"]}')
+            items.append(f"⚔️ **Sword** x{inventory['sword']}")
 
         if inventory["raw_potato"] > 0:
-            items.append(f'🥔 **Raw Potato** x{inventory["raw_potato"]}')
+            items.append(f"🥔 **Raw Potato** x{inventory['raw_potato']}")
 
         if inventory["golden_mushroom"] > 0:
-            items.append(f'🍄 **Golden Mushroom** x{inventory["golden_mushroom"]}')
+            items.append(f"🍄 **Golden Mushroom** x{inventory['golden_mushroom']}")
 
         # Fishing bait
         if inventory.get("bait_worm", 0) > 0:
-            items.append(f'🪱 **Worm Bait** x{inventory["bait_worm"]}')
+            items.append(f"🪱 **Worm Bait** x{inventory['bait_worm']}")
 
         if inventory.get("bait_herring", 0) > 0:
-            items.append(f'🐟 **Herring Bait** x{inventory["bait_herring"]}')
+            items.append(f"🐟 **Herring Bait** x{inventory['bait_herring']}")
 
         if inventory.get("bait_sturgeon", 0) > 0:
-            items.append(f'🐋 **Sturgeon Bait** x{inventory["bait_sturgeon"]}')
+            items.append(f"🐋 **Sturgeon Bait** x{inventory['bait_sturgeon']}")
 
         return items
