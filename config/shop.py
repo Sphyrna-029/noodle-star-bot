@@ -50,6 +50,15 @@ SHOP_ITEMS: Final[dict[str, ShopItem]] = {
         description="Mine instantly with no cooldown! Single use. Use: `!mine mushroom`",
         aliases=("golden mushroom", "mushroom"),
     ),
+    "telescope": ShopItem(
+        price=200,
+        db_column="telescope",
+        consumable=False,
+        emoji="🔭",
+        display_name="Telescope",
+        description="View a random 10x10 emoji starfield. Use: `!telescope`",
+        aliases=("telescope",),
+    ),
     "bait_worm": ShopItem(
         price=33,
         db_column="bait_worm",
