@@ -8,11 +8,11 @@ from typing import List, Optional
 from config import (
     MINERALS_GOLD_PICKAXE,
     MINERALS_NORMAL,
-    MINING_BASE_COOLDOWN_MINUTES,
+    MINING_BASE_COOLDOWN,
     MINING_COLLAPSE_LOSS_PERCENT,
     MINING_DISASTER_CHANCE,
     MINING_GOBLIN_LOSS_PERCENT,
-    MINING_POTATO_COOLDOWN_MINUTES,
+    MINING_POTATO_COOLDOWN,
 )
 from database.repository import UserRepository
 from utils.formatters import format_time_remaining
@@ -38,7 +38,7 @@ class MineResult:
 class MiningService:
     """Handles all mining-related business logic."""
 
-    def __init__(self, repository: UserRepository = None):
+    def __init__(self, repository: Optional[UserRepository] = None):
         self.repo = repository or UserRepository()
 
     def can_mine(self, user_id: int) -> bool:
@@ -48,7 +48,7 @@ class MiningService:
             return True
 
         time_since = datetime.now() - last_mine
-        return time_since >= timedelta(minutes=MINING_BASE_COOLDOWN_MINUTES)
+        return time_since >= timedelta(minutes=MINING_BASE_COOLDOWN)
 
     def get_cooldown_remaining(self, user_id: int) -> Optional[timedelta]:
         """Get time remaining on cooldown, or None if can mine."""
@@ -57,7 +57,7 @@ class MiningService:
             return None
 
         time_since = datetime.now() - last_mine
-        cooldown = timedelta(minutes=MINING_BASE_COOLDOWN_MINUTES)
+        cooldown = timedelta(minutes=MINING_BASE_COOLDOWN)
 
         if time_since >= cooldown:
             return None
@@ -71,14 +71,14 @@ class MiningService:
             return None
 
         time_since = datetime.now() - last_mine
-        cooldown = timedelta(minutes=MINING_POTATO_COOLDOWN_MINUTES)
+        cooldown = timedelta(minutes=MINING_POTATO_COOLDOWN)
 
         if time_since >= cooldown:
             return None
 
         return cooldown - time_since
 
-    def mine(self, user_id: int, username: str, use_item: str = None) -> MineResult:
+    def mine(self, user_id: int, username: str, use_item: str = "") -> MineResult:
         """
         Execute mining with all logic.
 
@@ -94,7 +94,11 @@ class MiningService:
 
         # Check if using golden mushroom
         using_mushroom = False
-        if use_item and use_item.lower() in ["mushroom", "golden mushroom", "goldenmushroom"]:
+        if use_item and use_item.lower() in [
+            "mushroom",
+            "golden mushroom",
+            "goldenmushroom",
+        ]:
             if inventory["golden_mushroom"] <= 0:
                 return MineResult(
                     success=False,
@@ -123,8 +127,10 @@ class MiningService:
                     )
 
                 # Potato reduces cooldown to 5 minutes
-                if time_since < timedelta(minutes=MINING_POTATO_COOLDOWN_MINUTES):
-                    remaining = timedelta(minutes=MINING_POTATO_COOLDOWN_MINUTES) - time_since
+                if time_since < timedelta(minutes=MINING_POTATO_COOLDOWN):
+                    remaining = (
+                        timedelta(minutes=MINING_POTATO_COOLDOWN) - time_since
+                    )
                     return MineResult(
                         success=False,
                         message=f"Even with a raw potato, you need to wait!\nCome back in **{format_time_remaining(remaining)}** to mine again!",
@@ -136,8 +142,10 @@ class MiningService:
                 )
             else:
                 # Normal 30 minute cooldown
-                if time_since < timedelta(minutes=MINING_BASE_COOLDOWN_MINUTES):
-                    remaining = timedelta(minutes=MINING_BASE_COOLDOWN_MINUTES) - time_since
+                if time_since < timedelta(minutes=MINING_BASE_COOLDOWN):
+                    remaining = (
+                        timedelta(minutes=MINING_BASE_COOLDOWN) - time_since
+                    )
                     return MineResult(
                         success=False,
                         message=f"You're too tired to mine right now!\nCome back in **{format_time_remaining(remaining)}** to mine again!\n💡 *Use `!mine potato` to reduce cooldown or `!mine mushroom` to mine instantly!*",
@@ -151,10 +159,10 @@ class MiningService:
         minerals = MINERALS_GOLD_PICKAXE if has_gold_pickaxe else MINERALS_NORMAL
 
         # Select random mineral based on weights
-        mineral = random.choices(minerals, weights=[m["weight"] for m in minerals])[0]
+        mineral = random.choices(minerals, weights=[m.weight for m in minerals])[0]
 
         # Give reward
-        reward = mineral["stars"]
+        reward = mineral.stars
         current_stars = self.repo.get_user_stars(user_id, username)
         new_stars = current_stars + reward
 
@@ -165,8 +173,8 @@ class MiningService:
         result = MineResult(
             success=True,
             message="Mining complete",
-            mineral_name=mineral["name"],
-            mineral_emoji=mineral["emoji"],
+            mineral_name=mineral.name,
+            mineral_emoji=mineral.emoji,
             stars_earned=reward,
             new_balance=new_stars,
         )

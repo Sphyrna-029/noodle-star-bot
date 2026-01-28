@@ -97,9 +97,15 @@ def parse_trade_offer(args: list[str]) -> tuple[Optional[TradeOffer], Optional[T
     if err:
         return None, None, f"Error in your offer: {err}"
 
+    if proposer_offer is None:
+        return None, None, "Invalid offer"
+
     opponent_offer, err = _parse_half(want_args)
     if err:
         return None, None, f"Error in requested items: {err}"
+
+    if opponent_offer is None:
+        return None, None, "Invalid offer"
 
     # Must offer or request something
     if (proposer_offer.stars == 0 and not proposer_offer.items
@@ -145,9 +151,9 @@ def _parse_half(args: list[str]) -> tuple[Optional[TradeOffer], str]:
         matched = False
         for length in range(min(3, len(args) - i), 0, -1):
             candidate = " ".join(args[i:i + length])
-            item = get_item_by_alias(candidate)
-            if item:
-                key = item["key"]
+            match = get_item_by_alias(candidate)
+            if match is not None:
+                key, _shop_item = match
                 offer.items[key] = offer.items.get(key, 0) + amount
                 i += length
                 matched = True
@@ -222,11 +228,11 @@ class TradeService:
                 item_info = SHOP_ITEMS.get(item_key)
                 if not item_info:
                     return f"Unknown item: {item_key}."
-                db_col = item_info["db_column"]
+                db_col = item_info.db_column
                 have = inventory.get(db_col, 0)
                 if have < qty:
                     return (
-                        f"Not enough {item_info['display_name']} "
+                        f"Not enough {item_info.display_name} "
                         f"(have {have}, need {qty})."
                     )
 
@@ -239,8 +245,8 @@ class TradeService:
             parts.append(f"**{offer.stars}** stars")
         for item_key, qty in offer.items.items():
             item_info = SHOP_ITEMS.get(item_key, {})
-            emoji = item_info.get("emoji", "")
-            name = item_info.get("display_name", item_key)
+            emoji = getattr(item_info, "emoji", "")
+            name = getattr(item_info, "display_name", item_key)
             parts.append(f"{emoji} **{qty}x** {name}")
         return ", ".join(parts) if parts else "*nothing*"
 
@@ -263,7 +269,7 @@ class TradeService:
             from_inv = self.repo.get_user_inventory(from_id)
             to_inv = self.repo.get_user_inventory(to_id)
             for item_key, qty in offer.items.items():
-                db_col = SHOP_ITEMS[item_key]["db_column"]
+                db_col = SHOP_ITEMS[item_key].db_column
                 self.repo.update_user_inventory(
                     from_id, db_col, from_inv[db_col] - qty
                 )
@@ -312,6 +318,9 @@ class TradeService:
         proposer_offer, opponent_offer, err = parse_trade_offer(args)
         if err:
             return TradeResult(False, err)
+
+        if proposer_offer is None:
+            return TradeResult(False, "Invalid offer")
 
         # Validate proposer has what they're offering
         if proposer_offer.stars > 0 or proposer_offer.items:
