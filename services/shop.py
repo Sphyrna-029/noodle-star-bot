@@ -162,6 +162,9 @@ class ShopService:
         if inventory["golden_mushroom"] > 0:
             items.append(f"🍄 **Golden Mushroom** x{inventory['golden_mushroom']}")
 
+        if inventory["telescope"] > 0:
+            items.append("📷 **Telescope** (Permanent)")
+
         # Fishing bait
         if inventory.get("bait_worm", 0) > 0:
             items.append(f"🪱 **Worm Bait** x{inventory['bait_worm']}")
