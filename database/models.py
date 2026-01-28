@@ -19,7 +19,6 @@ class User:
     sword: int = 0
     raw_potato: int = 0
     golden_mushroom: int = 0
-    telescope: int = 0
 
     @property
     def total_stars(self) -> int:
@@ -35,7 +34,6 @@ class User:
             "sword": self.sword,
             "raw_potato": self.raw_potato,
             "golden_mushroom": self.golden_mushroom,
-            "telescope": self.telescope,
         }
 
     @classmethod
@@ -56,7 +54,6 @@ class User:
             sword=row["sword"],
             raw_potato=row["raw_potato"],
             golden_mushroom=row["golden_mushroom"],
-            telescope=row["telescope"],
         )
 
 
@@ -69,7 +66,6 @@ class Inventory:
     sword: int = 0
     raw_potato: int = 0
     golden_mushroom: int = 0
-    telescope: int = 0
 
     def to_dict(self) -> dict:
         """Convert to dictionary."""
