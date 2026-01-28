@@ -5,10 +5,11 @@ from dataclasses import dataclass
 from typing import Optional
 
 from config import (
+    COINFLIP_MIN_BET,
     COINFLIP_WIN_MULTIPLIER,
     DUEL_DICE_SIDES,
     GAMBLE_DICE_SIDES,
-    GAMBLE_MULTIPLIERS,
+    GAMBLE_MULTIPLIER_CDF,
     GAMBLE_WIN_TARGET,
 )
 from database.repository import UserRepository
@@ -70,10 +71,10 @@ class GamblingService:
         - 33% chance for 2x
         """
         rand = random.random()
-        for multiplier, threshold in GAMBLE_MULTIPLIERS:
+        for multiplier, threshold in GAMBLE_MULTIPLIER_CDF:
             if rand < threshold:
                 return multiplier
-        return GAMBLE_MULTIPLIERS[-1][0]  # Default to last multiplier
+        return GAMBLE_MULTIPLIER_CDF[-1][0]  # Default to last multiplier
 
     def gamble(self, user_id: int, username: str, amount: int) -> GambleResult:
         """
@@ -109,18 +110,6 @@ class GamblingService:
                 success=False,
                 won=False,
                 message=f"You need at least 1 noodle star to gamble! Current balance: **{current_stars}** stars",
-            )
-
-        # Minimum bet is 10% of total value (wallet + bank)
-        bank = self.repo.get_user_bank(user_id)
-        total_value = current_stars + bank
-        min_bet = max(1, int(total_value * 0.10))
-        if amount < min_bet:
-            return GambleResult(
-                success=False,
-                won=False,
-                message=f"Minimum gamble is 10% of your total value (**{min_bet}** stars). "
-                        f"Your total: **{total_value}** (wallet: {current_stars}, bank: {bank}).",
             )
 
         if amount > current_stars:
@@ -205,11 +194,11 @@ class GamblingService:
         elif choice == "t":
             choice = "tails"
 
-        if amount <= 0:
+        if amount < COINFLIP_MIN_BET:
             return CoinflipResult(
                 success=False,
                 won=False,
-                message="You must bet at least 1 noodle star!",
+                message=f"Minimum bet for coinflip is {COINFLIP_MIN_BET} noodle stars!",
             )
 
         if current_stars <= 0:
@@ -217,18 +206,6 @@ class GamblingService:
                 success=False,
                 won=False,
                 message=f"You need at least 1 noodle star to play! Current balance: **{current_stars}** stars",
-            )
-
-        # Minimum bet is 10% of total value (wallet + bank)
-        bank = self.repo.get_user_bank(user_id)
-        total_value = current_stars + bank
-        min_bet = max(1, int(total_value * 0.10))
-        if amount < min_bet:
-            return CoinflipResult(
-                success=False,
-                won=False,
-                message=f"Minimum bet is 10% of your total value (**{min_bet}** stars). "
-                        f"Your total: **{total_value}** (wallet: {current_stars}, bank: {bank}).",
             )
 
         if amount > current_stars:
@@ -360,7 +337,9 @@ class GamblingService:
             new_opponent_stars = opponent_stars + amount
 
         # Update balances
-        self.repo.update_user_stars(challenger_id, challenger_name, new_challenger_stars)
+        self.repo.update_user_stars(
+            challenger_id, challenger_name, new_challenger_stars
+        )
         self.repo.update_user_stars(opponent_id, opponent_name, new_opponent_stars)
 
         return DuelResult(
