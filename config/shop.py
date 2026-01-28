@@ -77,6 +77,15 @@ SHOP_ITEMS: Final[dict[str, ShopItem]] = {
         description="Premium bait. Best fish odds, long bite (5-8min), tiny window (20s). High risk/reward! Use: `!use bait sturgeon`",
         aliases=("sturgeon", "sturgeon bait", "bait sturgeon"),
     ),
+    "telescope": ShopItem(
+        price=200,
+        db_column="telescope",
+        consumable=False,
+        emoji="📷",
+        display_name="Telescope",
+        description="See the stars in a whole new way! Use `!telescope` to view a random starfield.",
+        aliases=("telescope",),
+    ),
 }
 
 
