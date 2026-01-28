@@ -38,8 +38,8 @@ class UserRepository:
                     """
                     INSERT INTO noodle_stars
                     (user_id, username, stars, bank, last_mine,
-                     gold_pickaxe, helmet, sword, raw_potato, golden_mushroom)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     gold_pickaxe, helmet, sword, raw_potato, golden_mushroom, telescope)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         user_id,
@@ -47,6 +47,7 @@ class UserRepository:
                         STARTING_STARS,
                         STARTING_BANK,
                         None,
+                        0,
                         0,
                         0,
                         0,
@@ -85,7 +86,7 @@ class UserRepository:
             cursor.execute(
                 """
                 SELECT gold_pickaxe, helmet, sword, raw_potato, golden_mushroom,
-                       bait_worm, bait_herring, bait_sturgeon
+                       bait_worm, bait_herring, bait_sturgeon, telescope
                 FROM noodle_stars WHERE user_id = ?
                 """,
                 (user_id,),
@@ -102,6 +103,7 @@ class UserRepository:
                     "bait_worm": 0,
                     "bait_herring": 0,
                     "bait_sturgeon": 0,
+                    "telescope": 0,
                 }
 
             return {
@@ -113,6 +115,7 @@ class UserRepository:
                 "bait_worm": row["bait_worm"] or 0,
                 "bait_herring": row["bait_herring"] or 0,
                 "bait_sturgeon": row["bait_sturgeon"] or 0,
+                "telescope": row["telescope"] or 0,
             }
 
     def update_user_stars(self, user_id: int, username: str, stars: int) -> None:

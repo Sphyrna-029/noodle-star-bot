@@ -2,6 +2,7 @@
 
 import discord
 from discord.ext import commands
+import random
 
 from services.shop import ShopService
 
@@ -70,6 +71,36 @@ class ShopCog(commands.Cog):
             embed.description = "*Empty - Visit the !store to buy items!*"
 
         await ctx.send(embed=embed)
+
+
+    @commands.command(name="telescope")
+    async def telescope(self, ctx):
+        """Use your telescope to view a random starfield."""
+        # Check if user has telescope in inventory
+        inventory = self.shop.get_inventory(ctx.author.id)
+
+        if inventory.get("telescope", 0) <= 0:
+            await ctx.send(
+                f"❌ {ctx.author.mention}, you don't have a telescope! "
+                f"Use `!buy telescope` to purchase one from the store."
+            )
+            return
+
+        # Generate a random 10x10 starfield
+        star_emojis = ["⭐", "🌟", "✨", "💫", "🌌", "🌠", "🪐", "☄️", "🌌", "🌠"]
+        starfield = []
+
+        for _ in range(10):
+            row = ""
+            for _ in range(10):
+                row += random.choice(star_emojis)
+            starfield.append(row)
+
+        # Send the starfield
+        starfield_text = "\n".join(starfield)
+        await ctx.send(
+            f"🌌 {ctx.author.mention}'s Starfield View 🌌\n\n```\n{starfield_text}\n```"
+        )
 
 
 async def setup(bot):

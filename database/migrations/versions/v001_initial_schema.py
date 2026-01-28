@@ -21,7 +21,8 @@ def upgrade(cursor) -> None:
             helmet INTEGER DEFAULT 0,
             sword INTEGER DEFAULT 0,
             raw_potato INTEGER DEFAULT 0,
-            golden_mushroom INTEGER DEFAULT 0
+            golden_mushroom INTEGER DEFAULT 0,
+            telescope INTEGER DEFAULT 0
         )
     """)
 

@@ -113,6 +113,15 @@ SHOP_ITEMS = {
         "description": "Mine instantly with no cooldown! Single use. Use: `!mine mushroom`",
         "aliases": ["golden mushroom", "mushroom"],
     },
+    "telescope": {
+        "price": 200,
+        "db_column": "telescope",
+        "consumable": False,
+        "emoji": "🔭",
+        "display_name": "Telescope",
+        "description": "Allows you to view a random starfield!",
+        "aliases": ["telescope", "starfield"],
+    },
     # Fishing Bait
     "bait_worm": {
         "price": 33,

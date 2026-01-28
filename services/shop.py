@@ -173,4 +173,7 @@ class ShopService:
         if inventory.get("bait_sturgeon", 0) > 0:
             items.append(f'🐋 **Sturgeon Bait** x{inventory["bait_sturgeon"]}')
 
+        if inventory.get("telescope", 0) > 0:
+            items.append(f'🔭 **Telescope** (Permanent)')
+
         return items
