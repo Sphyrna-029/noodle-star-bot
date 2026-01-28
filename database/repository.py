@@ -116,19 +116,78 @@ class UserRepository:
             }
 
     def update_user_stars(self, user_id: int, username: str, stars: int) -> None:
-        """Update user's wallet stars."""
+        """
+        Update user's wallet stars.
+
+        Uses INSERT OR REPLACE preserving bank and last_mine (matching original behavior).
+        """
         with self.db.get_cursor() as cursor:
             cursor.execute(
-                "UPDATE noodle_stars SET stars = ?, username = ? WHERE user_id = ?",
-                (stars, username, user_id),
+                """
+                INSERT OR REPLACE INTO noodle_stars
+                (user_id, username, stars, bank, last_mine,
+                 gold_pickaxe, helmet, sword, raw_potato, golden_mushroom)
+                VALUES (
+                    ?, ?, ?,
+                    COALESCE((SELECT bank FROM noodle_stars WHERE user_id = ?), 0),
+                    (SELECT last_mine FROM noodle_stars WHERE user_id = ?),
+                    COALESCE((SELECT gold_pickaxe FROM noodle_stars WHERE user_id = ?), 0),
+                    COALESCE((SELECT helmet FROM noodle_stars WHERE user_id = ?), 0),
+                    COALESCE((SELECT sword FROM noodle_stars WHERE user_id = ?), 0),
+                    COALESCE((SELECT raw_potato FROM noodle_stars WHERE user_id = ?), 0),
+                    COALESCE((SELECT golden_mushroom FROM noodle_stars WHERE user_id = ?), 0)
+                )
+                """,
+                (
+                    user_id,
+                    username,
+                    stars,
+                    user_id,
+                    user_id,
+                    user_id,
+                    user_id,
+                    user_id,
+                    user_id,
+                    user_id,
+                ),
             )
 
     def update_user_bank(self, user_id: int, username: str, bank: int) -> None:
-        """Update user's bank balance."""
+        """
+        Update user's bank balance.
+
+        Uses INSERT OR REPLACE preserving stars and last_mine.
+        """
         with self.db.get_cursor() as cursor:
             cursor.execute(
-                "UPDATE noodle_stars SET bank = ?, username = ? WHERE user_id = ?",
-                (bank, username, user_id),
+                """
+                INSERT OR REPLACE INTO noodle_stars
+                (user_id, username, stars, bank, last_mine,
+                 gold_pickaxe, helmet, sword, raw_potato, golden_mushroom)
+                VALUES (
+                    ?, ?,
+                    COALESCE((SELECT stars FROM noodle_stars WHERE user_id = ?), 0),
+                    ?,
+                    (SELECT last_mine FROM noodle_stars WHERE user_id = ?),
+                    COALESCE((SELECT gold_pickaxe FROM noodle_stars WHERE user_id = ?), 0),
+                    COALESCE((SELECT helmet FROM noodle_stars WHERE user_id = ?), 0),
+                    COALESCE((SELECT sword FROM noodle_stars WHERE user_id = ?), 0),
+                    COALESCE((SELECT raw_potato FROM noodle_stars WHERE user_id = ?), 0),
+                    COALESCE((SELECT golden_mushroom FROM noodle_stars WHERE user_id = ?), 0)
+                )
+                """,
+                (
+                    user_id,
+                    username,
+                    user_id,
+                    bank,
+                    user_id,
+                    user_id,
+                    user_id,
+                    user_id,
+                    user_id,
+                    user_id,
+                ),
             )
 
     def update_username(self, user_id: int, username: str) -> None:
