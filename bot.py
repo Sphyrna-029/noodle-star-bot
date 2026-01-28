@@ -33,7 +33,6 @@ class NoodleStarBot(commands.Bot):
             "cogs.shop",
             "cogs.moderator",
             "cogs.fishing",
-            "cogs.trading",
         ]
 
     async def setup_hook(self):
@@ -66,5 +65,5 @@ class NoodleStarBot(commands.Bot):
     async def on_ready(self):
         """Called when the bot is connected and ready."""
         print(f"{self.user} has connected to Discord!")
-        print(f"Bot is ready to track noodle stars!")
+        print("Bot is ready to track noodle stars!")
         print(f"Serving {len(self.guilds)} guild(s)")
