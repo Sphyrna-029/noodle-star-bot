@@ -48,7 +48,7 @@ class MiningService:
             return True
 
         time_since = datetime.now() - last_mine
-        return time_since >= timedelta(minutes=MINING_BASE_COOLDOWN)
+        return time_since >= MINING_BASE_COOLDOWN
 
     def get_cooldown_remaining(self, user_id: int) -> Optional[timedelta]:
         """Get time remaining on cooldown, or None if can mine."""
@@ -127,10 +127,8 @@ class MiningService:
                     )
 
                 # Potato reduces cooldown to 5 minutes
-                if time_since < timedelta(minutes=MINING_POTATO_COOLDOWN):
-                    remaining = (
-                        timedelta(minutes=MINING_POTATO_COOLDOWN) - time_since
-                    )
+                if time_since < MINING_POTATO_COOLDOWN:
+                    remaining = MINING_POTATO_COOLDOWN - time_since
                     return MineResult(
                         success=False,
                         message=f"Even with a raw potato, you need to wait!\nCome back in **{format_time_remaining(remaining)}** to mine again!",
@@ -142,10 +140,8 @@ class MiningService:
                 )
             else:
                 # Normal 30 minute cooldown
-                if time_since < timedelta(minutes=MINING_BASE_COOLDOWN):
-                    remaining = (
-                        timedelta(minutes=MINING_BASE_COOLDOWN) - time_since
-                    )
+                if time_since < MINING_BASE_COOLDOWN:
+                    remaining = MINING_BASE_COOLDOWN - time_since
                     return MineResult(
                         success=False,
                         message=f"You're too tired to mine right now!\nCome back in **{format_time_remaining(remaining)}** to mine again!\n💡 *Use `!mine potato` to reduce cooldown or `!mine mushroom` to mine instantly!*",
