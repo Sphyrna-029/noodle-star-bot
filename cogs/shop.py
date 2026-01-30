@@ -71,6 +71,41 @@ class ShopCog(commands.Cog):
 
         await ctx.send(embed=embed)
 
+    @commands.command(name="telescope")
+    async def telescope(self, ctx):
+        """View a random 10x10 starfield using your telescope"""
+        # Check if user has telescope in inventory
+        inventory = self.shop.get_inventory(ctx.author.id)
+        if inventory.get("telescope", 0) <= 0:
+            await ctx.send(
+                f"❌ {ctx.author.mention}, you don't have a telescope! "
+                f"Purchase one from the store with `!store` and `!buy telescope`"
+            )
+            return
+
+        # Generate a 10x10 starfield
+        import random
+
+        # Star emojis to use for the starfield
+        star_emojis = ["⭐", "✨", "🌟", "🌌", "🪐", "🌙", "🌕", "🌖", "🌗", "🌘"]
+
+        # Create 10x10 grid
+        starfield = []
+        for i in range(10):
+            row = ""
+            for j in range(10):
+                row += random.choice(star_emojis)
+            starfield.append(row)
+
+        # Create embed with starfield
+        embed = discord.Embed(
+            title="🔭 Telescope View",
+            description="\n".join(starfield),
+            color=discord.Color.blue()
+        )
+
+        await ctx.send(embed=embed)
+
 
 async def setup(bot):
     """Setup function for loading the cog."""
