@@ -4,4 +4,4 @@ WORKDIR /bot
 
 RUN pip3 install discord
 
-CMD [ "python3", "bot.py" ]
+CMD [ "python3", "main.py" ]
