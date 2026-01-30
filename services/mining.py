@@ -48,7 +48,7 @@ class MiningService:
             return True
 
         time_since = datetime.now() - last_mine
-        return time_since >= timedelta(minutes=MINING_BASE_COOLDOWN)
+        return time_since >= MINING_BASE_COOLDOWN
 
     def get_cooldown_remaining(self, user_id: int) -> Optional[timedelta]:
         """Get time remaining on cooldown, or None if can mine."""
@@ -57,7 +57,7 @@ class MiningService:
             return None
 
         time_since = datetime.now() - last_mine
-        cooldown = timedelta(minutes=MINING_BASE_COOLDOWN)
+        cooldown = MINING_BASE_COOLDOWN
 
         if time_since >= cooldown:
             return None
@@ -71,7 +71,7 @@ class MiningService:
             return None
 
         time_since = datetime.now() - last_mine
-        cooldown = timedelta(minutes=MINING_POTATO_COOLDOWN)
+        cooldown = MINING_POTATO_COOLDOWN
 
         if time_since >= cooldown:
             return None
@@ -127,9 +127,9 @@ class MiningService:
                     )
 
                 # Potato reduces cooldown to 5 minutes
-                if time_since < timedelta(minutes=MINING_POTATO_COOLDOWN):
+                if time_since < MINING_POTATO_COOLDOWN:
                     remaining = (
-                        timedelta(minutes=MINING_POTATO_COOLDOWN) - time_since
+                        MINING_POTATO_COOLDOWN - time_since
                     )
                     return MineResult(
                         success=False,
@@ -142,9 +142,9 @@ class MiningService:
                 )
             else:
                 # Normal 30 minute cooldown
-                if time_since < timedelta(minutes=MINING_BASE_COOLDOWN):
+                if time_since < MINING_BASE_COOLDOWN:
                     remaining = (
-                        timedelta(minutes=MINING_BASE_COOLDOWN) - time_since
+                        MINING_BASE_COOLDOWN - time_since
                     )
                     return MineResult(
                         success=False,
