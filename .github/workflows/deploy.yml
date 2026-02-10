@@ -20,7 +20,7 @@ jobs:
           port: ${{ secrets.SSH_PORT }}  # Default is 22
           script: |
             # Navigate to the container directory
-            cd /containers/noodle_bot
+            cd /home/mok/containers/noodle_bot
             
             # Create backup with timestamp
             TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
