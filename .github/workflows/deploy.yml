@@ -47,4 +47,4 @@ jobs:
             # Navigate to new bot folder and build
             cd noodle-star-bot
             cp ../control.sh .
-            ./control.sh build
+            echo "${{ secrets.SSH_PASSWORD }}" | sudo -S ./control.sh build
