@@ -55,7 +55,7 @@ class EconomyService:
             BalanceResult with new balance
         """
         current = self.repo.get_user_stars(user_id, username)
-        new_balance = current + amount
+        new_balance = max(0, current + amount)
         self.repo.update_user_stars(user_id, username, new_balance)
         self.repo.update_username(user_id, username)
 
