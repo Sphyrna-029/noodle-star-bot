@@ -16,6 +16,7 @@ class PurchaseResult:
     item_name: str = ""
     item_emoji: str = ""
     price: int = 0
+    quantity: int = 1
     new_balance: int = 0
 
 
@@ -70,7 +71,44 @@ class ShopService:
                 description=shop_item.description,
             )
 
-    def buy(self, user_id: int, username: str, item_name: str) -> PurchaseResult:
+    @staticmethod
+    def _parse_buy_request(item_name: str, quantity: int) -> tuple[str, int]:
+        """
+        Parse buy input into normalized item name and quantity.
+
+        Supports:
+        - !buy potato 5
+        - !buy potato x5
+        """
+        clean_item_name = item_name.strip()
+        if quantity != 1:
+            return clean_item_name, quantity
+
+        parts = clean_item_name.rsplit(maxsplit=1)
+        if len(parts) != 2:
+            return clean_item_name, quantity
+
+        maybe_qty = parts[1]
+        if maybe_qty.lower().startswith("x"):
+            maybe_qty = maybe_qty[1:]
+
+        if maybe_qty == "":
+            return clean_item_name, quantity
+
+        try:
+            parsed_quantity = int(maybe_qty)
+        except ValueError:
+            return clean_item_name, quantity
+
+        return parts[0].strip(), parsed_quantity
+
+    def buy(
+        self,
+        user_id: int,
+        username: str,
+        item_name: str,
+        quantity: int = 1,
+    ) -> PurchaseResult:
         """
         Purchase an item from the store.
 
@@ -88,7 +126,20 @@ class ShopService:
                 message="Please specify an item to buy! Use `!store` to see available items.",
             )
 
-        item = self.get_item(item_name)
+        parsed_item_name, quantity = self._parse_buy_request(item_name, quantity)
+        if not parsed_item_name:
+            return PurchaseResult(
+                success=False,
+                message="Please specify an item to buy! Use `!store` to see available items.",
+            )
+
+        if quantity <= 0:
+            return PurchaseResult(
+                success=False,
+                message="Quantity must be a positive number.",
+            )
+
+        item = self.get_item(parsed_item_name)
         if item is None:
             return PurchaseResult(
                 success=False,
@@ -97,19 +148,43 @@ class ShopService:
 
         current_stars = self.repo.get_user_stars(user_id, username)
         inventory = self.repo.get_user_inventory(user_id)
+        total_price = item.price * quantity
+        display_name = (
+            f"{item.display_name} x{quantity}" if quantity > 1 else item.display_name
+        )
 
         # Check if user has enough stars
-        if current_stars < item.price:
+        if current_stars < total_price:
+            max_affordable = current_stars // item.price
             return PurchaseResult(
                 success=False,
-                message=f"You need **{item.price}** stars to buy {item.emoji} **{item.display_name}**!\nYou only have **{current_stars}** stars.",
+                message=(
+                    f"You need **{total_price}** stars to buy {item.emoji} "
+                    f"**{display_name}**!\n"
+                    f"You only have **{current_stars}** stars "
+                    f"(max affordable: **{max_affordable}**)."
+                ),
                 item_name=item.display_name,
                 item_emoji=item.emoji,
-                price=item.price,
+                price=total_price,
+                quantity=quantity,
             )
 
-        # Check if user already owns gold pickaxe (permanent item)
-        if item.db_column == "gold_pickaxe" and inventory["gold_pickaxe"] > 0:
+        # Permanent items cannot be stacked
+        if not item.consumable and quantity > 1:
+            return PurchaseResult(
+                success=False,
+                message=(
+                    f"{item.emoji} **{item.display_name}** is a permanent item, "
+                    "so you can only buy one."
+                ),
+                item_name=item.display_name,
+                item_emoji=item.emoji,
+                quantity=quantity,
+            )
+
+        # Check if user already owns permanent item
+        if not item.consumable and inventory[item.db_column] > 0:
             return PurchaseResult(
                 success=False,
                 message=f"You already own a {item.emoji} **{item.display_name}**!",
@@ -118,19 +193,23 @@ class ShopService:
             )
 
         # Deduct stars
-        new_stars = current_stars - item.price
+        new_stars = current_stars - total_price
         self.repo.update_user_stars(user_id, username, new_stars)
 
         # Add item to inventory
         current_amount = inventory[item.db_column]
-        self.repo.update_user_inventory(user_id, item.db_column, current_amount + 1)
+        self.repo.update_user_inventory(user_id, item.db_column, current_amount + quantity)
 
         return PurchaseResult(
             success=True,
-            message=f"Purchased {item.emoji} **{item.display_name}** for **{item.price}** stars!",
+            message=(
+                f"Purchased {item.emoji} **{display_name}** "
+                f"for **{total_price}** stars!"
+            ),
             item_name=item.display_name,
             item_emoji=item.emoji,
-            price=item.price,
+            price=total_price,
+            quantity=quantity,
             new_balance=new_stars,
         )
 

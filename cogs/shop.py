@@ -17,7 +17,7 @@ class ShopCog(commands.Cog):
     async def store(self, ctx):
         """View items available for purchase"""
         embed = discord.Embed(title="🏪 Noodle Star Store", color=discord.Color.gold())
-        embed.description = "Use `!buy <item>` to purchase items!"
+        embed.description = "Use `!buy <item> [quantity]` to purchase items!"
 
         items = self.shop.get_items()
         for item in items:
@@ -31,7 +31,7 @@ class ShopCog(commands.Cog):
 
     @commands.command(name="buy")
     async def buy(self, ctx, *, item_name: str = None):
-        """Buy an item from the store"""
+        """Buy an item from the store (usage: !buy <item> [quantity])."""
         if item_name is None:
             await ctx.send(
                 f"❌ {ctx.author.mention}, please specify an item to buy! "
@@ -45,8 +45,12 @@ class ShopCog(commands.Cog):
             await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
             return
 
+        purchased_item = (
+            result.item_name if result.quantity == 1 else f"{result.item_name} x{result.quantity}"
+        )
         await ctx.send(
-            f"✅ {ctx.author.mention} purchased {result.item_emoji} **{result.item_name}** "
+            f"✅ {ctx.author.mention} purchased {result.item_emoji} "
+            f"**{purchased_item}** "
             f"for **{result.price}** stars!\n"
             f"New balance: **{result.new_balance}** stars"
         )

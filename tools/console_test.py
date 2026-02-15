@@ -487,7 +487,7 @@ BOT COMMANDS (use ! prefix):
         # Shop commands
         elif cmd == "store":
             embed = MockEmbed(title="Noodle Star Store")
-            embed.description = "Use !buy <item> to purchase items!"
+            embed.description = "Use !buy <item> [quantity] to purchase items!"
             items = self.shop.get_items()
             for item in items:
                 embed.add_field(
@@ -498,7 +498,7 @@ BOT COMMANDS (use ! prefix):
 
         elif cmd == "buy":
             if not args:
-                await ctx.send("Usage: !buy <item>")
+                await ctx.send("Usage: !buy <item> [quantity]")
             else:
                 item_name = " ".join(args)
                 result = self.shop.buy(
@@ -507,8 +507,13 @@ BOT COMMANDS (use ! prefix):
                 if not result.success:
                     await ctx.send(f"Error: {result.message}")
                 else:
+                    purchased_item = (
+                        result.item_name
+                        if result.quantity == 1
+                        else f"{result.item_name} x{result.quantity}"
+                    )
                     await ctx.send(
-                        f"Purchased {result.item_emoji} **{result.item_name}** "
+                        f"Purchased {result.item_emoji} **{purchased_item}** "
                         f"for **{result.price}** stars!\n"
                         f"  New balance: **{result.new_balance}** stars"
                     )
