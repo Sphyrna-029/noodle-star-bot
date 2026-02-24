@@ -122,7 +122,7 @@ class FishingService:
         if last_fish is None:
             return None
 
-        cooldown_end = last_fish + timedelta(seconds=FISHING_COOLDOWN)
+        cooldown_end = last_fish + FISHING_COOLDOWN
         now = datetime.now()
 
         if now < cooldown_end:
@@ -276,7 +276,8 @@ class FishingService:
 
         # Calculate bite timing
         bait_config = FISHING_BAIT_TIERS[equipped_bait]
-        min_wait, max_wait = bait_config.bite_wait_min, bait_config.bite_wait_max
+        min_wait = int(bait_config.bite_wait_min.total_seconds())
+        max_wait = int(bait_config.bite_wait_max.total_seconds())
         bite_wait = random.randint(min_wait, max_wait)
 
         now = datetime.now()
@@ -297,8 +298,9 @@ class FishingService:
         self._sessions[user_id] = session
 
         # Schedule bite notification
+        pull_window = int(bait_config.pull_window.total_seconds())
         session.task = asyncio.create_task(
-            self._schedule_bite(user_id, bite_wait, bait_config.pull_window)
+            self._schedule_bite(user_id, bite_wait, pull_window)
         )
 
         bait_info = FISHING_BAIT_TIERS[equipped_bait]

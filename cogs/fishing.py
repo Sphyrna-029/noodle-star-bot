@@ -257,7 +257,7 @@ class FishingCog(commands.Cog):
                 bait_list = []
                 for bait_key, bait_info in FISHING_BAIT_TIERS.items():
                     bait_list.append(
-                        f"{bait_info['emoji']} **{bait_info['display_name']}** (`{bait_key}`)"
+                        f"{bait_info.emoji} **{bait_info.display_name}** (`{bait_key}`)"
                     )
                 await ctx.send(
                     f"🎣 {ctx.author.mention}, specify which bait to equip:\n"
