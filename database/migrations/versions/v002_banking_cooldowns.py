@@ -28,6 +28,11 @@ def downgrade(cursor) -> None:
             username TEXT,
             stars INTEGER DEFAULT 0,
             bank INTEGER DEFAULT 0,
+            stamina INTEGER DEFAULT 100,
+            stamina_last_updated TEXT,
+            stamina_last_reset TEXT,
+            last_duel_amount INTEGER DEFAULT 0,
+            last_duel_at TEXT,
             last_mine TEXT,
             gold_pickaxe INTEGER DEFAULT 0,
             helmet INTEGER DEFAULT 0,
@@ -38,7 +43,8 @@ def downgrade(cursor) -> None:
     """)
     cursor.execute("""
         INSERT INTO noodle_stars_backup
-        SELECT user_id, username, stars, bank, last_mine,
+        SELECT user_id, username, stars, bank, stamina, stamina_last_updated,
+               stamina_last_reset, last_duel_amount, last_duel_at, last_mine,
                gold_pickaxe, helmet, sword, raw_potato, golden_mushroom
         FROM noodle_stars
     """)
