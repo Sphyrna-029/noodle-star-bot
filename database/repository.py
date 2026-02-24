@@ -94,7 +94,7 @@ class UserRepository:
                 """
                 SELECT gold_pickaxe, helmet, sword, raw_potato, golden_mushroom,
                        bait_worm, bait_herring, bait_sturgeon, telescope,
-                       mine_level, active_mine_level
+                       mine_level, active_mine_level, golden_axe, mithril_shield
                 FROM noodle_stars WHERE user_id = ?
                 """,
                 (user_id,),
@@ -114,6 +114,8 @@ class UserRepository:
                     "telescope": 0,
                     "mine_level": 1,
                     "active_mine_level": 1,
+                    "golden_axe": 0,
+                    "mithril_shield": 0,
                 }
 
             return {
@@ -128,6 +130,8 @@ class UserRepository:
                 "telescope": row["telescope"] or 0,
                 "mine_level": row["mine_level"] or 1,
                 "active_mine_level": row["active_mine_level"] or 1,
+                "golden_axe": row["golden_axe"] or 0,
+                "mithril_shield": row["mithril_shield"] or 0,
             }
 
     def update_user_stars(self, user_id: int, username: str, stars: int) -> None:
@@ -183,7 +187,7 @@ class UserRepository:
                 SET gold_pickaxe = 0, helmet = 0, sword = 0,
                     raw_potato = 0, golden_mushroom = 0, telescope = 0,
                     bait_worm = 0, bait_herring = 0, bait_sturgeon = 0,
-                    equipped_bait = NULL
+                    equipped_bait = NULL, golden_axe = 0, mithril_shield = 0
                 WHERE user_id = ?
                 """,
                 (user_id,),
@@ -492,4 +496,24 @@ class UserRepository:
             cursor.execute(
                 "UPDATE noodle_stars SET last_fish = ? WHERE user_id = ?",
                 (now, user_id),
+            )
+
+    def get_active_fish_level(self, user_id: int) -> int:
+        """Get user's currently selected fishing level."""
+        with self.db.get_cursor() as cursor:
+            cursor.execute(
+                "SELECT active_fish_level FROM noodle_stars WHERE user_id = ?",
+                (user_id,),
+            )
+            row = cursor.fetchone()
+            if row is None or row["active_fish_level"] is None:
+                return 1
+            return row["active_fish_level"]
+
+    def set_active_fish_level(self, user_id: int, level: int) -> None:
+        """Update user's active fishing level."""
+        with self.db.get_cursor() as cursor:
+            cursor.execute(
+                "UPDATE noodle_stars SET active_fish_level = ? WHERE user_id = ?",
+                (level, user_id),
             )

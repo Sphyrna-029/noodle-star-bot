@@ -47,6 +47,7 @@ MINE_LEVELS: Final[dict[int, dict]]
 FISHING_COOLDOWN: Final[timedelta]
 FISHING_BAIT_TIERS: Final[dict[str, BaitTier]]
 FISHING_CATCH_TABLE: Final[dict[str, CatchBucket]]
+FISH_LEVELS: Final[dict[int, dict]]
 
 # shop
 SHOP_ITEMS: Final[dict[str, ShopItem]]
