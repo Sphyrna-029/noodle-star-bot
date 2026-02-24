@@ -35,13 +35,14 @@ class User:
 
     @property
     def inventory(self) -> dict:
-        """Get inventory as a dictionary."""
+        """Get inventory as a dictionary (basic items only, for quick checks)."""
         return {
             "gold_pickaxe": self.gold_pickaxe,
             "helmet": self.helmet,
             "sword": self.sword,
             "raw_potato": self.raw_potato,
             "golden_mushroom": self.golden_mushroom,
+            "telescope": self.telescope,
         }
 
     @classmethod

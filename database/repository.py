@@ -185,12 +185,17 @@ class UserRepository:
             )
 
     def clear_user_inventory(self, user_id: int) -> None:
-        """Remove all items from user's inventory except gold pickaxe."""
+        """Remove all items from user's inventory except gold pickaxe and telescope."""
         with self.db.get_cursor() as cursor:
             cursor.execute(
                 """
                 UPDATE noodle_stars
-                SET helmet = 0, sword = 0, raw_potato = 0, golden_mushroom = 0
+                SET helmet = 0, sword = 0, raw_potato = 0, golden_mushroom = 0,
+                    bait_worm = 0, bait_herring = 0, bait_sturgeon = 0,
+                    equipped_bait = NULL, golden_axe = 0, mithril_shield = 0,
+                    rune_fragment = 0, fossilized_noodle = 0,
+                    bucktail_jig = 0, jig_active = 0, ray_gun = 0,
+                    star_magnet = 0, lucky_charm = 0, heart_of_leviathan = 0
                 WHERE user_id = ?
                 """,
                 (user_id,),

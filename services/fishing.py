@@ -11,7 +11,6 @@ from typing import Callable, Dict, List, Optional
 from config import (
     FISH_LEVELS,
     FISHING_BAIT_TIERS,
-    FISHING_CATCH_TABLE,
     FISHING_COOLDOWN,
 )
 from config.models import MineHazard
@@ -229,11 +228,15 @@ class FishingService:
         self.repo.set_equipped_bait(user_id, bait_type)
         bait_info = FISHING_BAIT_TIERS[bait_type]
 
+        min_wait = int(bait_info.bite_wait_min.total_seconds())
+        max_wait = int(bait_info.bite_wait_max.total_seconds())
+        pull_win = int(bait_info.pull_window.total_seconds())
+
         return EquipResult(
             success=True,
             message=f"Equipped {bait_info.emoji} **{bait_info.display_name}** bait!\n"
-            f"Bite wait: {bait_info.bite_wait_min}-{bait_info.bite_wait_max}s | "
-            f"Pull window: {bait_info.pull_window}s | "
+            f"Bite wait: {min_wait}-{max_wait}s | "
+            f"Pull window: {pull_win}s | "
             f"Rare boost: {bait_info.rare_boost}x",
         )
 

@@ -94,12 +94,16 @@ class AlienAbductionCog(commands.Cog):
         user = self.repo.get_user(ctx.author.id, str(ctx.author))
         stars_lost = user.stars
 
-        if stars_lost == 0 and all(v == 0 for k, v in user.inventory.items()):
+        # Check full inventory (includes all rare items)
+        inventory = self.repo.get_user_inventory(ctx.author.id)
+        has_any_items = any(
+            v > 0 for k, v in inventory.items()
+            if k not in ("mine_level", "active_mine_level")
+        )
+
+        if stars_lost == 0 and not has_any_items:
             # Nothing to lose — aliens aren't interested in broke people
             return
-
-        # Check for ray-gun protection (saves items, still lose stars)
-        inventory = self.repo.get_user_inventory(ctx.author.id)
         ray_gun_uses = inventory.get("ray_gun", 0)
 
         if ray_gun_uses > 0:
