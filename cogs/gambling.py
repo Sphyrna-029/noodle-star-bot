@@ -112,7 +112,9 @@ class GamblingCog(commands.Cog):
         # Send initial duel message
         await ctx.send(
             f"⚔️ **DICE DUEL!** ⚔️\n"
-            f"{ctx.author.mention} challenges {opponent.mention} to a duel for **{amount}** stars!\n\n"
+            f"{ctx.author.mention} challenges {opponent.mention} to a duel for **{amount}** stars!\n"
+            f"💪 Stamina: **{result.challenger_stamina_before}** → **{result.challenger_stamina_after}** "
+            f"(cost **{result.stamina_cost}**)\n\n"
             f"🎲 Rolling..."
         )
 

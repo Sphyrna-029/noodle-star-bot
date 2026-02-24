@@ -13,6 +13,11 @@ class User:
     username: str
     stars: int = 0
     bank: int = 0
+    stamina: int = 100
+    stamina_last_updated: Optional[datetime] = None
+    stamina_last_reset: Optional[datetime] = None
+    last_duel_amount: int = 0
+    last_duel_at: Optional[datetime] = None
     last_mine: Optional[datetime] = None
     gold_pickaxe: int = 0
     helmet: int = 0
@@ -46,11 +51,36 @@ class User:
         if row["last_mine"]:
             last_mine = datetime.fromisoformat(row["last_mine"])
 
+        stamina_last_updated = None
+        if "stamina_last_updated" in row.keys() and row["stamina_last_updated"]:
+            stamina_last_updated = datetime.fromisoformat(row["stamina_last_updated"])
+
+        stamina_last_reset = None
+        if "stamina_last_reset" in row.keys() and row["stamina_last_reset"]:
+            stamina_last_reset = datetime.fromisoformat(row["stamina_last_reset"])
+
+        last_duel_at = None
+        if "last_duel_at" in row.keys() and row["last_duel_at"]:
+            last_duel_at = datetime.fromisoformat(row["last_duel_at"])
+
+        stamina = 100
+        if "stamina" in row.keys() and row["stamina"] is not None:
+            stamina = row["stamina"]
+
+        last_duel_amount = 0
+        if "last_duel_amount" in row.keys() and row["last_duel_amount"] is not None:
+            last_duel_amount = row["last_duel_amount"]
+
         return cls(
             user_id=row["user_id"],
             username=row["username"],
             stars=row["stars"],
             bank=row["bank"],
+            stamina=stamina,
+            stamina_last_updated=stamina_last_updated,
+            stamina_last_reset=stamina_last_reset,
+            last_duel_amount=last_duel_amount,
+            last_duel_at=last_duel_at,
             last_mine=last_mine,
             gold_pickaxe=row["gold_pickaxe"],
             helmet=row["helmet"],

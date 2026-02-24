@@ -443,9 +443,9 @@ class FishingService:
         rare_boost = bait_config.rare_boost
 
         # Calculate adjusted weights
-        common_weight = FISHING_CATCH_TABLE["common"]["weight"]
-        rare_weight = FISHING_CATCH_TABLE["rare"]["weight"] * rare_boost
-        legendary_weight = FISHING_CATCH_TABLE["legendary"]["weight"] * rare_boost
+        common_weight = FISHING_CATCH_TABLE["common"].weight
+        rare_weight = FISHING_CATCH_TABLE["rare"].weight * rare_boost
+        legendary_weight = FISHING_CATCH_TABLE["legendary"].weight * rare_boost
 
         total_weight = common_weight + rare_weight + legendary_weight
 
@@ -460,14 +460,14 @@ class FishingService:
             rarity = "legendary"
 
         # Roll for specific catch within rarity
-        catches = FISHING_CATCH_TABLE[rarity]["catches"]
-        catch_weights = [c["weight"] for c in catches]
+        catches = FISHING_CATCH_TABLE[rarity].catches
+        catch_weights = [c.weight for c in catches]
         catch = random.choices(catches, weights=catch_weights, k=1)[0]
 
         return {
-            "name": catch["name"],
-            "emoji": catch["emoji"],
-            "stars": catch["stars"],
+            "name": catch.name,
+            "emoji": catch.emoji,
+            "stars": catch.stars,
             "rarity": rarity,
         }
 
