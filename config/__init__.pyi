@@ -26,6 +26,12 @@ COINFLIP_WIN_MULTIPLIER: Final[float]
 COINFLIP_MIN_BET: Final[int]
 
 DUEL_DICE_SIDES: Final[int]
+DUEL_STAMINA_MAX: Final[int]
+DUEL_STAMINA_BASE_COST: Final[int]
+DUEL_STAMINA_COST_PER_50: Final[int]
+DUEL_STAMINA_REGEN_BASE_MINUTES: Final[int]
+DUEL_STAMINA_REGEN_AMOUNT_DIVISOR: Final[int]
+DUEL_STAMINA_REGEN_MAX_EXTRA_MINUTES: Final[int]
 
 # mining
 MINING_BASE_COOLDOWN: Final[timedelta]
@@ -35,6 +41,7 @@ MINING_COLLAPSE_LOSS_PERCENT: Final[float]
 MINING_GOBLIN_LOSS_PERCENT: Final[float]
 MINERALS_NORMAL: Final[tuple[Mineral, ...]]
 MINERALS_GOLD_PICKAXE: Final[tuple[Mineral, ...]]
+MINE_LEVELS: Final[dict[int, dict]]
 
 # fishing
 FISHING_COOLDOWN: Final[timedelta]
