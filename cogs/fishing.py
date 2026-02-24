@@ -3,7 +3,7 @@
 import discord
 from discord.ext import commands
 
-from config import FISHING_BAIT_TIERS, FISHING_COOLDOWN
+from config import FISH_LEVELS, FISHING_BAIT_TIERS, FISHING_COOLDOWN
 from services.fishing import FishingService, FishingState
 
 
@@ -146,6 +146,50 @@ class FishingCog(commands.Cog):
                 f"Balance: **{result.new_balance}** stars"
             )
 
+        # Rare item drops
+        if result.golden_axe_found:
+            embed.add_field(
+                name="🪓 **GOLDEN AXE FOUND!** 🪓",
+                value=(
+                    "A legendary **Golden Axe** tumbled out of your catch!\n"
+                    "It has **50 uses** and protects against sword-type hazards."
+                ),
+                inline=False,
+            )
+
+        if result.mithril_shield_found:
+            embed.add_field(
+                name="🛡️ **MITHRIL SHIELD FOUND!** 🛡️",
+                value=(
+                    "A gleaming **Mithril Shield** washed up with your catch!\n"
+                    "It has **10 uses** and protects against helmet-type hazards."
+                ),
+                inline=False,
+            )
+
+        # Show fishing level in footer
+        if result.level_name:
+            embed.set_footer(text=f"{result.level_emoji} {result.level_name}")
+
+        # Handle disaster messages
+        if result.disaster:
+            if result.disaster_protected:
+                embed.add_field(
+                    name=result.disaster_header,
+                    value=result.disaster_protected_msg,
+                    inline=False,
+                )
+            else:
+                disaster_text = result.disaster_unprotected_msg
+                if result.items_destroyed:
+                    disaster_text += f"\nNew balance: **{result.new_balance}** stars"
+                embed.add_field(
+                    name=result.disaster_header,
+                    value=disaster_text,
+                    inline=False,
+                )
+                embed.color = discord.Color.red()
+
         await ctx.send(embed=embed)
 
     @commands.command(name="fishing")
@@ -238,6 +282,42 @@ class FishingCog(commands.Cog):
                 embed.color = discord.Color.green()
 
         await ctx.send(embed=embed)
+
+    @commands.command(name="fishlevel")
+    async def fishlevel(self, ctx, level: int = None):
+        """View or switch your fishing level. Usage: !fishlevel [number]"""
+        if level is not None:
+            # Switch active level
+            success, msg = self.fishing.set_active_fish_level(ctx.author.id, level)
+            if success:
+                await ctx.send(f"🎣 {ctx.author.mention}, {msg}")
+            else:
+                await ctx.send(f"❌ {ctx.author.mention}, {msg}")
+            return
+
+        # Show level info
+        info = self.fishing.get_fish_level_info(ctx.author.id)
+
+        lines = [f"🎣 **Fishing Levels** — {ctx.author.mention}\n"]
+
+        for lvl_num, lvl in info.levels.items():
+            if lvl_num <= info.unlocked_level:
+                active = " ◀️" if lvl_num == info.active_level else ""
+                hazard_warning = ""
+                if lvl["disaster_chance"] > 0:
+                    hazard_warning = f" ⚠️ {int(lvl['disaster_chance'] * 100)}% hazard"
+                lines.append(
+                    f"{lvl['emoji']} **Level {lvl_num} — {lvl['name']}** ✅{active}{hazard_warning}"
+                )
+            else:
+                lines.append(
+                    f"🔒 **Level {lvl_num} — {lvl['name']}** — *Unlock in mine first*"
+                )
+
+        lines.append(f"\nUse `!fishlevel <number>` to switch levels")
+        lines.append(f"Fishing levels share unlocks with mining — use `!unlock <number>` to unlock new levels")
+
+        await ctx.send("\n".join(lines))
 
     @commands.command(name="use")
     async def use_item(self, ctx, item_type: str = None, item_name: str = None):

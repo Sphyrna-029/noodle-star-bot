@@ -5,13 +5,15 @@ import random
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, List, Optional
 
 from config import (
+    FISH_LEVELS,
     FISHING_BAIT_TIERS,
     FISHING_CATCH_TABLE,
     FISHING_COOLDOWN,
 )
+from config.models import MineHazard
 from database.repository import UserRepository
 
 
@@ -34,6 +36,7 @@ class FishingSession:
     cast_at: datetime
     bite_at: datetime
     expires_at: datetime
+    active_level: int = 1
     task: Optional[asyncio.Task] = field(default=None, repr=False)
 
 
@@ -57,6 +60,19 @@ class PullResult:
     catch_rarity: str = ""
     stars_earned: int = 0
     new_balance: int = 0
+    # Disaster fields (mirrors MineResult pattern)
+    disaster: Optional[str] = None
+    disaster_protected: bool = False
+    disaster_header: str = ""
+    disaster_protected_msg: str = ""
+    disaster_unprotected_msg: str = ""
+    stars_lost: int = 0
+    bank_lost: int = 0
+    items_destroyed: bool = False
+    level_name: str = ""
+    level_emoji: str = ""
+    golden_axe_found: bool = False
+    mithril_shield_found: bool = False
 
 
 @dataclass
@@ -78,6 +94,15 @@ class EquipResult:
 
     success: bool
     message: str
+
+
+@dataclass
+class FishLevelInfo:
+    """Info about a user's fishing levels."""
+
+    unlocked_level: int
+    active_level: int
+    levels: dict  # reference to FISH_LEVELS
 
 
 class FishingService:
@@ -274,6 +299,9 @@ class FishingService:
         # Consume the bait
         self.repo.consume_bait(user_id, equipped_bait)
 
+        # Get the user's active fishing level
+        active_level = self.repo.get_active_fish_level(user_id)
+
         # Calculate bite timing
         bait_config = FISHING_BAIT_TIERS[equipped_bait]
         min_wait, max_wait = bait_config.bite_wait_min, bait_config.bite_wait_max
@@ -293,6 +321,7 @@ class FishingService:
             cast_at=now,
             bite_at=bite_at,
             expires_at=expires_at,
+            active_level=active_level,
         )
         self._sessions[user_id] = session
 
@@ -302,10 +331,11 @@ class FishingService:
         )
 
         bait_info = FISHING_BAIT_TIERS[equipped_bait]
+        level_config = FISH_LEVELS[active_level]
         return CastResult(
             success=True,
-            message=f"You cast your line with {bait_info.emoji} **{bait_info.display_name}** bait... "
-            f"waiting for a bite.",
+            message=f"You cast your line with {bait_info.emoji} **{bait_info.display_name}** bait "
+            f"at {level_config['emoji']} **{level_config['name']}**... waiting for a bite.",
             bite_wait_seconds=bite_wait,
         )
 
@@ -372,7 +402,7 @@ class FishingService:
 
         Outcomes:
         - Too early (WAITING state): penalty cooldown, end attempt
-        - In window (BITING state): success, roll catch
+        - In window (BITING state): success, roll catch, then roll disaster
         - Too late (no session): fail message
         """
         session = self._sessions.get(user_id)
@@ -405,18 +435,21 @@ class FishingService:
         # In the window - success!
         if session.state == FishingState.BITING:
             bait_type = session.bait_type
+            active_level = session.active_level
             self._cleanup_session(user_id)
             self.repo.update_last_fish(user_id)
 
-            # Roll the catch
-            catch = self._roll_catch(bait_type)
+            level_config = FISH_LEVELS[active_level]
+
+            # Roll the catch using level-specific table
+            catch = self._roll_catch(bait_type, active_level)
 
             # Award stars
             current_stars = self.repo.get_user_stars(user_id, username)
             new_stars = current_stars + catch["stars"]
             self.repo.update_user_stars(user_id, username, new_stars)
 
-            return PullResult(
+            result = PullResult(
                 success=True,
                 message=f"You caught a {catch['emoji']} **{catch['name']}**!",
                 catch_name=catch["name"],
@@ -424,7 +457,93 @@ class FishingService:
                 catch_rarity=catch["rarity"],
                 stars_earned=catch["stars"],
                 new_balance=new_stars,
+                level_name=level_config["name"],
+                level_emoji=level_config["emoji"],
             )
+
+            # 1% chance to find a golden axe with any legendary catch
+            if catch["rarity"] == "legendary" and random.random() < 0.01:
+                self.repo.update_user_inventory(user_id, "golden_axe", 50)
+                result.golden_axe_found = True
+
+            # 0.1% chance to find a mithril shield with any catch
+            if random.random() < 0.001:
+                self.repo.update_user_inventory(user_id, "mithril_shield", 10)
+                result.mithril_shield_found = True
+
+            # Roll for disaster (after catch, matching mining pattern)
+            if level_config["disaster_chance"] > 0 and random.random() < level_config["disaster_chance"]:
+                hazard: MineHazard = random.choice(level_config["hazards"])
+                result.disaster = hazard.name
+                result.disaster_header = hazard.header
+
+                # Check if player has protection
+                inventory = self.repo.get_user_inventory(user_id)
+                has_helmet = inventory["helmet"] > 0
+                has_sword = inventory["sword"] > 0
+                golden_axe_uses = inventory["golden_axe"]
+                mithril_shield_uses = inventory["mithril_shield"]
+
+                # Siren and Leviathan require special items only
+                requires_special = hazard.name in ("siren", "leviathan")
+
+                protected = False
+                protection_msg = ""
+
+                if hazard.protection_item == "helmet":
+                    if not requires_special and has_helmet:
+                        protected = True
+                        protection_msg = hazard.protected_msg
+                        self.repo.update_user_inventory(user_id, "helmet", 0)
+                    elif mithril_shield_uses > 0:
+                        protected = True
+                        remaining = mithril_shield_uses - 1
+                        self.repo.update_user_inventory(user_id, "mithril_shield", remaining)
+                        protection_msg = (
+                            f"🛡️ Your mithril shield absorbed the blow!\n"
+                            f"*Your shield took a dent.* ({remaining} uses remaining)"
+                        )
+                elif hazard.protection_item == "sword":
+                    if not requires_special and has_sword:
+                        protected = True
+                        protection_msg = hazard.protected_msg
+                        self.repo.update_user_inventory(user_id, "sword", 0)
+                    elif golden_axe_uses > 0:
+                        protected = True
+                        remaining = golden_axe_uses - 1
+                        self.repo.update_user_inventory(user_id, "golden_axe", remaining)
+                        protection_msg = (
+                            f"🪓 Your golden axe fended off the attack!\n"
+                            f"*Your golden axe took a hit.* ({remaining} uses remaining)"
+                        )
+
+                if protected:
+                    result.disaster_protected = True
+                    result.disaster_protected_msg = protection_msg
+                else:
+                    # Calculate wallet loss
+                    stars_lost = int(new_stars * hazard.wallet_loss_pct)
+                    new_stars = new_stars - stars_lost
+                    self.repo.update_user_stars(user_id, username, new_stars)
+
+                    # Calculate bank loss if applicable
+                    bank_lost = 0
+                    if hazard.bank_loss_pct > 0:
+                        current_bank = self.repo.get_user_bank(user_id)
+                        bank_lost = int(current_bank * hazard.bank_loss_pct)
+                        if bank_lost > 0:
+                            self.repo.update_user_bank(user_id, username, current_bank - bank_lost)
+
+                    self.repo.clear_user_inventory(user_id)
+                    result.stars_lost = stars_lost
+                    result.bank_lost = bank_lost
+                    result.items_destroyed = True
+                    result.new_balance = new_stars
+                    result.disaster_unprotected_msg = hazard.unprotected_msg.format(
+                        stars_lost=stars_lost, bank_lost=bank_lost
+                    )
+
+            return result
 
         # Unknown state
         self._cleanup_session(user_id)
@@ -433,19 +552,22 @@ class FishingService:
             message="Something went wrong with your fishing session.",
         )
 
-    def _roll_catch(self, bait_type: str) -> dict:
+    def _roll_catch(self, bait_type: str, level: int = 1) -> dict:
         """
-        Roll a catch based on bait tier.
+        Roll a catch based on bait tier and fishing level.
 
         Bait rare_boost increases odds of rare/legendary catches.
         """
         bait_config = FISHING_BAIT_TIERS[bait_type]
         rare_boost = bait_config.rare_boost
 
+        # Look up catch table from level config
+        catch_table = FISH_LEVELS[level]["catches"]
+
         # Calculate adjusted weights
-        common_weight = FISHING_CATCH_TABLE["common"].weight
-        rare_weight = FISHING_CATCH_TABLE["rare"].weight * rare_boost
-        legendary_weight = FISHING_CATCH_TABLE["legendary"].weight * rare_boost
+        common_weight = catch_table["common"].weight
+        rare_weight = catch_table["rare"].weight * rare_boost
+        legendary_weight = catch_table["legendary"].weight * rare_boost
 
         total_weight = common_weight + rare_weight + legendary_weight
 
@@ -460,7 +582,7 @@ class FishingService:
             rarity = "legendary"
 
         # Roll for specific catch within rarity
-        catches = FISHING_CATCH_TABLE[rarity].catches
+        catches = catch_table[rarity].catches
         catch_weights = [c.weight for c in catches]
         catch = random.choices(catches, weights=catch_weights, k=1)[0]
 
@@ -470,6 +592,27 @@ class FishingService:
             "stars": catch.stars,
             "rarity": rarity,
         }
+
+    def get_fish_level_info(self, user_id: int) -> FishLevelInfo:
+        """Get level info for a user's fishing."""
+        return FishLevelInfo(
+            unlocked_level=self.repo.get_mine_level(user_id),
+            active_level=self.repo.get_active_fish_level(user_id),
+            levels=FISH_LEVELS,
+        )
+
+    def set_active_fish_level(self, user_id: int, level: int) -> tuple[bool, str]:
+        """Switch active fishing level. Returns (success, message)."""
+        if level < 1 or level > 5:
+            return False, "Fishing levels range from 1 to 5."
+
+        unlocked = self.repo.get_mine_level(user_id)
+        if level > unlocked:
+            return False, f"You haven't unlocked level {level} yet! Your highest unlocked level is {unlocked}. Unlock it with `!unlock {level}` in the mine."
+
+        self.repo.set_active_fish_level(user_id, level)
+        level_config = FISH_LEVELS[level]
+        return True, f"Switched to **{level_config['emoji']} {level_config['name']}** (Level {level})!"
 
     def cancel_session(self, user_id: int) -> bool:
         """Cancel an active fishing session. Returns True if there was one."""
