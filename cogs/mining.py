@@ -2,6 +2,7 @@
 
 from discord.ext import commands
 
+from config import MINE_LEVELS
 from services.mining import MiningService
 
 
@@ -21,13 +22,21 @@ class MiningCog(commands.Cog):
             await ctx.send(f"⏰ {ctx.author.mention}, {result.message}")
             return
 
-        # Create message based on mineral rarity
-        if result.mineral_name == "Diamond":
+        # Build header based on mineral value
+        top_minerals = {m.name for m in MINE_LEVELS[1]["minerals_normal"][-1:]}
+        for lvl in MINE_LEVELS.values():
+            for m in lvl["minerals_normal"][-1:]:
+                top_minerals.add(m.name)
+            for m in lvl["minerals_normal"][-2:-1]:
+                top_minerals.add(m.name)
+
+        # Check rarity by star value
+        if result.stars_earned >= 100:
             header = "🎉 **JACKPOT!** 🎉"
-        elif result.mineral_name == "Gold":
+        elif result.stars_earned >= 40:
             header = "✨ **RARE FIND!** ✨"
         else:
-            header = "⛏️ **Mining...**"
+            header = f"{result.level_emoji} **Mining in {result.level_name}...**"
 
         message = (
             f"{header}\n"
@@ -35,40 +44,68 @@ class MiningCog(commands.Cog):
             f"You earned **{result.stars_earned}** noodle stars! ⭐"
         )
 
-        # Handle disaster messages
-        if result.disaster == "collapse":
+        # Handle disaster messages using the generic hazard data
+        if result.disaster:
             if result.disaster_protected:
-                message += (
-                    f"\n\n💥 **MINE COLLAPSE!** 💥\n"
-                    f"🪖 Your helmet protected you from the collapse!\n"
-                    f"*Your helmet was destroyed in the process.*"
-                )
+                message += f"\n\n{result.disaster_header}\n{result.disaster_protected_msg}"
             else:
-                message += (
-                    f"\n\n💥 **MINE COLLAPSE!** 💥\n"
-                    f"You were caught in the collapse and lost **{result.stars_lost}** stars! 😱\n"
-                    f"💀 **All your items were destroyed!**\n"
-                    f"💡 *Buy a helmet from the !store to protect yourself!*"
-                )
-
-        elif result.disaster == "goblin":
-            if result.disaster_protected:
-                message += (
-                    f"\n\n👹 **GOBLIN ATTACK!** 👹\n"
-                    f"⚔️ You fought off the goblin with your sword!\n"
-                    f"*Your sword broke in the battle.*"
-                )
-            else:
-                message += (
-                    f"\n\n👹 **GOBLIN ATTACK!** 👹\n"
-                    f"The goblin stole **{result.stars_lost}** stars from you! 😱\n"
-                    f"💀 **The goblin destroyed all your items!**\n"
-                    f"💡 *Buy a sword from the !store to protect yourself!*"
-                )
+                message += f"\n\n{result.disaster_header}\n{result.disaster_unprotected_msg}"
 
         message += f"\nNew balance: **{result.new_balance}** stars!"
 
         await ctx.send(message)
+
+    @commands.command(name="minelevel")
+    async def minelevel(self, ctx, level: int = None):
+        """View or switch your mine level. Usage: !minelevel [number]"""
+        if level is not None:
+            # Switch active level
+            success, msg = self.mining.set_active_level(ctx.author.id, level)
+            if success:
+                await ctx.send(f"⛏️ {ctx.author.mention}, {msg}")
+            else:
+                await ctx.send(f"❌ {ctx.author.mention}, {msg}")
+            return
+
+        # Show level info
+        info = self.mining.get_level_info(ctx.author.id)
+
+        lines = [f"⛏️ **Mine Levels** — {ctx.author.mention}\n"]
+
+        for lvl_num, lvl in info.levels.items():
+            if lvl_num <= info.unlocked_level:
+                active = " ◀️" if lvl_num == info.active_level else ""
+                lines.append(f"{lvl['emoji']} **Level {lvl_num} — {lvl['name']}** ✅{active}")
+            elif lvl_num == info.unlocked_level + 1:
+                lines.append(f"🔒 **Level {lvl_num} — {lvl['name']}** — *{lvl['cost']} stars to unlock*")
+            else:
+                lines.append(f"🔒 **Level {lvl_num} — {lvl['name']}** — *Locked*")
+
+        lines.append(f"\nUse `!minelevel <number>` to switch levels")
+        lines.append(f"Use `!unlock <number>` to unlock the next level")
+
+        await ctx.send("\n".join(lines))
+
+    @commands.command(name="unlock")
+    async def unlock(self, ctx, level: int = None):
+        """Unlock a new mine level. Usage: !unlock <level>"""
+        if level is None:
+            await ctx.send(f"❌ {ctx.author.mention}, please specify a level to unlock! Usage: `!unlock <level>`")
+            return
+
+        result = self.mining.unlock_level(ctx.author.id, str(ctx.author), level)
+
+        if result.success:
+            level_config = MINE_LEVELS[result.level]
+            minerals = level_config["minerals_normal"]
+            mineral_list = " ".join(f"{m.emoji} {m.name} ({m.stars}⭐)" for m in minerals)
+            await ctx.send(
+                f"🎊 {ctx.author.mention}, {result.message}\n"
+                f"Cost: **{result.cost}** stars\n\n"
+                f"**New minerals available:**\n{mineral_list}"
+            )
+        else:
+            await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
 
 
 async def setup(bot):
