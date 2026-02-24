@@ -174,6 +174,21 @@ class UserRepository:
                 (user_id,),
             )
 
+    def clear_all_items(self, user_id: int) -> None:
+        """Remove ALL items from user's inventory including gold pickaxe, telescope, and bait."""
+        with self.db.get_cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE noodle_stars
+                SET gold_pickaxe = 0, helmet = 0, sword = 0,
+                    raw_potato = 0, golden_mushroom = 0, telescope = 0,
+                    bait_worm = 0, bait_herring = 0, bait_sturgeon = 0,
+                    equipped_bait = NULL
+                WHERE user_id = ?
+                """,
+                (user_id,),
+            )
+
     def get_last_mine(self, user_id: int) -> Optional[datetime]:
         """Get the user's last mining timestamp."""
         with self.db.get_cursor() as cursor:

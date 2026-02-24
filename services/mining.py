@@ -81,7 +81,7 @@ class MiningService:
             return None
 
         time_since = datetime.now() - last_mine
-        cooldown = timedelta(minutes=MINING_BASE_COOLDOWN)
+        cooldown = MINING_BASE_COOLDOWN
 
         if time_since >= cooldown:
             return None
@@ -95,7 +95,7 @@ class MiningService:
             return None
 
         time_since = datetime.now() - last_mine
-        cooldown = timedelta(minutes=MINING_POTATO_COOLDOWN)
+        cooldown = MINING_POTATO_COOLDOWN
 
         if time_since >= cooldown:
             return None
