@@ -20,6 +20,8 @@ class User:
     raw_potato: int = 0
     golden_mushroom: int = 0
     telescope: int = 0
+    mine_level: int = 1
+    active_mine_level: int = 1
 
     @property
     def total_stars(self) -> int:
@@ -56,6 +58,8 @@ class User:
             raw_potato=row["raw_potato"],
             golden_mushroom=row["golden_mushroom"],
             telescope=row["telescope"],
+            mine_level=row["mine_level"] if "mine_level" in row.keys() else 1,
+            active_mine_level=row["active_mine_level"] if "active_mine_level" in row.keys() else 1,
         )
 
 

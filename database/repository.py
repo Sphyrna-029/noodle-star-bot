@@ -86,7 +86,8 @@ class UserRepository:
             cursor.execute(
                 """
                 SELECT gold_pickaxe, helmet, sword, raw_potato, golden_mushroom,
-                       bait_worm, bait_herring, bait_sturgeon, telescope
+                       bait_worm, bait_herring, bait_sturgeon, telescope,
+                       mine_level, active_mine_level
                 FROM noodle_stars WHERE user_id = ?
                 """,
                 (user_id,),
@@ -104,6 +105,8 @@ class UserRepository:
                     "bait_herring": 0,
                     "bait_sturgeon": 0,
                     "telescope": 0,
+                    "mine_level": 1,
+                    "active_mine_level": 1,
                 }
 
             return {
@@ -116,6 +119,8 @@ class UserRepository:
                 "bait_herring": row["bait_herring"] or 0,
                 "bait_sturgeon": row["bait_sturgeon"] or 0,
                 "telescope": row["telescope"] or 0,
+                "mine_level": row["mine_level"] or 1,
+                "active_mine_level": row["active_mine_level"] or 1,
             }
 
     def update_user_stars(self, user_id: int, username: str, stars: int) -> None:
@@ -248,6 +253,50 @@ class UserRepository:
             cursor.execute(
                 "UPDATE noodle_stars SET last_withdraw = ? WHERE user_id = ?",
                 (now, user_id),
+            )
+
+    # =========================================================================
+    # MINE LEVEL METHODS
+    # =========================================================================
+
+    def get_mine_level(self, user_id: int) -> int:
+        """Get user's highest unlocked mine level."""
+        with self.db.get_cursor() as cursor:
+            cursor.execute(
+                "SELECT mine_level FROM noodle_stars WHERE user_id = ?",
+                (user_id,),
+            )
+            row = cursor.fetchone()
+            if row is None or row["mine_level"] is None:
+                return 1
+            return row["mine_level"]
+
+    def get_active_mine_level(self, user_id: int) -> int:
+        """Get user's currently selected mine level."""
+        with self.db.get_cursor() as cursor:
+            cursor.execute(
+                "SELECT active_mine_level FROM noodle_stars WHERE user_id = ?",
+                (user_id,),
+            )
+            row = cursor.fetchone()
+            if row is None or row["active_mine_level"] is None:
+                return 1
+            return row["active_mine_level"]
+
+    def set_mine_level(self, user_id: int, level: int) -> None:
+        """Update user's highest unlocked mine level."""
+        with self.db.get_cursor() as cursor:
+            cursor.execute(
+                "UPDATE noodle_stars SET mine_level = ? WHERE user_id = ?",
+                (level, user_id),
+            )
+
+    def set_active_mine_level(self, user_id: int, level: int) -> None:
+        """Update user's active mine level."""
+        with self.db.get_cursor() as cursor:
+            cursor.execute(
+                "UPDATE noodle_stars SET active_mine_level = ? WHERE user_id = ?",
+                (level, user_id),
             )
 
     # =========================================================================

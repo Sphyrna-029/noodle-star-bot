@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import Final
 
-__all__ = ["Mineral", "ShopItem", "BaitTier", "Catch", "CatchBucket"]
+__all__ = ["Mineral", "MineHazard", "ShopItem", "BaitTier", "Catch", "CatchBucket"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -11,6 +11,18 @@ class Mineral:
     emoji: str
     stars: int
     weight: int
+
+
+@dataclass(frozen=True, slots=True)
+class MineHazard:
+    name: str
+    emoji: str
+    header: str
+    wallet_loss_pct: float
+    bank_loss_pct: float
+    protection_item: str  # "helmet" or "sword"
+    protected_msg: str
+    unprotected_msg: str
 
 
 @dataclass(frozen=True, slots=True)
