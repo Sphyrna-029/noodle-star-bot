@@ -1,6 +1,7 @@
 """Fishing service for the fishing minigame."""
 
 import asyncio
+import math
 import random
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -37,6 +38,7 @@ class FishingSession:
     bite_at: datetime
     expires_at: datetime
     active_level: int = 1
+    jig_active: bool = False
     task: Optional[asyncio.Task] = field(default=None, repr=False)
 
 
@@ -71,8 +73,8 @@ class PullResult:
     items_destroyed: bool = False
     level_name: str = ""
     level_emoji: str = ""
-    golden_axe_found: bool = False
-    mithril_shield_found: bool = False
+    found_items: List[str] = field(default_factory=list)
+    extra_messages: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -235,6 +237,21 @@ class FishingService:
             f"Rare boost: {bait_info.rare_boost}x",
         )
 
+    def activate_jig(self, user_id: int, username: str) -> tuple[bool, str]:
+        """Activate a bucktail jig for the next cast. Returns (success, message)."""
+        self.repo.get_user(user_id, username)
+        inventory = self.repo.get_user_inventory(user_id)
+
+        if inventory["bucktail_jig"] <= 0:
+            return False, "You don't have any bucktail jigs!"
+
+        if inventory["jig_active"]:
+            return False, "You already have a jig active! It will apply to your next cast."
+
+        self.repo.update_user_inventory(user_id, "bucktail_jig", inventory["bucktail_jig"] - 1)
+        self.repo.update_user_inventory(user_id, "jig_active", 1)
+        return True, "🎣 **Bucktail Jig activated!** Your next cast has a **20% legendary catch chance**!"
+
     async def cast_line(
         self,
         user_id: int,
@@ -302,6 +319,12 @@ class FishingService:
         # Get the user's active fishing level
         active_level = self.repo.get_active_fish_level(user_id)
 
+        # Check and consume jig_active flag
+        inventory = self.repo.get_user_inventory(user_id)
+        jig_active = bool(inventory["jig_active"])
+        if jig_active:
+            self.repo.update_user_inventory(user_id, "jig_active", 0)
+
         # Calculate bite timing
         bait_config = FISHING_BAIT_TIERS[equipped_bait]
         min_wait, max_wait = bait_config.bite_wait_min, bait_config.bite_wait_max
@@ -322,6 +345,7 @@ class FishingService:
             bite_at=bite_at,
             expires_at=expires_at,
             active_level=active_level,
+            jig_active=jig_active,
         )
         self._sessions[user_id] = session
 
@@ -332,10 +356,11 @@ class FishingService:
 
         bait_info = FISHING_BAIT_TIERS[equipped_bait]
         level_config = FISH_LEVELS[active_level]
+        jig_msg = " 🎣 *Bucktail Jig active!*" if jig_active else ""
         return CastResult(
             success=True,
             message=f"You cast your line with {bait_info.emoji} **{bait_info.display_name}** bait "
-            f"at {level_config['emoji']} **{level_config['name']}**... waiting for a bite.",
+            f"at {level_config['emoji']} **{level_config['name']}**... waiting for a bite.{jig_msg}",
             bite_wait_seconds=bite_wait,
         )
 
@@ -436,17 +461,28 @@ class FishingService:
         if session.state == FishingState.BITING:
             bait_type = session.bait_type
             active_level = session.active_level
+            jig_active = session.jig_active
             self._cleanup_session(user_id)
             self.repo.update_last_fish(user_id)
 
             level_config = FISH_LEVELS[active_level]
 
             # Roll the catch using level-specific table
-            catch = self._roll_catch(bait_type, active_level)
+            catch = self._roll_catch(bait_type, active_level, jig_active)
+
+            # Read inventory for item effects
+            inventory = self.repo.get_user_inventory(user_id)
+
+            # Star magnet: +15% stars boost
+            reward = catch["stars"]
+            star_magnet_uses = inventory["star_magnet"]
+            if star_magnet_uses > 0 and reward > 0:
+                reward = math.ceil(reward * 1.15)
+                self.repo.update_user_inventory(user_id, "star_magnet", star_magnet_uses - 1)
 
             # Award stars
             current_stars = self.repo.get_user_stars(user_id, username)
-            new_stars = current_stars + catch["stars"]
+            new_stars = current_stars + reward
             self.repo.update_user_stars(user_id, username, new_stars)
 
             result = PullResult(
@@ -455,34 +491,37 @@ class FishingService:
                 catch_name=catch["name"],
                 catch_emoji=catch["emoji"],
                 catch_rarity=catch["rarity"],
-                stars_earned=catch["stars"],
+                stars_earned=reward,
                 new_balance=new_stars,
                 level_name=level_config["name"],
                 level_emoji=level_config["emoji"],
             )
 
-            # 1% chance to find a golden axe with any legendary catch
-            if catch["rarity"] == "legendary" and random.random() < 0.01:
-                self.repo.update_user_inventory(user_id, "golden_axe", 50)
-                result.golden_axe_found = True
-
-            # 0.1% chance to find a mithril shield with any catch
-            if random.random() < 0.001:
-                self.repo.update_user_inventory(user_id, "mithril_shield", 10)
-                result.mithril_shield_found = True
-
             # Roll for disaster (after catch, matching mining pattern)
-            if level_config["disaster_chance"] > 0 and random.random() < level_config["disaster_chance"]:
+            disaster_chance = level_config["disaster_chance"]
+
+            # Lucky charm halves disaster chance
+            lucky_charm_uses = inventory["lucky_charm"]
+            used_lucky_charm = False
+            if lucky_charm_uses > 0:
+                disaster_chance *= 0.5
+                used_lucky_charm = True
+
+            if disaster_chance > 0 and random.random() < disaster_chance:
+                # Consume lucky charm use (it was active but disaster still happened)
+                if used_lucky_charm:
+                    self.repo.update_user_inventory(user_id, "lucky_charm", lucky_charm_uses - 1)
+
                 hazard: MineHazard = random.choice(level_config["hazards"])
                 result.disaster = hazard.name
                 result.disaster_header = hazard.header
 
-                # Check if player has protection
-                inventory = self.repo.get_user_inventory(user_id)
-                has_helmet = inventory["helmet"] > 0
-                has_sword = inventory["sword"] > 0
-                golden_axe_uses = inventory["golden_axe"]
-                mithril_shield_uses = inventory["mithril_shield"]
+                # Re-read inventory in case star_magnet was consumed
+                inv = self.repo.get_user_inventory(user_id)
+                has_helmet = inv["helmet"] > 0
+                has_sword = inv["sword"] > 0
+                golden_axe_uses = inv["golden_axe"]
+                mithril_shield_uses = inv["mithril_shield"]
 
                 # Siren and Leviathan require special items only
                 requires_special = hazard.name in ("siren", "leviathan")
@@ -526,13 +565,20 @@ class FishingService:
                     new_stars = new_stars - stars_lost
                     self.repo.update_user_stars(user_id, username, new_stars)
 
-                    # Calculate bank loss if applicable
+                    # Calculate bank loss (heart of leviathan provides 100% protection)
                     bank_lost = 0
                     if hazard.bank_loss_pct > 0:
-                        current_bank = self.repo.get_user_bank(user_id)
-                        bank_lost = int(current_bank * hazard.bank_loss_pct)
-                        if bank_lost > 0:
-                            self.repo.update_user_bank(user_id, username, current_bank - bank_lost)
+                        heart_uses = inv["heart_of_leviathan"]
+                        if heart_uses > 0:
+                            self.repo.update_user_inventory(user_id, "heart_of_leviathan", heart_uses - 1)
+                            result.extra_messages.append(
+                                "💜 Your **Heart of Leviathan** shielded your bank! *It crumbles to dust.*"
+                            )
+                        else:
+                            current_bank = self.repo.get_user_bank(user_id)
+                            bank_lost = int(current_bank * hazard.bank_loss_pct)
+                            if bank_lost > 0:
+                                self.repo.update_user_bank(user_id, username, current_bank - bank_lost)
 
                     self.repo.clear_user_inventory(user_id)
                     result.stars_lost = stars_lost
@@ -542,6 +588,64 @@ class FishingService:
                     result.disaster_unprotected_msg = hazard.unprotected_msg.format(
                         stars_lost=stars_lost, bank_lost=bank_lost
                     )
+            else:
+                # Lucky charm was active but no disaster — still consume a use
+                if used_lucky_charm:
+                    self.repo.update_user_inventory(user_id, "lucky_charm", lucky_charm_uses - 1)
+
+            # ---------------------------------------------------------------
+            # Roll for item drops (after disaster resolution)
+            # ---------------------------------------------------------------
+
+            # 1% golden axe on legendary catches
+            if catch["rarity"] == "legendary" and random.random() < 0.01:
+                self.repo.update_user_inventory(user_id, "golden_axe", 50)
+                result.found_items.append(
+                    "🪓 **Golden Axe** found! Protects against sword-type hazards (50 uses)."
+                )
+
+            # 0.1% mithril shield on any catch
+            if random.random() < 0.001:
+                self.repo.update_user_inventory(user_id, "mithril_shield", 10)
+                result.found_items.append(
+                    "🛡️ **Mithril Shield** found! Protects against helmet-type hazards (10 uses)."
+                )
+
+            # 0.3% bucktail jig on any catch
+            if random.random() < 0.003:
+                cur_jig = self.repo.get_user_inventory(user_id)["bucktail_jig"]
+                self.repo.update_user_inventory(user_id, "bucktail_jig", cur_jig + 1)
+                result.found_items.append(
+                    "🎣 **Bucktail Jig** found! Use `!use jig` for 20% legendary chance on next cast."
+                )
+
+            # 0.35% ray-gun on any catch
+            if random.random() < 0.0035:
+                self.repo.update_user_inventory(user_id, "ray_gun", 2)
+                result.found_items.append(
+                    "🔫 **Ray-Gun** found! Protects your items from alien abduction (2 uses)."
+                )
+
+            # 1% star magnet on rare or legendary catches
+            if catch["rarity"] in ("rare", "legendary") and random.random() < 0.01:
+                self.repo.update_user_inventory(user_id, "star_magnet", 20)
+                result.found_items.append(
+                    "🧲 **Star Magnet** found! +15% stars on mining and fishing (20 uses)."
+                )
+
+            # 0.05% lucky charm on any catch
+            if random.random() < 0.0005:
+                self.repo.update_user_inventory(user_id, "lucky_charm", 50)
+                result.found_items.append(
+                    "🍀 **Lucky Charm** found! Reduces disaster chance by 50% (50 uses)."
+                )
+
+            # 25% heart of leviathan on "Leviathan Scale" catch
+            if catch["name"] == "Leviathan Scale" and random.random() < 0.25:
+                self.repo.update_user_inventory(user_id, "heart_of_leviathan", 1)
+                result.found_items.append(
+                    "💜 **Heart of Leviathan** found! Fully protects your bank from one disaster."
+                )
 
             return result
 
@@ -552,11 +656,12 @@ class FishingService:
             message="Something went wrong with your fishing session.",
         )
 
-    def _roll_catch(self, bait_type: str, level: int = 1) -> dict:
+    def _roll_catch(self, bait_type: str, level: int = 1, jig_active: bool = False) -> dict:
         """
-        Roll a catch based on bait tier and fishing level.
+        Roll a catch based on bait tier, fishing level, and jig status.
 
         Bait rare_boost increases odds of rare/legendary catches.
+        Jig active gives a flat 20% legendary chance.
         """
         bait_config = FISHING_BAIT_TIERS[bait_type]
         rare_boost = bait_config.rare_boost
@@ -568,6 +673,20 @@ class FishingService:
         common_weight = catch_table["common"].weight
         rare_weight = catch_table["rare"].weight * rare_boost
         legendary_weight = catch_table["legendary"].weight * rare_boost
+
+        if jig_active:
+            # Jig overrides to 20% legendary chance
+            total = common_weight + rare_weight + legendary_weight
+            legendary_weight = total * 0.20
+            # Split remaining 80% proportionally between common and rare
+            remaining = total * 0.80
+            orig_non_leg = common_weight + rare_weight
+            if orig_non_leg > 0:
+                common_weight = remaining * (common_weight / orig_non_leg)
+                rare_weight = remaining * (rare_weight / orig_non_leg)
+            else:
+                common_weight = remaining * 0.5
+                rare_weight = remaining * 0.5
 
         total_weight = common_weight + rare_weight + legendary_weight
 

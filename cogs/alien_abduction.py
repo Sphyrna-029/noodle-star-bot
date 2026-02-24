@@ -98,6 +98,27 @@ class AlienAbductionCog(commands.Cog):
             # Nothing to lose — aliens aren't interested in broke people
             return
 
+        # Check for ray-gun protection (saves items, still lose stars)
+        inventory = self.repo.get_user_inventory(ctx.author.id)
+        ray_gun_uses = inventory.get("ray_gun", 0)
+
+        if ray_gun_uses > 0:
+            # Ray-gun saves items but stars are still lost
+            self.repo.update_user_stars(ctx.author.id, str(ctx.author), 0)
+            self.repo.update_user_inventory(ctx.author.id, "ray_gun", ray_gun_uses - 1)
+            remaining = ray_gun_uses - 1
+
+            await ctx.send(
+                f"🛸 **ALIEN ABDUCTION!** 🛸\n\n"
+                f"{ctx.author.mention} was beamed up by aliens! They took **{stars_lost} stars** "
+                f"from your wallet...\n\n"
+                f"🔫 But you pulled out your **Ray-Gun** and blasted them before they could "
+                f"touch your items! The aliens fled in terror.\n"
+                f"*Your ray-gun is running low on charge.* ({remaining} uses remaining)\n\n"
+                f"🏦 Bank stars were safe — the aliens couldn't crack the PIN."
+            )
+            return
+
         # Wipe wallet stars (set to 0)
         self.repo.update_user_stars(ctx.author.id, str(ctx.author), 0)
 

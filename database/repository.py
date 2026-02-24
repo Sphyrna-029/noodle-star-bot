@@ -94,7 +94,9 @@ class UserRepository:
                 """
                 SELECT gold_pickaxe, helmet, sword, raw_potato, golden_mushroom,
                        bait_worm, bait_herring, bait_sturgeon, telescope,
-                       mine_level, active_mine_level, golden_axe, mithril_shield
+                       mine_level, active_mine_level, golden_axe, mithril_shield,
+                       rune_fragment, fossilized_noodle, bucktail_jig, jig_active,
+                       ray_gun, star_magnet, lucky_charm, heart_of_leviathan
                 FROM noodle_stars WHERE user_id = ?
                 """,
                 (user_id,),
@@ -116,6 +118,14 @@ class UserRepository:
                     "active_mine_level": 1,
                     "golden_axe": 0,
                     "mithril_shield": 0,
+                    "rune_fragment": 0,
+                    "fossilized_noodle": 0,
+                    "bucktail_jig": 0,
+                    "jig_active": 0,
+                    "ray_gun": 0,
+                    "star_magnet": 0,
+                    "lucky_charm": 0,
+                    "heart_of_leviathan": 0,
                 }
 
             return {
@@ -132,6 +142,14 @@ class UserRepository:
                 "active_mine_level": row["active_mine_level"] or 1,
                 "golden_axe": row["golden_axe"] or 0,
                 "mithril_shield": row["mithril_shield"] or 0,
+                "rune_fragment": row["rune_fragment"] or 0,
+                "fossilized_noodle": row["fossilized_noodle"] or 0,
+                "bucktail_jig": row["bucktail_jig"] or 0,
+                "jig_active": row["jig_active"] or 0,
+                "ray_gun": row["ray_gun"] or 0,
+                "star_magnet": row["star_magnet"] or 0,
+                "lucky_charm": row["lucky_charm"] or 0,
+                "heart_of_leviathan": row["heart_of_leviathan"] or 0,
             }
 
     def update_user_stars(self, user_id: int, username: str, stars: int) -> None:
@@ -187,7 +205,10 @@ class UserRepository:
                 SET gold_pickaxe = 0, helmet = 0, sword = 0,
                     raw_potato = 0, golden_mushroom = 0, telescope = 0,
                     bait_worm = 0, bait_herring = 0, bait_sturgeon = 0,
-                    equipped_bait = NULL, golden_axe = 0, mithril_shield = 0
+                    equipped_bait = NULL, golden_axe = 0, mithril_shield = 0,
+                    rune_fragment = 0, fossilized_noodle = 0,
+                    bucktail_jig = 0, jig_active = 0, ray_gun = 0,
+                    star_magnet = 0, lucky_charm = 0, heart_of_leviathan = 0
                 WHERE user_id = ?
                 """,
                 (user_id,),

@@ -250,6 +250,29 @@ class ShopService:
         if inventory.get("mithril_shield", 0) > 0:
             items.append(f"🛡️ **Mithril Shield** ({inventory['mithril_shield']} uses)")
 
+        if inventory.get("rune_fragment", 0) > 0:
+            items.append(f"🪨 **Rune Fragment** ({inventory['rune_fragment']} uses)")
+
+        if inventory.get("fossilized_noodle", 0) > 0:
+            items.append(f"🍜 **Fossilized Noodle** ({inventory['fossilized_noodle']} uses)")
+
+        if inventory.get("bucktail_jig", 0) > 0:
+            jig_count = inventory["bucktail_jig"]
+            active = " *(1 active)*" if inventory.get("jig_active", 0) else ""
+            items.append(f"🎣 **Bucktail Jig** x{jig_count}{active}")
+
+        if inventory.get("ray_gun", 0) > 0:
+            items.append(f"🔫 **Ray-Gun** ({inventory['ray_gun']} uses)")
+
+        if inventory.get("star_magnet", 0) > 0:
+            items.append(f"🧲 **Star Magnet** ({inventory['star_magnet']} uses)")
+
+        if inventory.get("lucky_charm", 0) > 0:
+            items.append(f"🍀 **Lucky Charm** ({inventory['lucky_charm']} uses)")
+
+        if inventory.get("heart_of_leviathan", 0) > 0:
+            items.append(f"💜 **Heart of Leviathan** ({inventory['heart_of_leviathan']} uses)")
+
         # Fishing bait
         if inventory.get("bait_worm", 0) > 0:
             items.append(f"🪱 **Worm Bait** x{inventory['bait_worm']}")
