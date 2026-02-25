@@ -51,6 +51,37 @@ class NoodleHelpCommand(commands.HelpCommand):
     def _sort_commands(self, cmds: Iterable[commands.Command]) -> List[commands.Command]:
         return sorted(cmds, key=lambda c: c.name)
 
+    def _add_split_fields(
+        self,
+        embed: discord.Embed,
+        title: str,
+        lines: List[str],
+        *,
+        empty_value: str = "No commands.",
+        max_len: int = 1024,
+    ) -> None:
+        if not lines:
+            embed.add_field(name=title, value=empty_value, inline=False)
+            return
+
+        chunks: List[str] = []
+        current = ""
+        for line in lines:
+            candidate = f"{current}\n{line}" if current else line
+            if len(candidate) > max_len:
+                if current:
+                    chunks.append(current)
+                current = line
+            else:
+                current = candidate
+
+        if current:
+            chunks.append(current)
+
+        for index, chunk in enumerate(chunks):
+            name = title if index == 0 else f"{title} (cont.)"
+            embed.add_field(name=name, value=chunk, inline=False)
+
     # --- Send helpers --------------------------------------------------------
 
     async def send_bot_help(self, mapping):
@@ -74,11 +105,11 @@ class NoodleHelpCommand(commands.HelpCommand):
         for category in self._sort_categories(category_map.keys()):
             commands_list = self._sort_commands(category_map[category])
             lines = [self._format_command_line(cmd) for cmd in commands_list]
-            value = "\n".join(lines) if lines else "No commands."
-            embed.add_field(name=category, value=value, inline=False)
+            self._add_split_fields(embed, category, lines)
 
+        prefix = ctx.clean_prefix
         embed.set_footer(
-            text="Use !help <command> for details • Use !help <category> for a category"
+            text=f"Use {prefix}help <command> for details • Use {prefix}help <category> for a category"
         )
 
         await ctx.send(embed=embed)
@@ -119,11 +150,7 @@ class NoodleHelpCommand(commands.HelpCommand):
             color=discord.Color.blurple(),
         )
         lines = [self._format_command_line(cmd) for cmd in commands_list]
-        embed.add_field(
-            name="Commands",
-            value="\n".join(lines) if lines else "No commands.",
-            inline=False,
-        )
+        self._add_split_fields(embed, "Commands", lines)
 
         await ctx.send(embed=embed)
 
@@ -148,10 +175,6 @@ class NoodleHelpCommand(commands.HelpCommand):
         subcommands = await self.filter_commands(group.commands, sort=True)
         if subcommands:
             lines = [self._format_command_line(cmd) for cmd in subcommands]
-            embed.add_field(
-                name="Subcommands",
-                value="\n".join(lines),
-                inline=False,
-            )
+            self._add_split_fields(embed, "Subcommands", lines)
 
         await ctx.send(embed=embed)

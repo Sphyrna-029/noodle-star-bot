@@ -147,7 +147,12 @@ class FishingService:
         if last_fish is None:
             return None
 
-        cooldown_end = last_fish + timedelta(seconds=FISHING_COOLDOWN)
+        cooldown_seconds = (
+            int(FISHING_COOLDOWN.total_seconds())
+            if isinstance(FISHING_COOLDOWN, timedelta)
+            else int(FISHING_COOLDOWN)
+        )
+        cooldown_end = last_fish + timedelta(seconds=cooldown_seconds)
         now = datetime.now()
 
         if now < cooldown_end:
@@ -227,11 +232,15 @@ class FishingService:
         self.repo.set_equipped_bait(user_id, bait_type)
         bait_info = FISHING_BAIT_TIERS[bait_type]
 
+        bite_wait_min = int(bait_info.bite_wait_min.total_seconds())
+        bite_wait_max = int(bait_info.bite_wait_max.total_seconds())
+        pull_window = int(bait_info.pull_window.total_seconds())
+
         return EquipResult(
             success=True,
             message=f"Equipped {bait_info.emoji} **{bait_info.display_name}** bait!\n"
-            f"Bite wait: {bait_info.bite_wait_min}-{bait_info.bite_wait_max}s | "
-            f"Pull window: {bait_info.pull_window}s | "
+            f"Bite wait: {bite_wait_min}-{bite_wait_max}s | "
+            f"Pull window: {pull_window}s | "
             f"Rare boost: {bait_info.rare_boost}x",
         )
 
@@ -304,13 +313,15 @@ class FishingService:
 
         # Calculate bite timing
         bait_config = FISHING_BAIT_TIERS[equipped_bait]
-        min_wait, max_wait = bait_config.bite_wait_min, bait_config.bite_wait_max
+        min_wait = int(bait_config.bite_wait_min.total_seconds())
+        max_wait = int(bait_config.bite_wait_max.total_seconds())
+        pull_window = int(bait_config.pull_window.total_seconds())
         bite_wait = random.randint(min_wait, max_wait)
 
         now = datetime.now()
         bite_at = now + timedelta(seconds=bite_wait)
         # expires_at will be set when bite occurs
-        expires_at = bite_at + timedelta(seconds=bait_config.pull_window)
+        expires_at = bite_at + timedelta(seconds=pull_window)
 
         # Create session
         session = FishingSession(
@@ -327,7 +338,7 @@ class FishingService:
 
         # Schedule bite notification
         session.task = asyncio.create_task(
-            self._schedule_bite(user_id, bite_wait, bait_config.pull_window)
+            self._schedule_bite(user_id, bite_wait, pull_window)
         )
 
         bait_info = FISHING_BAIT_TIERS[equipped_bait]

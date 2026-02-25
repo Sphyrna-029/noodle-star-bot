@@ -391,7 +391,7 @@ class FishingCog(commands.Cog):
             )
 
         embed.set_footer(
-            text=f"Fishing cooldown: {FISHING_COOLDOWN}s between attempts"
+            text=f"Fishing cooldown: {int(FISHING_COOLDOWN.total_seconds())}s between attempts"
         )
         await ctx.send(embed=embed)
 
