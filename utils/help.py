@@ -96,10 +96,22 @@ class NoodleHelpCommand(commands.HelpCommand):
     def _truncate(self, text: str, *, max_len: int = 1900) -> str:
         return text[:max_len] + "…" if len(text) > max_len else text
 
+    def _get_prefix(self) -> str:
+        """Safely determine the prefix from the current context.
+
+        Older/newer discord.py versions may not expose `clean_prefix` on
+        HelpCommand directly. Prefer `context.clean_prefix`, then fall back
+        to `context.prefix`, and finally a sensible default.
+        """
+        ctx = self.context
+        if ctx is None:
+            return "/"
+        return getattr(ctx, "clean_prefix", None) or getattr(ctx, "prefix", "/") or "/"
+
     # --- Send helpers --------------------------------------------------------
 
     async def send_bot_help(self, mapping):
-        prefix = self.clean_prefix
+        prefix = self._get_prefix()
 
         embed = discord.Embed(
             title="✨ Noodle Star Bot — Help",
