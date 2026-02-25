@@ -22,8 +22,9 @@ class NoodleHelpCommand(commands.HelpCommand):
     ]
 
     def __init__(self):
+        # Base HelpCommand doesn't define `no_category`, so set it here.
+        self.no_category: str = "Other"
         super().__init__(
-            no_category="Other",
             command_attrs={
                 "help": "Show available commands and usage details.",
             },
@@ -85,6 +86,8 @@ class NoodleHelpCommand(commands.HelpCommand):
     async def _safe_send_embed(self, embed: discord.Embed, *, fallback_text: str) -> None:
         """Try embed first; fallback to plain text if embeds fail."""
         ctx = self.context
+        if ctx is None:
+            return
         try:
             await ctx.send(embed=embed)
         except (discord.Forbidden, discord.HTTPException):
@@ -96,8 +99,7 @@ class NoodleHelpCommand(commands.HelpCommand):
     # --- Send helpers --------------------------------------------------------
 
     async def send_bot_help(self, mapping):
-        ctx = self.context
-        prefix = ctx.clean_prefix
+        prefix = self.clean_prefix
 
         embed = discord.Embed(
             title="✨ Noodle Star Bot — Help",
