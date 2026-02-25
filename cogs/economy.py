@@ -62,7 +62,7 @@ class EconomyCog(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(name="deposit")
-    async def deposit(self, ctx, amount: str = None):
+    async def deposit(self, ctx, amount: str = ''):
         """Deposit noodle stars into your bank for safekeeping"""
         if amount is None:
             await ctx.send(
@@ -85,7 +85,7 @@ class EconomyCog(commands.Cog):
         )
 
     @commands.command(name="withdraw")
-    async def withdraw(self, ctx, amount: str = None):
+    async def withdraw(self, ctx, amount: str = ''):
         """Withdraw noodle stars from your bank"""
         if amount is None:
             await ctx.send(

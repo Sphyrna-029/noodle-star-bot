@@ -71,7 +71,7 @@ class FishingCog(commands.Cog):
             return
 
     @commands.command(name="fish")
-    async def fish(self, ctx, bait: str = None):
+    async def fish(self, ctx, bait: str = ''):
         """Cast your fishing line and wait for a bite.
 
         Usage: `!fish` or `!fish <bait>` to equip bait then cast.
@@ -284,7 +284,7 @@ class FishingCog(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(name="fishlevel")
-    async def fishlevel(self, ctx, level: int = None):
+    async def fishlevel(self, ctx, level: int):
         """View or switch your fishing level. Usage: !fishlevel [number]"""
         if level is not None:
             # Switch active level
@@ -320,7 +320,7 @@ class FishingCog(commands.Cog):
         await ctx.send("\n".join(lines))
 
     @commands.command(name="use")
-    async def use_item(self, ctx, item_type: str = None, item_name: str = None):
+    async def use_item(self, ctx, item_type: str = '', item_name: str = ''):
         """Equip bait for fishing. Usage: !use bait <worm|herring|sturgeon>"""
         if item_type is None:
             await ctx.send(
@@ -365,7 +365,7 @@ class FishingCog(commands.Cog):
             )
 
     @commands.command(name="equip")
-    async def equip(self, ctx, item_type: str = None, item_name: str = None):
+    async def equip(self, ctx, item_type: str = '', item_name: str = ''):
         """Alias for !use. Equip bait for fishing."""
         await self.use_item(ctx, item_type, item_name)
 
