@@ -3,7 +3,7 @@
 import discord
 from discord.ext import commands
 
-from services.shop import ShopService
+from cogs.shop.use_cases import ShopUseCases
 
 
 class ShopCog(commands.Cog):
@@ -11,7 +11,7 @@ class ShopCog(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.shop = ShopService()
+        self.shop = ShopUseCases()
 
     @commands.command(name="store")
     async def store(self, ctx):

@@ -2,8 +2,8 @@
 
 from discord.ext import commands
 
-from config import MINE_LEVELS
-from services.mining import MiningService
+from cogs.mining.constants import MINE_LEVELS
+from cogs.mining.use_cases import MiningUseCases
 
 
 class MiningCog(commands.Cog):
@@ -11,7 +11,7 @@ class MiningCog(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.mining = MiningService()
+        self.mining = MiningUseCases()
 
     @commands.command(name="mine")
     async def mine(self, ctx, use_item: str = None):

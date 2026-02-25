@@ -1,39 +1,13 @@
-"""Shop service for store and purchases."""
+"""Shop use-cases for store and purchases."""
 
-from dataclasses import dataclass
 from typing import Dict, List, Optional
 
-from config import SHOP_ITEMS, get_item_by_alias
+from cogs.shop.constants import SHOP_ITEMS, get_item_by_alias
 from database.repository import UserRepository
+from .dto import PurchaseResult, ShopItem
 
 
-@dataclass
-class PurchaseResult:
-    """Result of a purchase operation."""
-
-    success: bool
-    message: str
-    item_name: str = ""
-    item_emoji: str = ""
-    price: int = 0
-    quantity: int = 1
-    new_balance: int = 0
-
-
-@dataclass
-class ShopItem:
-    """Represents an item in the shop."""
-
-    key: str
-    price: int
-    db_column: str
-    consumable: bool
-    emoji: str
-    display_name: str
-    description: str
-
-
-class ShopService:
+class ShopUseCases:
     """Handles all shop-related business logic."""
 
     def __init__(self, repository: UserRepository = None):

@@ -1,11 +1,9 @@
-"""Trading service for player-to-player trades."""
+"""Trading use-cases for player-to-player trades."""
 
 import asyncio
-from dataclasses import dataclass, field
-from enum import Enum
 from typing import Callable, Dict, Optional
 
-from config import SHOP_ITEMS, get_item_by_alias
+from cogs.shop.constants import SHOP_ITEMS, get_item_by_alias
 from database.repository import UserRepository
 
 
@@ -22,41 +20,7 @@ TRADE_COUNTDOWN_SECONDS = 10  # seconds after accept before execution
 # =============================================================================
 
 
-class TradeState(Enum):
-    """States for the trade state machine."""
-    PENDING = "pending"        # Waiting for opponent to accept
-    COUNTDOWN = "countdown"    # 10s cancel window after accept
-    COMPLETED = "completed"    # Trade executed successfully
-    CANCELLED = "cancelled"    # Trade was cancelled
-
-
-@dataclass
-class TradeOffer:
-    """What one side of a trade is giving."""
-    stars: int = 0
-    items: Dict[str, int] = field(default_factory=dict)  # item_key -> quantity
-
-
-@dataclass
-class TradeSession:
-    """Represents an active trade between two users."""
-    proposer_id: int
-    proposer_name: str
-    opponent_id: int
-    opponent_name: str
-    proposer_offer: TradeOffer
-    opponent_offer: TradeOffer
-    state: TradeState = TradeState.PENDING
-    channel_id: int = 0
-    task: Optional[asyncio.Task] = field(default=None, repr=False)
-
-
-@dataclass
-class TradeResult:
-    """Result of a trade action."""
-    success: bool
-    message: str
-    session: Optional[TradeSession] = None
+from .dto import TradeOffer, TradeResult, TradeSession, TradeState
 
 
 # =============================================================================
@@ -166,11 +130,11 @@ def _parse_half(args: list[str]) -> tuple[Optional[TradeOffer], str]:
 
 
 # =============================================================================
-# Trade Service
+# Trade Use-Cases
 # =============================================================================
 
 
-class TradeService:
+class TradeUseCases:
     """
     Handles all trade-related business logic.
 

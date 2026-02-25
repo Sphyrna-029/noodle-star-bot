@@ -3,7 +3,7 @@
 import discord
 from discord.ext import commands
 
-from services.gambling import GamblingService
+from cogs.gambling.use_cases import GamblingUseCases
 
 
 class GamblingCog(commands.Cog):
@@ -11,7 +11,7 @@ class GamblingCog(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.gambling = GamblingService()
+        self.gambling = GamblingUseCases()
 
     @commands.command(name="gamble")
     async def gamble(self, ctx, amount: int = None):

@@ -3,7 +3,8 @@
 import discord
 from discord.ext import commands
 
-from services.trading import TradeService, TradeState, TRADE_COUNTDOWN_SECONDS
+from cogs.trading.use_cases import TradeUseCases, TRADE_COUNTDOWN_SECONDS
+from cogs.trading.dto import TradeState
 
 
 class TradingCog(commands.Cog):
@@ -11,7 +12,7 @@ class TradingCog(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.trading = TradeService()
+        self.trading = TradeUseCases()
         self.trading.set_trade_callback(self._on_trade_event)
 
     async def _on_trade_event(

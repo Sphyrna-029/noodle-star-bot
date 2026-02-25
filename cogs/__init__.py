@@ -1,11 +1,11 @@
 """Discord Cogs for Noodle Star Bot."""
 
-from .economy import EconomyCog
-from .fishing import FishingCog
-from .gambling import GamblingCog
-from .mining import MiningCog
-from .moderator import ModeratorCog
-from .shop import ShopCog
+from .economy.handlers import EconomyCog
+from .fishing.handlers import FishingCog
+from .gambling.handlers import GamblingCog
+from .mining.handlers import MiningCog
+from .moderator.handlers import ModeratorCog
+from .shop.handlers import ShopCog
 
 __all__ = [
     "EconomyCog",
