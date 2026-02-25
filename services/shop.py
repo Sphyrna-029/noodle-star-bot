@@ -244,6 +244,12 @@ class ShopService:
         if inventory["telescope"] > 0:
             items.append("📷 **Telescope** (Permanent)")
 
+        if inventory.get("golden_axe", 0) > 0:
+            items.append(f"🪓 **Golden Axe** ({inventory['golden_axe']} uses)")
+
+        if inventory.get("mithril_shield", 0) > 0:
+            items.append(f"🛡️ **Mithril Shield** ({inventory['mithril_shield']} uses)")
+
         # Fishing bait
         if inventory.get("bait_worm", 0) > 0:
             items.append(f"🪱 **Worm Bait** x{inventory['bait_worm']}")

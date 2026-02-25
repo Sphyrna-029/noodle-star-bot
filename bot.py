@@ -5,7 +5,7 @@ from discord.ext import commands
 
 from config import COMMAND_PREFIX
 from database.migrations import MigrationManager
-
+from utils.help import NoodleHelpCommand
 
 class NoodleStarBot(commands.Bot):
     """
@@ -25,8 +25,13 @@ class NoodleStarBot(commands.Bot):
 
         super().__init__(command_prefix=COMMAND_PREFIX, intents=intents)
 
+        # Custom help
+        self.help_command = NoodleHelpCommand()
+        self.help_command.cog = None
+
         # List of cogs to load
         self.cog_list = [
+            "cogs.alien_abduction",
             "cogs.economy",
             "cogs.gambling",
             "cogs.mining",

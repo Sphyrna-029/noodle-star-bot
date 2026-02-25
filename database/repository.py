@@ -34,12 +34,14 @@ class UserRepository:
 
             if row is None:
                 # Create new user
+                now = datetime.now().isoformat()
                 cursor.execute(
                     """
                     INSERT INTO noodle_stars
                     (user_id, username, stars, bank, last_mine,
-                     gold_pickaxe, helmet, sword, raw_potato, golden_mushroom, telescope)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     gold_pickaxe, helmet, sword, raw_potato, golden_mushroom, telescope,
+                     stamina, stamina_last_updated, stamina_last_reset, last_duel_amount, last_duel_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         user_id,
@@ -53,6 +55,11 @@ class UserRepository:
                         0,
                         0,
                         0,
+                        100,
+                        now,
+                        now,
+                        0,
+                        None,
                     ),
                 )
 
@@ -87,7 +94,7 @@ class UserRepository:
                 """
                 SELECT gold_pickaxe, helmet, sword, raw_potato, golden_mushroom,
                        bait_worm, bait_herring, bait_sturgeon, telescope,
-                       mine_level, active_mine_level
+                       mine_level, active_mine_level, golden_axe, mithril_shield
                 FROM noodle_stars WHERE user_id = ?
                 """,
                 (user_id,),
@@ -107,6 +114,8 @@ class UserRepository:
                     "telescope": 0,
                     "mine_level": 1,
                     "active_mine_level": 1,
+                    "golden_axe": 0,
+                    "mithril_shield": 0,
                 }
 
             return {
@@ -121,6 +130,8 @@ class UserRepository:
                 "telescope": row["telescope"] or 0,
                 "mine_level": row["mine_level"] or 1,
                 "active_mine_level": row["active_mine_level"] or 1,
+                "golden_axe": row["golden_axe"] or 0,
+                "mithril_shield": row["mithril_shield"] or 0,
             }
 
     def update_user_stars(self, user_id: int, username: str, stars: int) -> None:
@@ -162,6 +173,21 @@ class UserRepository:
                 """
                 UPDATE noodle_stars
                 SET helmet = 0, sword = 0, raw_potato = 0, golden_mushroom = 0
+                WHERE user_id = ?
+                """,
+                (user_id,),
+            )
+
+    def clear_all_items(self, user_id: int) -> None:
+        """Remove ALL items from user's inventory including gold pickaxe, telescope, and bait."""
+        with self.db.get_cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE noodle_stars
+                SET gold_pickaxe = 0, helmet = 0, sword = 0,
+                    raw_potato = 0, golden_mushroom = 0, telescope = 0,
+                    bait_worm = 0, bait_herring = 0, bait_sturgeon = 0,
+                    equipped_bait = NULL, golden_axe = 0, mithril_shield = 0
                 WHERE user_id = ?
                 """,
                 (user_id,),
@@ -253,6 +279,82 @@ class UserRepository:
             cursor.execute(
                 "UPDATE noodle_stars SET last_withdraw = ? WHERE user_id = ?",
                 (now, user_id),
+            )
+
+    def get_duel_stamina_state(self, user_id: int) -> dict:
+        """Get stamina state for duels."""
+        with self.db.get_cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT stamina, stamina_last_updated, stamina_last_reset,
+                       last_duel_amount, last_duel_at
+                FROM noodle_stars WHERE user_id = ?
+                """,
+                (user_id,),
+            )
+            row = cursor.fetchone()
+            if row is None:
+                return {
+                    "stamina": 0,
+                    "stamina_last_updated": None,
+                    "stamina_last_reset": None,
+                    "last_duel_amount": 0,
+                    "last_duel_at": None,
+                }
+
+            stamina_last_updated = (
+                datetime.fromisoformat(row["stamina_last_updated"])
+                if row["stamina_last_updated"]
+                else None
+            )
+            stamina_last_reset = (
+                datetime.fromisoformat(row["stamina_last_reset"])
+                if row["stamina_last_reset"]
+                else None
+            )
+            last_duel_at = (
+                datetime.fromisoformat(row["last_duel_at"])
+                if row["last_duel_at"]
+                else None
+            )
+
+            return {
+                "stamina": row["stamina"] or 0,
+                "stamina_last_updated": stamina_last_updated,
+                "stamina_last_reset": stamina_last_reset,
+                "last_duel_amount": row["last_duel_amount"] or 0,
+                "last_duel_at": last_duel_at,
+            }
+
+    def update_duel_stamina_state(
+        self,
+        user_id: int,
+        stamina: int,
+        stamina_last_updated: datetime,
+        stamina_last_reset: datetime,
+        last_duel_amount: int,
+        last_duel_at: datetime | None,
+    ) -> None:
+        """Update stamina state for duels."""
+        with self.db.get_cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE noodle_stars
+                SET stamina = ?,
+                    stamina_last_updated = ?,
+                    stamina_last_reset = ?,
+                    last_duel_amount = ?,
+                    last_duel_at = ?
+                WHERE user_id = ?
+                """,
+                (
+                    stamina,
+                    stamina_last_updated.isoformat(),
+                    stamina_last_reset.isoformat(),
+                    last_duel_amount,
+                    last_duel_at.isoformat() if last_duel_at else None,
+                    user_id,
+                ),
             )
 
     # =========================================================================
@@ -394,4 +496,24 @@ class UserRepository:
             cursor.execute(
                 "UPDATE noodle_stars SET last_fish = ? WHERE user_id = ?",
                 (now, user_id),
+            )
+
+    def get_active_fish_level(self, user_id: int) -> int:
+        """Get user's currently selected fishing level."""
+        with self.db.get_cursor() as cursor:
+            cursor.execute(
+                "SELECT active_fish_level FROM noodle_stars WHERE user_id = ?",
+                (user_id,),
+            )
+            row = cursor.fetchone()
+            if row is None or row["active_fish_level"] is None:
+                return 1
+            return row["active_fish_level"]
+
+    def set_active_fish_level(self, user_id: int, level: int) -> None:
+        """Update user's active fishing level."""
+        with self.db.get_cursor() as cursor:
+            cursor.execute(
+                "UPDATE noodle_stars SET active_fish_level = ? WHERE user_id = ?",
+                (level, user_id),
             )

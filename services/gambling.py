@@ -2,12 +2,20 @@
 
 import random
 from dataclasses import dataclass
+from datetime import datetime, timedelta
+from math import ceil
 from typing import Optional
 
 from config import (
     COINFLIP_MIN_BET,
     COINFLIP_WIN_MULTIPLIER,
     DUEL_DICE_SIDES,
+    DUEL_STAMINA_BASE_COST,
+    DUEL_STAMINA_COST_PER_50,
+    DUEL_STAMINA_MAX,
+    DUEL_STAMINA_REGEN_AMOUNT_DIVISOR,
+    DUEL_STAMINA_REGEN_BASE_MINUTES,
+    DUEL_STAMINA_REGEN_MAX_EXTRA_MINUTES,
     GAMBLE_DICE_SIDES,
     GAMBLE_MULTIPLIER_CDF,
     GAMBLE_WIN_TARGET,
@@ -52,6 +60,9 @@ class DuelResult:
     amount: int = 0
     challenger_new_balance: int = 0
     opponent_new_balance: int = 0
+    stamina_cost: int = 0
+    challenger_stamina_before: int = 0
+    challenger_stamina_after: int = 0
 
 
 class GamblingService:
@@ -59,6 +70,44 @@ class GamblingService:
 
     def __init__(self, repository: UserRepository = None):
         self.repo = repository or UserRepository()
+
+    def _calculate_duel_stamina_cost(self, amount: int) -> int:
+        return DUEL_STAMINA_BASE_COST + ceil(amount / DUEL_STAMINA_COST_PER_50)
+
+    def _duel_stamina_regen_interval_minutes(self, last_duel_amount: int) -> int:
+        extra = min(
+            DUEL_STAMINA_REGEN_MAX_EXTRA_MINUTES,
+            last_duel_amount // DUEL_STAMINA_REGEN_AMOUNT_DIVISOR,
+        )
+        return DUEL_STAMINA_REGEN_BASE_MINUTES + extra
+
+    def _apply_duel_stamina_regen(self, stamina_state: dict, now: datetime) -> dict:
+        last_reset = stamina_state.get("stamina_last_reset")
+        if last_reset is None or last_reset.date() != now.date():
+            stamina_state["stamina"] = DUEL_STAMINA_MAX
+            stamina_state["stamina_last_reset"] = now
+            stamina_state["stamina_last_updated"] = now
+
+        stamina = stamina_state.get("stamina", 0)
+        if stamina >= DUEL_STAMINA_MAX:
+            stamina_state["stamina"] = DUEL_STAMINA_MAX
+            return stamina_state
+
+        last_updated = stamina_state.get("stamina_last_updated") or now
+        interval_minutes = self._duel_stamina_regen_interval_minutes(
+            stamina_state.get("last_duel_amount", 0)
+        )
+        elapsed_intervals = int(
+            (now - last_updated).total_seconds() // (interval_minutes * 60)
+        )
+        if elapsed_intervals > 0:
+            regen = min(elapsed_intervals, DUEL_STAMINA_MAX - stamina)
+            stamina += regen
+            last_updated = last_updated + timedelta(minutes=regen * interval_minutes)
+
+        stamina_state["stamina"] = stamina
+        stamina_state["stamina_last_updated"] = last_updated
+        return stamina_state
 
     def _select_multiplier(self) -> float:
         """
@@ -317,6 +366,42 @@ class GamblingService:
                 message=f"Opponent only has **{opponent_stars}** stars! They can't match a bet of **{amount}** stars!",
             )
 
+        now = datetime.now()
+        stamina_state = self.repo.get_duel_stamina_state(challenger_id)
+        stamina_state = self._apply_duel_stamina_regen(stamina_state, now)
+
+        stamina_cost = self._calculate_duel_stamina_cost(amount)
+        stamina_before = stamina_state["stamina"]
+
+        if stamina_before < stamina_cost:
+            return DuelResult(
+                success=False,
+                message=(
+                    "You don't have enough stamina to duel! "
+                    f"Required: **{stamina_cost}**, available: **{stamina_before}**."
+                ),
+                stamina_cost=stamina_cost,
+                challenger_stamina_before=stamina_before,
+                challenger_stamina_after=stamina_before,
+            )
+
+        stamina_after = stamina_before - stamina_cost
+        stamina_state["stamina"] = stamina_after
+        stamina_state["stamina_last_updated"] = now
+        stamina_state["last_duel_amount"] = amount
+        stamina_state["last_duel_at"] = now
+        if stamina_state.get("stamina_last_reset") is None:
+            stamina_state["stamina_last_reset"] = now
+
+        self.repo.update_duel_stamina_state(
+            challenger_id,
+            stamina=stamina_state["stamina"],
+            stamina_last_updated=stamina_state["stamina_last_updated"],
+            stamina_last_reset=stamina_state["stamina_last_reset"],
+            last_duel_amount=stamina_state["last_duel_amount"],
+            last_duel_at=stamina_state["last_duel_at"],
+        )
+
         # Roll the dice
         challenger_roll = random.randint(1, DUEL_DICE_SIDES)
         opponent_roll = random.randint(1, DUEL_DICE_SIDES)
@@ -351,4 +436,7 @@ class GamblingService:
             amount=amount,
             challenger_new_balance=new_challenger_stars,
             opponent_new_balance=new_opponent_stars,
+            stamina_cost=stamina_cost,
+            challenger_stamina_before=stamina_before,
+            challenger_stamina_after=stamina_after,
         )

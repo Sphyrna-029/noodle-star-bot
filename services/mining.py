@@ -81,7 +81,7 @@ class MiningService:
             return None
 
         time_since = datetime.now() - last_mine
-        cooldown = timedelta(minutes=MINING_BASE_COOLDOWN)
+        cooldown = MINING_BASE_COOLDOWN
 
         if time_since >= cooldown:
             return None
@@ -95,7 +95,7 @@ class MiningService:
             return None
 
         time_since = datetime.now() - last_mine
-        cooldown = timedelta(minutes=MINING_POTATO_COOLDOWN)
+        cooldown = MINING_POTATO_COOLDOWN
 
         if time_since >= cooldown:
             return None
@@ -211,17 +211,48 @@ class MiningService:
             result.disaster = hazard.name
             result.disaster_header = hazard.header
 
-            # Check if player has the protection item
-            has_protection = (
-                (hazard.protection_item == "helmet" and has_helmet)
-                or (hazard.protection_item == "sword" and has_sword)
-            )
+            golden_axe_uses = inventory["golden_axe"]
+            mithril_shield_uses = inventory["mithril_shield"]
 
-            if has_protection:
+            # Siren and Leviathan require special items only
+            requires_special = hazard.name in ("siren", "leviathan")
+
+            # Determine protection
+            # Regular items are consumed first; special items are fallback
+            # Siren/Leviathan ignore regular helmet/sword entirely
+            protected = False
+            protection_msg = ""
+
+            if hazard.protection_item == "helmet":
+                if not requires_special and has_helmet:
+                    protected = True
+                    protection_msg = hazard.protected_msg
+                    self.repo.update_user_inventory(user_id, "helmet", 0)
+                elif mithril_shield_uses > 0:
+                    protected = True
+                    remaining = mithril_shield_uses - 1
+                    self.repo.update_user_inventory(user_id, "mithril_shield", remaining)
+                    protection_msg = (
+                        f"🛡️ Your mithril shield absorbed the blow!\n"
+                        f"*Your shield took a dent.* ({remaining} uses remaining)"
+                    )
+            elif hazard.protection_item == "sword":
+                if not requires_special and has_sword:
+                    protected = True
+                    protection_msg = hazard.protected_msg
+                    self.repo.update_user_inventory(user_id, "sword", 0)
+                elif golden_axe_uses > 0:
+                    protected = True
+                    remaining = golden_axe_uses - 1
+                    self.repo.update_user_inventory(user_id, "golden_axe", remaining)
+                    protection_msg = (
+                        f"🪓 Your golden axe fended off the attack!\n"
+                        f"*Your golden axe took a hit.* ({remaining} uses remaining)"
+                    )
+
+            if protected:
                 result.disaster_protected = True
-                result.disaster_protected_msg = hazard.protected_msg
-                # Remove protection item
-                self.repo.update_user_inventory(user_id, hazard.protection_item, 0)
+                result.disaster_protected_msg = protection_msg
             else:
                 # Calculate wallet loss
                 stars_lost = int(new_stars * hazard.wallet_loss_pct)
