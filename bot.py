@@ -26,8 +26,8 @@ class NoodleStarBot(commands.Bot):
         super().__init__(command_prefix=COMMAND_PREFIX, intents=intents)
 
         # Custom help
-        self.help_command = NoodleHelpCommand()
-        self.help_command.cog = None
+        #self.help_command = NoodleHelpCommand()
+        #self.help_command.cog = None
 
         # List of cogs to load
         self.cog_list = [
