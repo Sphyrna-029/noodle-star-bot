@@ -1,0 +1,49 @@
+name: Deploy Noodle Bot (Stage)
+
+on:
+  push:
+    branches:
+      - stage
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            # Navigate to the stage container directory
+            cd /home/mok/containers/noodle_bot_stage
+
+            # Create backup with timestamp
+            TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+            if [ -d "noodle-star-bot" ]; then
+              mv noodle-star-bot "noodle-star-bot_stage_${TIMESTAMP}"
+              echo "Renamed existing folder to noodle-star-bot_stage_${TIMESTAMP}"
+            fi
+
+            # Clone the repository (stage branch)
+            git clone -b stage https://github.com/Sphyrna-029/noodle-star-bot
+
+            # Find the most recent backup folder and copy database
+            LATEST_BACKUP=$(ls -td noodle-star-bot_stage_* 2>/dev/null | head -1)
+            if [ -n "$LATEST_BACKUP" ] && [ -d "$LATEST_BACKUP" ]; then
+              echo "Copying database from $LATEST_BACKUP"
+              cp "$LATEST_BACKUP/database.db" noodle-star-bot/ 2>/dev/null || \
+              cp "$LATEST_BACKUP"/*.db noodle-star-bot/ 2>/dev/null || \
+              echo "No database file found in backup"
+            else
+              echo "No backup folder found, skipping database copy"
+            fi
+
+            # Navigate to new bot folder and build
+            cd noodle-star-bot
+            cp ../control.sh .
+            echo "${{ secrets.SSH_PASSWORD }}" | sudo -S ./control.sh build
