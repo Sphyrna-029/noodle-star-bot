@@ -379,12 +379,14 @@ class FishingCog(commands.Cog):
         )
 
         for bait_key, bait_info in FISHING_BAIT_TIERS.items():
-            min_wait, max_wait = bait_info.bite_wait_min, bait_info.bite_wait_max
+            min_wait = int(bait_info.bite_wait_min.total_seconds())
+            max_wait = int(bait_info.bite_wait_max.total_seconds())
+            pull_window = int(bait_info.pull_window.total_seconds())
             embed.add_field(
                 name=f"{bait_info.emoji} {bait_info.display_name}",
                 value=(
                     f"**Bite wait:** {min_wait}-{max_wait}s\n"
-                    f"**Pull window:** {bait_info.pull_window}s\n"
+                    f"**Pull window:** {pull_window}s\n"
                     f"**Rare boost:** {bait_info.rare_boost}x"
                 ),
                 inline=True,
