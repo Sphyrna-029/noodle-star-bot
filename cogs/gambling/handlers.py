@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 
 from cogs.gambling.use_cases import GambleUseCase, CoinflipUseCase, DuelUseCase, BlackJackUseCase
-from cogs.gambling.dto import BlackJackGameState
+from cogs.gambling.dto import BlackJackGameState, BlackJackResult
 
 
 class BlackJackView(discord.ui.View):
@@ -26,7 +26,7 @@ class BlackJackView(discord.ui.View):
             return False
         return True
 
-    def _create_embed(self, result) -> discord.Embed:
+    def _create_embed(self, result: BlackJackResult, player_name: str) -> discord.Embed:
         """Create an embed showing the current game state."""
         # Format dealer hand (hide second card if game not over)
         if result.game_over:
@@ -57,7 +57,7 @@ class BlackJackView(discord.ui.View):
             inline=False
         )
         embed.add_field(
-            name=f"Your Hand ({result.player_value})",
+            name=f"Your Hand ({result.player_value}) ({player_name})",
             value=player_cards,
             inline=False
         )
@@ -112,7 +112,7 @@ class BlackJackView(discord.ui.View):
                 for item in self.children:
                     item.disabled = True
 
-            embed = self._create_embed(result)
+            embed = self._create_embed(result, interaction.user.name)
             await interaction.response.edit_message(embed=embed, view=self)
         except Exception as e:
             await interaction.response.send_message(
