@@ -277,8 +277,6 @@ class GamblingCog(commands.Cog):
     async def blackjack(self, ctx, amount: int = None):
         """Play BlackJack! Try to get 21 without going over. Dealer stands on 17."""
         try:
-            print(f"[DEBUG] Blackjack command called by {ctx.author} with amount: {amount}")
-            
             if amount is None:
                 await ctx.send(
                     f"❌ {ctx.author.mention}, please specify how many stars to bet! "
@@ -289,10 +287,8 @@ class GamblingCog(commands.Cog):
             # Send a thinking message to show the bot is responding
             thinking_msg = await ctx.send(f"🎴 {ctx.author.mention}, dealing cards...")
             
-            print("[DEBUG] Starting game...")
             # Start the game
             result = self.blackjack_use_case.start_game(ctx.author.id, str(ctx.author), amount)
-            print(f"[DEBUG] Game started - success: {result.success}, game_over: {result.game_over}")
 
             if not result.success:
                 await thinking_msg.edit(content=f"❌ {ctx.author.mention}, {result.message}")
@@ -300,7 +296,6 @@ class GamblingCog(commands.Cog):
 
             # If game ended immediately (blackjack or double blackjack)
             if result.game_over:
-                print("[DEBUG] Game ended immediately")
                 embed = discord.Embed(title="🃏 BlackJack 🃏", color=discord.Color.gold())
 
                 dealer_cards = " ".join(str(card) for card in result.dealer_hand)
@@ -341,7 +336,6 @@ class GamblingCog(commands.Cog):
                 await thinking_msg.edit(content=None, embed=embed)
                 return
 
-            print("[DEBUG] Creating game state and view...")
             # Create game state for the view
             game_state = BlackJackGameState(
                 user_id=ctx.author.id,
@@ -355,14 +349,10 @@ class GamblingCog(commands.Cog):
 
             # Create the interactive view
             view = BlackJackView(game_state, self.blackjack_use_case, ctx.author.id)
-            print("[DEBUG] Creating embed...")
             embed = view._create_embed(result)
 
-            print("[DEBUG] Sending message with embed and view...")
             await thinking_msg.edit(content=None, embed=embed, view=view)
-            print("[DEBUG] Message sent successfully")
         except Exception as e:
-            print(f"[ERROR] Exception in blackjack command: {type(e).__name__}: {str(e)}")
             import traceback
             traceback.print_exc()
             try:
