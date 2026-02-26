@@ -104,27 +104,41 @@ class BlackJackView(discord.ui.View):
     @discord.ui.button(label="Hit", style=discord.ButtonStyle.primary, emoji="🎴")
     async def hit_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Handle Hit button press."""
-        result = self.use_case.hit(self.game_state)
+        try:
+            result = self.use_case.hit(self.game_state)
 
-        if result.game_over:
-            # Disable buttons when game is over
-            for item in self.children:
-                item.disabled = True
+            if result.game_over:
+                # Disable buttons when game is over
+                for item in self.children:
+                    item.disabled = True
 
-        embed = self._create_embed(result)
-        await interaction.response.edit_message(embed=embed, view=self)
+            embed = self._create_embed(result)
+            await interaction.response.edit_message(embed=embed, view=self)
+        except Exception as e:
+            await interaction.response.send_message(
+                f"❌ Error: {type(e).__name__}: {str(e)}",
+                ephemeral=True
+            )
+            raise
 
     @discord.ui.button(label="Stand", style=discord.ButtonStyle.secondary, emoji="✋")
     async def stand_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Handle Stand button press."""
-        result = self.use_case.stand(self.game_state)
+        try:
+            result = self.use_case.stand(self.game_state)
 
-        # Game is always over after standing
-        for item in self.children:
-            item.disabled = True
+            # Game is always over after standing
+            for item in self.children:
+                item.disabled = True
 
-        embed = self._create_embed(result)
-        await interaction.response.edit_message(embed=embed, view=self)
+            embed = self._create_embed(result)
+            await interaction.response.edit_message(embed=embed, view=self)
+        except Exception as e:
+            await interaction.response.send_message(
+                f"❌ Error: {type(e).__name__}: {str(e)}",
+                ephemeral=True
+            )
+            raise
 
 
 class GamblingCog(commands.Cog):
@@ -262,78 +276,101 @@ class GamblingCog(commands.Cog):
     @commands.command(name="blackjack", aliases=["bj"])
     async def blackjack(self, ctx, amount: int = None):
         """Play BlackJack! Try to get 21 without going over. Dealer stands on 17."""
-        if amount is None:
-            await ctx.send(
-                f"❌ {ctx.author.mention}, please specify how many stars to bet! "
-                f"Usage: `!blackjack <amount>`"
-            )
-            return
+        try:
+            print(f"[DEBUG] Blackjack command called by {ctx.author} with amount: {amount}")
+            
+            if amount is None:
+                await ctx.send(
+                    f"❌ {ctx.author.mention}, please specify how many stars to bet! "
+                    f"Usage: `!blackjack <amount>`"
+                )
+                return
 
-        # Start the game
-        result = self.blackjack_use_case.start_game(ctx.author.id, str(ctx.author), amount)
+            # Send a thinking message to show the bot is responding
+            thinking_msg = await ctx.send(f"🎴 {ctx.author.mention}, dealing cards...")
+            
+            print("[DEBUG] Starting game...")
+            # Start the game
+            result = self.blackjack_use_case.start_game(ctx.author.id, str(ctx.author), amount)
+            print(f"[DEBUG] Game started - success: {result.success}, game_over: {result.game_over}")
 
-        if not result.success:
-            await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
-            return
+            if not result.success:
+                await thinking_msg.edit(content=f"❌ {ctx.author.mention}, {result.message}")
+                return
 
-        # If game ended immediately (blackjack or double blackjack)
-        if result.game_over:
-            embed = discord.Embed(title="🃏 BlackJack 🃏", color=discord.Color.gold())
+            # If game ended immediately (blackjack or double blackjack)
+            if result.game_over:
+                print("[DEBUG] Game ended immediately")
+                embed = discord.Embed(title="🃏 BlackJack 🃏", color=discord.Color.gold())
 
-            dealer_cards = " ".join(str(card) for card in result.dealer_hand)
-            player_cards = " ".join(str(card) for card in result.player_hand)
+                dealer_cards = " ".join(str(card) for card in result.dealer_hand)
+                player_cards = " ".join(str(card) for card in result.player_hand)
 
-            embed.add_field(
-                name=f"Dealer's Hand ({result.dealer_value})",
-                value=dealer_cards,
-                inline=False
-            )
-            embed.add_field(
-                name=f"Your Hand ({result.player_value})",
-                value=player_cards,
-                inline=False
-            )
-
-            if result.won is True:
-                result_text = f"✨ **{result.message}** ✨"
-                embed.color = discord.Color.green()
-            else:
-                result_text = f"🤝 **{result.message}** 🤝"
-
-            embed.add_field(name="Result", value=result_text, inline=False)
-
-            if result.amount_changed > 0:
                 embed.add_field(
-                    name="Winnings",
-                    value=f"+{result.amount_changed} ⭐",
+                    name=f"Dealer's Hand ({result.dealer_value})",
+                    value=dealer_cards,
+                    inline=False
+                )
+                embed.add_field(
+                    name=f"Your Hand ({result.player_value})",
+                    value=player_cards,
+                    inline=False
+                )
+
+                if result.won is True:
+                    result_text = f"✨ **{result.message}** ✨"
+                    embed.color = discord.Color.green()
+                else:
+                    result_text = f"🤝 **{result.message}** 🤝"
+
+                embed.add_field(name="Result", value=result_text, inline=False)
+
+                if result.amount_changed > 0:
+                    embed.add_field(
+                        name="Winnings",
+                        value=f"+{result.amount_changed} ⭐",
+                        inline=True
+                    )
+
+                embed.add_field(
+                    name="New Balance",
+                    value=f"{result.new_balance} ⭐",
                     inline=True
                 )
 
-            embed.add_field(
-                name="New Balance",
-                value=f"{result.new_balance} ⭐",
-                inline=True
+                await thinking_msg.edit(content=None, embed=embed)
+                return
+
+            print("[DEBUG] Creating game state and view...")
+            # Create game state for the view
+            game_state = BlackJackGameState(
+                user_id=ctx.author.id,
+                username=str(ctx.author),
+                bet_amount=amount,
+                deck=result.deck,
+                player_hand=result.player_hand,
+                dealer_hand=result.dealer_hand,
+                game_over=False
             )
 
-            await ctx.send(embed=embed)
-            return
+            # Create the interactive view
+            view = BlackJackView(game_state, self.blackjack_use_case, ctx.author.id)
+            print("[DEBUG] Creating embed...")
+            embed = view._create_embed(result)
 
-        # Create game state for the view
-        game_state = BlackJackGameState(
-            user_id=ctx.author.id,
-            username=str(ctx.author),
-            bet_amount=amount,
-            deck=result.deck,
-            player_hand=result.player_hand,
-            dealer_hand=result.dealer_hand,
-            game_over=False
-        )
-
-        # Create the interactive view
-        view = BlackJackView(game_state, self.blackjack_use_case, ctx.author.id)
-        embed = view._create_embed(result)
-
-        await ctx.send(embed=embed, view=view)
+            print("[DEBUG] Sending message with embed and view...")
+            await thinking_msg.edit(content=None, embed=embed, view=view)
+            print("[DEBUG] Message sent successfully")
+        except Exception as e:
+            print(f"[ERROR] Exception in blackjack command: {type(e).__name__}: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            try:
+                await ctx.send(f"❌ An error occurred: {type(e).__name__}: {str(e)}")
+            except:
+                pass
+            # Re-raise so it appears in logs
+            raise
 
 
 async def setup(bot):
