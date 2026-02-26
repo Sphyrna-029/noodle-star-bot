@@ -1,13 +1,9 @@
-"""Gambling use-cases for games of chance."""
-
 import random
 from datetime import datetime, timedelta
 from math import ceil
 from typing import Optional
 
 from cogs.gambling.constants import (
-    COINFLIP_MIN_BET,
-    COINFLIP_WIN_MULTIPLIER,
     DUEL_DICE_SIDES,
     DUEL_STAMINA_BASE_COST,
     DUEL_STAMINA_COST_PER_50,
@@ -15,19 +11,13 @@ from cogs.gambling.constants import (
     DUEL_STAMINA_REGEN_AMOUNT_DIVISOR,
     DUEL_STAMINA_REGEN_BASE_MINUTES,
     DUEL_STAMINA_REGEN_MAX_EXTRA_MINUTES,
-    GAMBLE_DICE_SIDES,
-    GAMBLE_MULTIPLIER_CDF,
-    GAMBLE_WIN_TARGET,
 )
-from database.repository import UserRepository
-from .dto import CoinflipResult, DuelResult, GambleResult
+from cogs.gambling.dto import DuelResult
+from .base import BaseGamblingUseCase
 
 
-class GamblingUseCases:
-    """Handles all gambling-related business logic."""
-
-    def __init__(self, repository: UserRepository = None):
-        self.repo = repository or UserRepository()
+class DuelUseCase(BaseGamblingUseCase):
+    """Handles the duel game logic."""
 
     def _calculate_duel_stamina_cost(self, amount: int) -> int:
         return DUEL_STAMINA_BASE_COST + ceil(amount / DUEL_STAMINA_COST_PER_50)
@@ -67,200 +57,13 @@ class GamblingUseCases:
         stamina_state["stamina_last_updated"] = last_updated
         return stamina_state
 
-    def _select_multiplier(self) -> float:
-        """
-        Select a random multiplier based on weighted probabilities.
-
-        Uses the original bot's logic:
-        - 1% chance for 5x
-        - 33% chance for 1.25x
-        - 33% chance for 1.5x
-        - 33% chance for 2x
-        """
-        rand = random.random()
-        for multiplier, threshold in GAMBLE_MULTIPLIER_CDF:
-            if rand < threshold:
-                return multiplier
-        return GAMBLE_MULTIPLIER_CDF[-1][0]  # Default to last multiplier
-
-    def gamble(self, user_id: int, username: str, amount: int) -> GambleResult:
-        """
-        Play the gamble game (roll to 7).
-
-        Args:
-            user_id: Discord user ID
-            username: Discord username
-            amount: Amount to gamble
-
-        Returns:
-            GambleResult with outcome
-        """
-        current_stars = self.repo.get_user_stars(user_id, username)
-
-        # Validation
-        if amount is None:
-            return GambleResult(
-                success=False,
-                won=False,
-                message="Please specify how many stars to gamble! Usage: `!gamble <amount>`",
-            )
-
-        if amount <= 0:
-            return GambleResult(
-                success=False,
-                won=False,
-                message="You must gamble at least 1 noodle star!",
-            )
-
-        if current_stars <= 0:
-            return GambleResult(
-                success=False,
-                won=False,
-                message=f"You need at least 1 noodle star to gamble! Current balance: **{current_stars}** stars",
-            )
-
-        if amount > current_stars:
-            return GambleResult(
-                success=False,
-                won=False,
-                message=f"You only have **{current_stars}** stars! You can't gamble **{amount}** stars!",
-            )
-
-        # Select multiplier and roll
-        multiplier = self._select_multiplier()
-        roll = random.randint(1, GAMBLE_DICE_SIDES)
-
-        # Deduct the bet immediately (consistent behavior)
-        deducted_balance = current_stars - amount
-
-        # Check if won
-        if roll == GAMBLE_WIN_TARGET:
-            winnings = int(amount * multiplier)
-            new_balance = deducted_balance + winnings
-            self.repo.update_user_stars(user_id, username, new_balance)
-
-            return GambleResult(
-                success=True,
-                won=True,
-                message="WIN",
-                roll=roll,
-                multiplier=multiplier,
-                amount_changed=winnings - amount,
-                new_balance=new_balance,
-            )
-        else:
-            new_balance = deducted_balance
-            self.repo.update_user_stars(user_id, username, new_balance)
-
-            return GambleResult(
-                success=True,
-                won=False,
-                message="LOSE",
-                roll=roll,
-                multiplier=multiplier,
-                amount_changed=-amount,
-                new_balance=new_balance,
-            )
-
-    def coinflip(
-        self, user_id: int, username: str, amount: int, choice: str
-    ) -> CoinflipResult:
-        """
-        Play the coinflip game.
-
-        Args:
-            user_id: Discord user ID
-            username: Discord username
-            amount: Amount to bet
-            choice: "heads" or "tails" (or "h"/"t")
-
-        Returns:
-            CoinflipResult with outcome
-        """
-        current_stars = self.repo.get_user_stars(user_id, username)
-
-        # Validation
-        if amount is None or choice is None:
-            return CoinflipResult(
-                success=False,
-                won=False,
-                message="Please specify an amount and choice! Usage: `!coinflip <amount> <heads/tails>`",
-            )
-
-        # Normalize choice
-        choice = choice.lower()
-        if choice not in ["heads", "tails", "h", "t"]:
-            return CoinflipResult(
-                success=False,
-                won=False,
-                message="Please choose either `heads` or `tails`!",
-            )
-
-        if choice == "h":
-            choice = "heads"
-        elif choice == "t":
-            choice = "tails"
-
-        if amount < COINFLIP_MIN_BET:
-            return CoinflipResult(
-                success=False,
-                won=False,
-                message=f"Minimum bet for coinflip is {COINFLIP_MIN_BET} noodle stars!",
-            )
-
-        if current_stars <= 0:
-            return CoinflipResult(
-                success=False,
-                won=False,
-                message=f"You need at least 1 noodle star to play! Current balance: **{current_stars}** stars",
-            )
-
-        if amount > current_stars:
-            return CoinflipResult(
-                success=False,
-                won=False,
-                message=f"You only have **{current_stars}** stars! You can't bet **{amount}** stars!",
-            )
-
-        # Flip the coin
-        result = random.choice(["heads", "tails"])
-
-        # Deduct the bet immediately
-        deducted_balance = current_stars - amount
-
-        if result == choice:
-            winnings = int(amount * COINFLIP_WIN_MULTIPLIER)
-            new_balance = deducted_balance + winnings
-            self.repo.update_user_stars(user_id, username, new_balance)
-
-            return CoinflipResult(
-                success=True,
-                won=True,
-                message="WIN",
-                result=result,
-                amount_changed=winnings - amount,
-                new_balance=new_balance,
-            )
-        else:
-            new_balance = deducted_balance
-            self.repo.update_user_stars(user_id, username, new_balance)
-
-            return CoinflipResult(
-                success=True,
-                won=False,
-                message="LOSE",
-                result=result,
-                amount_changed=-amount,
-                new_balance=new_balance,
-            )
-
-    def duel(
+    def execute(
         self,
         challenger_id: int,
         challenger_name: str,
         opponent_id: int,
         opponent_name: str,
-        amount: int,
+        amount: Optional[int],
     ) -> DuelResult:
         """
         Execute a duel between two players.

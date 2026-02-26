@@ -3,7 +3,7 @@
 import discord
 from discord.ext import commands
 
-from cogs.gambling.use_cases import GamblingUseCases
+from cogs.gambling.use_cases import GambleUseCase, CoinflipUseCase, DuelUseCase
 
 
 class GamblingCog(commands.Cog):
@@ -11,7 +11,9 @@ class GamblingCog(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.gambling = GamblingUseCases()
+        self.gamble_use_case = GambleUseCase()
+        self.coinflip_use_case = CoinflipUseCase()
+        self.duel_use_case = DuelUseCase()
 
     @commands.command(name="gamble")
     async def gamble(self, ctx, amount: int = None):
@@ -23,7 +25,7 @@ class GamblingCog(commands.Cog):
             )
             return
 
-        result = self.gambling.gamble(ctx.author.id, str(ctx.author), amount)
+        result = self.gamble_use_case.execute(ctx.author.id, str(ctx.author), amount)
 
         if not result.success:
             await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
@@ -54,7 +56,7 @@ class GamblingCog(commands.Cog):
             )
             return
 
-        result = self.gambling.coinflip(ctx.author.id, str(ctx.author), amount, choice)
+        result = self.coinflip_use_case.execute(ctx.author.id, str(ctx.author), amount, choice)
 
         if not result.success:
             await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
@@ -97,7 +99,7 @@ class GamblingCog(commands.Cog):
             await ctx.send(f"❌ {ctx.author.mention}, you can't duel a bot!")
             return
 
-        result = self.gambling.duel(
+        result = self.duel_use_case.execute(
             ctx.author.id,
             str(ctx.author),
             opponent.id,
