@@ -1,17 +1,7 @@
-"""Discord Cogs for Noodle Star Bot."""
+"""Top-level cogs package.
 
-from .economy import EconomyCog
-from .fishing import FishingCog
-from .gambling import GamblingCog
-from .mining import MiningCog
-from .moderator import ModeratorCog
-from .shop import ShopCog
-
-__all__ = [
-    "EconomyCog",
-    "FishingCog",
-    "GamblingCog",
-    "MiningCog",
-    "ModeratorCog",
-    "ShopCog",
-]
+Keep this module side-effect free.
+Do not import handlers here, because infra modules import feature constants
+from `cogs.<feature>.constants`, and eager handler imports can create
+startup-time import cycles.
+"""

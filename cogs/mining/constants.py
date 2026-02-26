@@ -1,7 +1,7 @@
 from datetime import timedelta
 from typing import Final
 
-from .models import MineHazard, Mineral
+from config.models import MineHazard, Mineral
 
 __all__ = [
     "MINING_BASE_COOLDOWN",

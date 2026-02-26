@@ -3,7 +3,7 @@
 import discord
 from discord.ext import commands
 
-from services.economy import EconomyService
+from cogs.economy.use_cases import EconomyUseCases
 
 
 class EconomyCog(commands.Cog):
@@ -11,7 +11,7 @@ class EconomyCog(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.economy = EconomyService()
+        self.economy = EconomyUseCases()
 
     @commands.command(name="stars")
     async def check_stars(self, ctx, member: discord.Member = None):

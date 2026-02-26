@@ -1,11 +1,10 @@
 """Mining service with cooldowns, disasters, and mine levels."""
 
 import random
-from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import List, Optional
+from typing import Optional
 
-from config import (
+from cogs.mining.constants import (
     MINE_LEVELS,
     MINERALS_GOLD_PICKAXE,
     MINERALS_NORMAL,
@@ -15,51 +14,10 @@ from config import (
 from config.models import MineHazard
 from database.repository import UserRepository
 from utils.formatters import format_time_remaining
+from .dto import LevelInfo, MineResult, UnlockResult
 
 
-@dataclass
-class MineResult:
-    """Result of a mining operation."""
-
-    success: bool
-    message: str
-    mineral_name: str = ""
-    mineral_emoji: str = ""
-    stars_earned: int = 0
-    new_balance: int = 0
-    disaster: Optional[str] = None
-    disaster_protected: bool = False
-    disaster_header: str = ""
-    disaster_protected_msg: str = ""
-    disaster_unprotected_msg: str = ""
-    stars_lost: int = 0
-    bank_lost: int = 0
-    items_destroyed: bool = False
-    extra_messages: List[str] = field(default_factory=list)
-    level_name: str = ""
-    level_emoji: str = ""
-
-
-@dataclass
-class UnlockResult:
-    """Result of unlocking a mine level."""
-
-    success: bool
-    message: str
-    level: int = 0
-    cost: int = 0
-
-
-@dataclass
-class LevelInfo:
-    """Info about a user's mine levels."""
-
-    unlocked_level: int
-    active_level: int
-    levels: dict  # reference to MINE_LEVELS
-
-
-class MiningService:
+class MiningUseCases:
     """Handles all mining-related business logic."""
 
     def __init__(self, repository: Optional[UserRepository] = None):
@@ -372,3 +330,4 @@ class MiningService:
             user_id, "golden_mushroom", inventory["golden_mushroom"] - 1
         )
         return True
+

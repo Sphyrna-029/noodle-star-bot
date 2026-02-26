@@ -3,7 +3,7 @@
 import discord
 from discord.ext import commands
 
-from services.economy import EconomyService
+from cogs.economy.use_cases import EconomyUseCases
 from utils.checks import is_moderator
 
 
@@ -12,7 +12,7 @@ class ModeratorCog(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.economy = EconomyService()
+        self.economy = EconomyUseCases()
 
     @commands.command(name="addstar")
     @is_moderator()

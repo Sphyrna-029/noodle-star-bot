@@ -1,32 +1,18 @@
-"""Economy service for balance management."""
+"""Economy use-cases for balance management."""
 
-from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import List, Tuple
 
-from config import (
+from cogs.economy.constants import (
     BANKING_DEPOSIT_COOLDOWN_MINUTES,
     BANKING_WITHDRAW_COOLDOWN_MINUTES,
 )
 from database.repository import UserRepository
 from utils.formatters import format_time_remaining
+from .dto import BalanceResult
 
 
-@dataclass
-class BalanceResult:
-    """Result of a balance operation."""
-
-    success: bool
-    message: str
-    wallet: int = 0
-    bank: int = 0
-
-    @property
-    def total(self) -> int:
-        return self.wallet + self.bank
-
-
-class EconomyService:
+class EconomyUseCases:
     """Handles all economy-related business logic."""
 
     def __init__(self, repository: UserRepository = None):

@@ -1,7 +1,14 @@
-FROM python:3-alpine
+FROM python:3.12-slim
 
 WORKDIR /bot
 
-RUN pip3 install discord
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-CMD [ "python3", "main.py" ]
+COPY requirements.txt ./
+RUN python -m pip install --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+CMD ["python", "main.py"]

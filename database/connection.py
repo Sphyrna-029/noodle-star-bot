@@ -4,7 +4,7 @@ import sqlite3
 from contextlib import contextmanager
 from typing import Generator
 
-from config import DATABASE_FILE
+from config.db import DATABASE_FILE
 
 
 class DatabaseConnection:

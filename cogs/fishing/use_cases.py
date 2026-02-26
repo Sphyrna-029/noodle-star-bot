@@ -1,13 +1,11 @@
-"""Fishing service for the fishing minigame."""
+"""Fishing use-cases for the fishing minigame."""
 
 import asyncio
 import random
-from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from enum import Enum
 from typing import Callable, Dict, List, Optional
 
-from config import (
+from cogs.fishing.constants import (
     FISH_LEVELS,
     FISHING_BAIT_TIERS,
     FISHING_CATCH_TABLE,
@@ -17,95 +15,18 @@ from config.models import MineHazard
 from database.repository import UserRepository
 
 
-class FishingState(Enum):
-    """States for the fishing state machine."""
-
-    IDLE = "idle"
-    WAITING = "waiting"  # Line cast, waiting for bite
-    BITING = "biting"  # Fish is biting, waiting for pull
-
-
-@dataclass
-class FishingSession:
-    """Represents an active fishing session for a user."""
-
-    user_id: int
-    channel_id: int
-    state: FishingState
-    bait_type: str
-    cast_at: datetime
-    bite_at: datetime
-    expires_at: datetime
-    active_level: int = 1
-    task: Optional[asyncio.Task] = field(default=None, repr=False)
+from .dto import (
+    CastResult,
+    EquipResult,
+    FishLevelInfo,
+    FishingSession,
+    FishingState,
+    FishingStatus,
+    PullResult,
+)
 
 
-@dataclass
-class CastResult:
-    """Result of casting a line."""
-
-    success: bool
-    message: str
-    bite_wait_seconds: int = 0
-
-
-@dataclass
-class PullResult:
-    """Result of pulling the line."""
-
-    success: bool
-    message: str
-    catch_name: str = ""
-    catch_emoji: str = ""
-    catch_rarity: str = ""
-    stars_earned: int = 0
-    new_balance: int = 0
-    # Disaster fields (mirrors MineResult pattern)
-    disaster: Optional[str] = None
-    disaster_protected: bool = False
-    disaster_header: str = ""
-    disaster_protected_msg: str = ""
-    disaster_unprotected_msg: str = ""
-    stars_lost: int = 0
-    bank_lost: int = 0
-    items_destroyed: bool = False
-    level_name: str = ""
-    level_emoji: str = ""
-    golden_axe_found: bool = False
-    mithril_shield_found: bool = False
-
-
-@dataclass
-class FishingStatus:
-    """Current fishing status for a user."""
-
-    is_fishing: bool
-    state: Optional[FishingState] = None
-    bait_type: Optional[str] = None
-    time_until_bite: Optional[int] = None  # seconds
-    time_until_expires: Optional[int] = None  # seconds
-    cooldown_remaining: Optional[int] = None  # seconds
-    equipped_bait: Optional[str] = None
-
-
-@dataclass
-class EquipResult:
-    """Result of equipping bait."""
-
-    success: bool
-    message: str
-
-
-@dataclass
-class FishLevelInfo:
-    """Info about a user's fishing levels."""
-
-    unlocked_level: int
-    active_level: int
-    levels: dict  # reference to FISH_LEVELS
-
-
-class FishingService:
+class FishingUseCases:
     """
     Handles all fishing-related business logic.
 
