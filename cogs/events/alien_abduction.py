@@ -8,7 +8,7 @@ from database.repository import UserRepository
 
 
 # 0.5% chance per command
-ABDUCTION_CHANCE = 0.005
+ABDUCTION_CHANCE = 0.0005 # ~%2 per day
 
 ABDUCTION_MESSAGES = [
     (

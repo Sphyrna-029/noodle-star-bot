@@ -2,8 +2,8 @@
 
 from discord.ext import commands
 
-from config import MINE_LEVELS
-from services.mining import MiningService
+from cogs.mining.constants import MINE_LEVELS
+from cogs.mining.use_cases import MiningUseCases
 
 
 class MiningCog(commands.Cog):
@@ -11,10 +11,10 @@ class MiningCog(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.mining = MiningService()
+        self.mining = MiningUseCases()
 
     @commands.command(name="mine")
-    async def mine(self, ctx, use_item: str = None):
+    async def mine(self, ctx, use_item: str = ''):
         """Mine for minerals to earn noodle stars!"""
         result = self.mining.mine(ctx.author.id, str(ctx.author), use_item)
 
@@ -56,7 +56,7 @@ class MiningCog(commands.Cog):
         await ctx.send(message)
 
     @commands.command(name="minelevel")
-    async def minelevel(self, ctx, level: int = None):
+    async def minelevel(self, ctx, level: int = 0):
         """View or switch your mine level. Usage: !minelevel [number]"""
         if level is not None:
             # Switch active level
@@ -87,7 +87,7 @@ class MiningCog(commands.Cog):
         await ctx.send("\n".join(lines))
 
     @commands.command(name="unlock")
-    async def unlock(self, ctx, level: int = None):
+    async def unlock(self, ctx, level: int = 0):
         """Unlock a new mine level. Usage: !unlock <level>"""
         if level is None:
             await ctx.send(f"❌ {ctx.author.mention}, please specify a level to unlock! Usage: `!unlock <level>`")

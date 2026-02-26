@@ -1,12 +1,11 @@
-"""Gambling service for games of chance."""
+"""Gambling use-cases for games of chance."""
 
 import random
-from dataclasses import dataclass
 from datetime import datetime, timedelta
 from math import ceil
 from typing import Optional
 
-from config import (
+from cogs.gambling.constants import (
     COINFLIP_MIN_BET,
     COINFLIP_WIN_MULTIPLIER,
     DUEL_DICE_SIDES,
@@ -21,51 +20,10 @@ from config import (
     GAMBLE_WIN_TARGET,
 )
 from database.repository import UserRepository
+from .dto import CoinflipResult, DuelResult, GambleResult
 
 
-@dataclass
-class GambleResult:
-    """Result of a gambling operation."""
-
-    success: bool
-    won: bool
-    message: str
-    roll: int = 0
-    multiplier: float = 0
-    amount_changed: int = 0
-    new_balance: int = 0
-
-
-@dataclass
-class CoinflipResult:
-    """Result of a coinflip."""
-
-    success: bool
-    won: bool
-    message: str
-    result: str = ""  # "heads" or "tails"
-    amount_changed: int = 0
-    new_balance: int = 0
-
-
-@dataclass
-class DuelResult:
-    """Result of a duel."""
-
-    success: bool
-    message: str
-    challenger_roll: int = 0
-    opponent_roll: int = 0
-    winner_id: Optional[int] = None
-    amount: int = 0
-    challenger_new_balance: int = 0
-    opponent_new_balance: int = 0
-    stamina_cost: int = 0
-    challenger_stamina_before: int = 0
-    challenger_stamina_after: int = 0
-
-
-class GamblingService:
+class GamblingUseCases:
     """Handles all gambling-related business logic."""
 
     def __init__(self, repository: UserRepository = None):

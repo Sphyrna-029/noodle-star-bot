@@ -1,7 +1,7 @@
 from datetime import timedelta
 from typing import Final
 
-from .models import BaitTier, Catch, CatchBucket, MineHazard
+from config.models import BaitTier, Catch, CatchBucket, MineHazard
 
 __all__ = [
     "FISHING_COOLDOWN",
