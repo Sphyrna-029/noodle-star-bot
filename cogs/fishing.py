@@ -3,9 +3,8 @@
 import discord
 from discord.ext import commands
 
-from cogs.fishing.constants import FISH_LEVELS, FISHING_BAIT_TIERS, FISHING_COOLDOWN
-from cogs.fishing.use_cases import FishingUseCases
-from cogs.fishing.dto import FishingState
+from config import FISH_LEVELS, FISHING_BAIT_TIERS, FISHING_COOLDOWN
+from services.fishing import FishingService, FishingState
 
 
 class FishingCog(commands.Cog):
@@ -13,7 +12,7 @@ class FishingCog(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.fishing = FishingUseCases()
+        self.fishing = FishingService()
         # Set up the bite notification callback
         self.fishing.set_bite_callback(self._on_bite)
 

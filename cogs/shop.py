@@ -3,7 +3,7 @@
 import discord
 from discord.ext import commands
 
-from cogs.shop.use_cases import ShopUseCases
+from services.shop import ShopService
 
 
 class ShopCog(commands.Cog):
@@ -11,7 +11,7 @@ class ShopCog(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.shop = ShopUseCases()
+        self.shop = ShopService()
 
     @commands.command(name="store")
     async def store(self, ctx):
@@ -30,7 +30,7 @@ class ShopCog(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(name="buy")
-    async def buy(self, ctx, *, item_name: str = ''):
+    async def buy(self, ctx, *, item_name: str = None):
         """Buy an item from the store (usage: !buy <item> [quantity])."""
         if item_name is None:
             await ctx.send(

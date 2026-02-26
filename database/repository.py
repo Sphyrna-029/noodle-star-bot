@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from cogs.economy.constants import STARTING_BANK, STARTING_STARS
+from config import STARTING_BANK, STARTING_STARS
 from database.connection import get_connection
 from database.models import User
 

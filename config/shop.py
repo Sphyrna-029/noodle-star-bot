@@ -1,6 +1,6 @@
 from typing import Final
 
-from config.models import ShopItem
+from .models import ShopItem
 
 __all__ = ["SHOP_ITEMS", "get_item_by_alias"]
 

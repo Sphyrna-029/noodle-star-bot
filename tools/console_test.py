@@ -25,16 +25,13 @@ if sys.platform == "win32":
     except Exception:
         pass  # Ignore if reconfigure not available
 
-from config.bot import COMMAND_PREFIX
-from cogs.fishing.constants import FISHING_BAIT_TIERS
-from cogs.shop.constants import SHOP_ITEMS
+from config import COMMAND_PREFIX, FISHING_BAIT_TIERS, SHOP_ITEMS
 from database.migrations import MigrationManager
-from cogs.economy.use_cases import EconomyUseCases
-from cogs.fishing.use_cases import FishingUseCases
-from cogs.fishing.dto import FishingState
-from cogs.gambling.use_cases import GamblingUseCases
-from cogs.mining.use_cases import MiningUseCases
-from cogs.shop.use_cases import ShopUseCases
+from services.economy import EconomyService
+from services.fishing import FishingService, FishingState
+from services.gambling import GamblingService
+from services.mining import MiningService
+from services.shop import ShopService
 
 # =============================================================================
 # Mock Discord Objects
@@ -115,12 +112,12 @@ class ConsoleBot:
     """Console-based testing interface for the Noodle Star Bot."""
 
     def __init__(self):
-        # Use-cases
-        self.economy = EconomyUseCases()
-        self.fishing = FishingUseCases()
-        self.gambling = GamblingUseCases()
-        self.mining = MiningUseCases()
-        self.shop = ShopUseCases()
+        # Services
+        self.economy = EconomyService()
+        self.fishing = FishingService()
+        self.gambling = GamblingService()
+        self.mining = MiningService()
+        self.shop = ShopService()
 
         # Set up fishing bite callback
         self.fishing.set_bite_callback(self._on_fishing_bite)

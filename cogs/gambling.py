@@ -3,7 +3,7 @@
 import discord
 from discord.ext import commands
 
-from cogs.gambling.use_cases import GamblingUseCases
+from services.gambling import GamblingService
 
 
 class GamblingCog(commands.Cog):
@@ -11,7 +11,7 @@ class GamblingCog(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.gambling = GamblingUseCases()
+        self.gambling = GamblingService()
 
     @commands.command(name="gamble")
     async def gamble(self, ctx, amount: int = None):
@@ -45,7 +45,7 @@ class GamblingCog(commands.Cog):
             )
 
     @commands.command(name="coinflip")
-    async def coinflip(self, ctx, amount: int = 0, choice: str = ''):
+    async def coinflip(self, ctx, amount: int = None, choice: str = None):
         """Flip a coin and bet on heads or tails!"""
         if amount is None or choice is None:
             await ctx.send(
@@ -83,7 +83,7 @@ class GamblingCog(commands.Cog):
             )
 
     @commands.command(name="duel")
-    async def duel(self, ctx, opponent: discord.Member = None, amount: int = 0):
+    async def duel(self, ctx, opponent: discord.Member = None, amount: int = None):
         """Challenge another user to a dice duel!"""
         if opponent is None or amount is None:
             await ctx.send(
