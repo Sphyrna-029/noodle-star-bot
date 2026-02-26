@@ -30,7 +30,7 @@ class ShopCog(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(name="buy")
-    async def buy(self, ctx, *, item_name: str = None):
+    async def buy(self, ctx, *, item_name: str = ''):
         """Buy an item from the store (usage: !buy <item> [quantity])."""
         if item_name is None:
             await ctx.send(
