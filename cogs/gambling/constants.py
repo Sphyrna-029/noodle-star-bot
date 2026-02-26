@@ -16,6 +16,8 @@ __all__ = [
     "BLACKJACK_DECKS",
     "BLACKJACK_PAYOUT",
     "BLACKJACK_WIN_MULTIPLIER",
+    "BLACKJACK_MIN_BET",
+    "BLACKJACK_COOLDOWN_SECONDS",
 ]
 
 # -- Gambling
@@ -45,3 +47,5 @@ DUEL_STAMINA_REGEN_MAX_EXTRA_MINUTES: Final[int] = 20
 BLACKJACK_DECKS: Final[int] = 2
 BLACKJACK_PAYOUT: Final[float] = 1.5  # 3:2 payout for natural blackjack
 BLACKJACK_WIN_MULTIPLIER: Final[float] = 1.0  # 1:1 payout for normal win
+BLACKJACK_MIN_BET: Final[int] = 20
+BLACKJACK_COOLDOWN_SECONDS: Final[int] = 30
