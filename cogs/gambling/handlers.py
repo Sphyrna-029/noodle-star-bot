@@ -274,7 +274,7 @@ class GamblingCog(commands.Cog):
         )
 
     @commands.command(name="blackjack", aliases=["bj"])
-    async def blackjack(self, ctx: discord.Context, amount: int = None):
+    async def blackjack(self, ctx, amount: int = None):
         """Play BlackJack! Try to get 21 without going over. Dealer stands on 17."""
         try:
             if amount is None:
