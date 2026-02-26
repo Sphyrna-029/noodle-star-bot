@@ -91,8 +91,9 @@ class BlackJackUseCase(BaseGamblingUseCase):
                 )
             else:
                 # Player wins with blackjack (3:2 payout)
-                winnings = int(amount * BLACKJACK_PAYOUT)
-                new_balance = current_stars + winnings
+                # Bet is never deducted for natural blackjack, so we add bet + (bet * 1.5)
+                profit = int(amount * BLACKJACK_PAYOUT)
+                new_balance = current_stars + profit
                 self.repo.update_user_stars(user_id, username, new_balance)
                 return BlackJackResult(
                     success=True,
@@ -103,7 +104,7 @@ class BlackJackUseCase(BaseGamblingUseCase):
                     dealer_hand=dealer_hand,
                     player_value=player_value,
                     dealer_value=dealer_value,
-                    amount_changed=winnings,
+                    amount_changed=profit,
                     new_balance=new_balance,
                     is_blackjack=True,
                     deck=deck,
