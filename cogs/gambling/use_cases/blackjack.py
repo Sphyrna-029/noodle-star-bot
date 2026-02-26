@@ -92,8 +92,8 @@ class BlackJackUseCase(BaseGamblingUseCase):
             else:
                 # Player wins with blackjack (3:2 payout)
                 winnings = int(amount * BLACKJACK_PAYOUT)
-                self.repo.add_user_stars(user_id, username, winnings)
-                new_balance = self.repo.get_user_stars(user_id, username)
+                new_balance = current_stars + winnings
+                self.repo.update_user_stars(user_id, username, new_balance)
                 return BlackJackResult(
                     success=True,
                     message="BLACKJACK! You win!",
@@ -110,7 +110,8 @@ class BlackJackUseCase(BaseGamblingUseCase):
                 )
 
         # Deduct bet amount
-        self.repo.add_user_stars(user_id, username, -amount)
+        new_balance = current_stars - amount
+        self.repo.update_user_stars(user_id, username, new_balance)
 
         return BlackJackResult(
             success=True,
@@ -122,7 +123,7 @@ class BlackJackUseCase(BaseGamblingUseCase):
             player_value=player_value,
             dealer_value=dealer_value,
             amount_changed=0,
-            new_balance=current_stars - amount,
+            new_balance=new_balance,
             deck=deck,
         )
 
@@ -175,12 +176,15 @@ class BlackJackUseCase(BaseGamblingUseCase):
             game_state.dealer_hand.append(game_state.deck.pop())
             dealer_value = self._calculate_hand_value(game_state.dealer_hand)
 
+        # Get current balance (bet was already deducted)
+        current_balance = self.repo.get_user_stars(game_state.user_id, game_state.username)
+
         # Determine winner
         if dealer_value > 21:
-            # Dealer busts - player wins
+            # Dealer busts - player wins (return bet + winnings)
             winnings = int(game_state.bet_amount * (1 + BLACKJACK_WIN_MULTIPLIER))
-            self.repo.add_user_stars(game_state.user_id, game_state.username, winnings)
-            new_balance = self.repo.get_user_stars(game_state.user_id, game_state.username)
+            new_balance = current_balance + winnings
+            self.repo.update_user_stars(game_state.user_id, game_state.username, new_balance)
             return BlackJackResult(
                 success=True,
                 message="Dealer busts! You win!",
@@ -195,10 +199,10 @@ class BlackJackUseCase(BaseGamblingUseCase):
                 deck=game_state.deck,
             )
         elif player_value > dealer_value:
-            # Player wins
+            # Player wins (return bet + winnings)
             winnings = int(game_state.bet_amount * (1 + BLACKJACK_WIN_MULTIPLIER))
-            self.repo.add_user_stars(game_state.user_id, game_state.username, winnings)
-            new_balance = self.repo.get_user_stars(game_state.user_id, game_state.username)
+            new_balance = current_balance + winnings
+            self.repo.update_user_stars(game_state.user_id, game_state.username, new_balance)
             return BlackJackResult(
                 success=True,
                 message="You win!",
@@ -213,8 +217,7 @@ class BlackJackUseCase(BaseGamblingUseCase):
                 deck=game_state.deck,
             )
         elif player_value < dealer_value:
-            # Dealer wins
-            new_balance = self.repo.get_user_stars(game_state.user_id, game_state.username)
+            # Dealer wins (bet already deducted, nothing to do)
             return BlackJackResult(
                 success=True,
                 message="Dealer wins!",
@@ -225,13 +228,13 @@ class BlackJackUseCase(BaseGamblingUseCase):
                 player_value=player_value,
                 dealer_value=dealer_value,
                 amount_changed=-game_state.bet_amount,
-                new_balance=new_balance,
+                new_balance=current_balance,
                 deck=game_state.deck,
             )
         else:
-            # Push - tie
-            self.repo.add_user_stars(game_state.user_id, game_state.username, game_state.bet_amount)
-            new_balance = self.repo.get_user_stars(game_state.user_id, game_state.username)
+            # Push - tie (return bet)
+            new_balance = current_balance + game_state.bet_amount
+            self.repo.update_user_stars(game_state.user_id, game_state.username, new_balance)
             return BlackJackResult(
                 success=True,
                 message="It's a push! Tie game.",
