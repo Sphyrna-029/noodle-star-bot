@@ -3,7 +3,128 @@
 import discord
 from discord.ext import commands
 
-from cogs.gambling.use_cases import GambleUseCase, CoinflipUseCase, DuelUseCase
+from cogs.gambling.use_cases import GambleUseCase, CoinflipUseCase, DuelUseCase, BlackJackUseCase
+from cogs.gambling.dto import BlackJackGameState
+
+
+class BlackJackView(discord.ui.View):
+    """Interactive view for BlackJack game with Hit/Stand buttons."""
+
+    def __init__(self, game_state: BlackJackGameState, use_case: BlackJackUseCase, author_id: int):
+        super().__init__(timeout=30)  # 30 second timeout
+        self.game_state = game_state
+        self.use_case = use_case
+        self.author_id = author_id
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        """Ensure only the person who started the game can use the buttons."""
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message(
+                "This isn't your game! Start your own with `!blackjack <amount>`",
+                ephemeral=True
+            )
+            return False
+        return True
+
+    def _create_embed(self, result) -> discord.Embed:
+        """Create an embed showing the current game state."""
+        # Format dealer hand (hide second card if game not over)
+        if result.game_over:
+            dealer_cards = " ".join(str(card) for card in result.dealer_hand)
+            dealer_value = f"({result.dealer_value})"
+        else:
+            dealer_cards = f"{result.dealer_hand[0]} 🂠"  # Show only first card
+            dealer_value = "(?)"
+
+        # Format player hand
+        player_cards = " ".join(str(card) for card in result.player_hand)
+
+        # Determine embed color
+        if result.game_over:
+            if result.won is True:
+                color = discord.Color.green()
+            elif result.won is False:
+                color = discord.Color.red()
+            else:  # Push
+                color = discord.Color.gold()
+        else:
+            color = discord.Color.blue()
+
+        embed = discord.Embed(title="🃏 BlackJack 🃏", color=color)
+        embed.add_field(
+            name=f"Dealer's Hand {dealer_value}",
+            value=dealer_cards,
+            inline=False
+        )
+        embed.add_field(
+            name=f"Your Hand ({result.player_value})",
+            value=player_cards,
+            inline=False
+        )
+
+        # Add result message if game is over
+        if result.game_over:
+            if result.is_blackjack:
+                result_text = f"✨ **{result.message}** ✨"
+            elif result.is_bust:
+                result_text = f"💥 **{result.message}** 💥"
+            elif result.won is True:
+                result_text = f"🎉 **{result.message}** 🎉"
+            elif result.won is False:
+                result_text = f"😔 **{result.message}** 😔"
+            else:
+                result_text = f"🤝 **{result.message}** 🤝"
+
+            embed.add_field(name="Result", value=result_text, inline=False)
+
+            # Show winnings/losses
+            if result.amount_changed > 0:
+                embed.add_field(
+                    name="Winnings",
+                    value=f"+{result.amount_changed} ⭐",
+                    inline=True
+                )
+            elif result.amount_changed < 0:
+                embed.add_field(
+                    name="Lost",
+                    value=f"{result.amount_changed} ⭐",
+                    inline=True
+                )
+
+            embed.add_field(
+                name="New Balance",
+                value=f"{result.new_balance} ⭐",
+                inline=True
+            )
+        else:
+            embed.set_footer(text="Hit to draw another card, or Stand to end your turn.")
+
+        return embed
+
+    @discord.ui.button(label="Hit", style=discord.ButtonStyle.primary, emoji="🎴")
+    async def hit_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Handle Hit button press."""
+        result = self.use_case.hit(self.game_state)
+
+        if result.game_over:
+            # Disable buttons when game is over
+            for item in self.children:
+                item.disabled = True
+
+        embed = self._create_embed(result)
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    @discord.ui.button(label="Stand", style=discord.ButtonStyle.secondary, emoji="✋")
+    async def stand_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Handle Stand button press."""
+        result = self.use_case.stand(self.game_state)
+
+        # Game is always over after standing
+        for item in self.children:
+            item.disabled = True
+
+        embed = self._create_embed(result)
+        await interaction.response.edit_message(embed=embed, view=self)
 
 
 class GamblingCog(commands.Cog):
@@ -14,6 +135,7 @@ class GamblingCog(commands.Cog):
         self.gamble_use_case = GambleUseCase()
         self.coinflip_use_case = CoinflipUseCase()
         self.duel_use_case = DuelUseCase()
+        self.blackjack_use_case = BlackJackUseCase()
 
     @commands.command(name="gamble")
     async def gamble(self, ctx, amount: int = None):
@@ -136,6 +258,82 @@ class GamblingCog(commands.Cog):
             f"{ctx.author.mention}'s balance: **{result.challenger_new_balance}** stars\n"
             f"{opponent.mention}'s balance: **{result.opponent_new_balance}** stars"
         )
+
+    @commands.command(name="blackjack", aliases=["bj"])
+    async def blackjack(self, ctx, amount: int = None):
+        """Play BlackJack! Try to get 21 without going over. Dealer stands on 17."""
+        if amount is None:
+            await ctx.send(
+                f"❌ {ctx.author.mention}, please specify how many stars to bet! "
+                f"Usage: `!blackjack <amount>`"
+            )
+            return
+
+        # Start the game
+        result = self.blackjack_use_case.start_game(ctx.author.id, str(ctx.author), amount)
+
+        if not result.success:
+            await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
+            return
+
+        # If game ended immediately (blackjack or double blackjack)
+        if result.game_over:
+            embed = discord.Embed(title="🃏 BlackJack 🃏", color=discord.Color.gold())
+
+            dealer_cards = " ".join(str(card) for card in result.dealer_hand)
+            player_cards = " ".join(str(card) for card in result.player_hand)
+
+            embed.add_field(
+                name=f"Dealer's Hand ({result.dealer_value})",
+                value=dealer_cards,
+                inline=False
+            )
+            embed.add_field(
+                name=f"Your Hand ({result.player_value})",
+                value=player_cards,
+                inline=False
+            )
+
+            if result.won is True:
+                result_text = f"✨ **{result.message}** ✨"
+                embed.color = discord.Color.green()
+            else:
+                result_text = f"🤝 **{result.message}** 🤝"
+
+            embed.add_field(name="Result", value=result_text, inline=False)
+
+            if result.amount_changed > 0:
+                embed.add_field(
+                    name="Winnings",
+                    value=f"+{result.amount_changed} ⭐",
+                    inline=True
+                )
+
+            embed.add_field(
+                name="New Balance",
+                value=f"{result.new_balance} ⭐",
+                inline=True
+            )
+
+            await ctx.send(embed=embed)
+            return
+
+        # Create game state for the view
+        game_state = BlackJackGameState(
+            user_id=ctx.author.id,
+            username=str(ctx.author),
+            bet_amount=amount,
+            deck=result.deck,
+            player_hand=result.player_hand,
+            dealer_hand=result.dealer_hand,
+            game_over=False
+        )
+
+        # Create the interactive view
+        view = BlackJackView(game_state, self.blackjack_use_case, ctx.author.id)
+        embed = view._create_embed(result)
+
+        await ctx.send(embed=embed, view=view)
 
 
 async def setup(bot):
