@@ -521,22 +521,31 @@ class UserRepository:
     def get_last_blackjack(self, user_id: int) -> Optional[datetime]:
         """Get the user's last blackjack game timestamp."""
         with self.db.get_cursor() as cursor:
-            cursor.execute(
-                "SELECT last_blackjack FROM noodle_stars WHERE user_id = ?",
-                (user_id,),
-            )
-            row = cursor.fetchone()
+            try:
+                cursor.execute(
+                    "SELECT last_blackjack FROM noodle_stars WHERE user_id = ?",
+                    (user_id,),
+                )
+                row = cursor.fetchone()
 
-            if row is None or row["last_blackjack"] is None:
+                if row is None or row["last_blackjack"] is None:
+                    return None
+
+                return datetime.fromisoformat(row["last_blackjack"])
+            except Exception:
+                # Column doesn't exist yet (migration not run)
                 return None
-
-            return datetime.fromisoformat(row["last_blackjack"])
 
     def update_last_blackjack(self, user_id: int) -> None:
         """Update the user's last blackjack game timestamp to now."""
         with self.db.get_cursor() as cursor:
-            now = datetime.now().isoformat()
-            cursor.execute(
-                "UPDATE noodle_stars SET last_blackjack = ? WHERE user_id = ?",
-                (now, user_id),
-            )
+            try:
+                now = datetime.now().isoformat()
+                cursor.execute(
+                    "UPDATE noodle_stars SET last_blackjack = ? WHERE user_id = ?",
+                    (now, user_id),
+                )
+            except Exception:
+                # Column doesn't exist yet (migration not run)
+                # Silently ignore - cooldown will work after restart
+                pass
