@@ -131,7 +131,7 @@ class BlackJackView(discord.ui.View):
             for item in self.children:
                 item.disabled = True
 
-            embed = self._create_embed(result)
+            embed = self._create_embed(result, interaction.user.name)
             await interaction.response.edit_message(embed=embed, view=self)
         except Exception as e:
             await interaction.response.send_message(
@@ -274,7 +274,7 @@ class GamblingCog(commands.Cog):
         )
 
     @commands.command(name="blackjack", aliases=["bj"])
-    async def blackjack(self, ctx, amount: int = None):
+    async def blackjack(self, ctx: discord.Context, amount: int = None):
         """Play BlackJack! Try to get 21 without going over. Dealer stands on 17."""
         try:
             if amount is None:
@@ -349,7 +349,7 @@ class GamblingCog(commands.Cog):
 
             # Create the interactive view
             view = BlackJackView(game_state, self.blackjack_use_case, ctx.author.id)
-            embed = view._create_embed(result)
+            embed = view._create_embed(result, ctx.author.name)
 
             await thinking_msg.edit(content=None, embed=embed, view=view)
         except Exception as e:
