@@ -46,7 +46,7 @@ class EconomyRepository(BaseRepository):
         """Get total stars in the economy."""
         with self.db.get_cursor() as cursor:
             cursor.execute(
-                "SELECT SUM(stars) AS total FROM noodle_stars"
+                "SELECT SUM(stars + bank) AS total FROM noodle_stars"
             )
             row = cursor.fetchone()
             return row["total"] if row else 0
