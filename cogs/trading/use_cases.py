@@ -216,6 +216,7 @@ class TradeUseCases:
 
     def _transfer_offer(
         self,
+        cursor,
         from_id: int,
         from_name: str,
         to_id: int,
@@ -224,21 +225,46 @@ class TradeUseCases:
     ) -> None:
         """Transfer stars and items from one user to another."""
         if offer.stars > 0:
-            from_stars = self.repo.get_user_stars(from_id, from_name)
-            to_stars = self.repo.get_user_stars(to_id, to_name)
-            self.repo.update_user_stars(from_id, from_name, from_stars - offer.stars)
-            self.repo.update_user_stars(to_id, to_name, to_stars + offer.stars)
+            cursor.execute(
+                "SELECT stars FROM noodle_stars WHERE user_id = ?",
+                (from_id,),
+            )
+            row = cursor.fetchone()
+            from_stars = row["stars"] if row else 0
+            if from_stars < offer.stars:
+                raise ValueError(
+                    f"Not enough stars (have {from_stars}, need {offer.stars})."
+                )
+            cursor.execute(
+                "UPDATE noodle_stars SET stars = ?, username = ? WHERE user_id = ?",
+                (from_stars - offer.stars, from_name, from_id),
+            )
+            cursor.execute(
+                "UPDATE noodle_stars SET stars = stars + ?, username = ? WHERE user_id = ?",
+                (offer.stars, to_name, to_id),
+            )
 
         if offer.items:
-            from_inv = self.repo.get_user_inventory(from_id)
-            to_inv = self.repo.get_user_inventory(to_id)
             for item_key, qty in offer.items.items():
                 db_col = SHOP_ITEMS[item_key].db_column
-                self.repo.update_user_inventory(
-                    from_id, db_col, from_inv[db_col] - qty
+                cursor.execute(
+                    f"SELECT {db_col} FROM user_inventory WHERE user_id = ?",
+                    (from_id,),
                 )
-                self.repo.update_user_inventory(
-                    to_id, db_col, to_inv[db_col] + qty
+                row = cursor.fetchone()
+                have = row[db_col] if row and db_col in row.keys() else 0
+                if have < qty:
+                    item_name = SHOP_ITEMS[item_key].display_name
+                    raise ValueError(
+                        f"Not enough {item_name} (have {have}, need {qty})."
+                    )
+                cursor.execute(
+                    f"UPDATE user_inventory SET {db_col} = ? WHERE user_id = ?",
+                    (have - qty, from_id),
+                )
+                cursor.execute(
+                    f"UPDATE user_inventory SET {db_col} = {db_col} + ? WHERE user_id = ?",
+                    (qty, to_id),
                 )
 
     # -------------------------------------------------------------------------
@@ -437,17 +463,48 @@ class TradeUseCases:
                         pass
                 return
 
-        # Execute transfers
-        self._transfer_offer(
-            session.proposer_id, session.proposer_name,
-            session.opponent_id, session.opponent_name,
-            session.proposer_offer,
-        )
-        self._transfer_offer(
-            session.opponent_id, session.opponent_name,
-            session.proposer_id, session.proposer_name,
-            session.opponent_offer,
-        )
+        # Execute transfers atomically
+        try:
+            with self.repo.db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "INSERT INTO noodle_stars (user_id, username, stars, bank) "
+                    "VALUES (?, ?, 0, 0) ON CONFLICT(user_id) DO NOTHING",
+                    (session.proposer_id, session.proposer_name),
+                )
+                cursor.execute(
+                    "INSERT INTO noodle_stars (user_id, username, stars, bank) "
+                    "VALUES (?, ?, 0, 0) ON CONFLICT(user_id) DO NOTHING",
+                    (session.opponent_id, session.opponent_name),
+                )
+                self.repo._ensure_inventory_row(cursor, session.proposer_id)
+                self.repo._ensure_inventory_row(cursor, session.opponent_id)
+
+                self._transfer_offer(
+                    cursor,
+                    session.proposer_id, session.proposer_name,
+                    session.opponent_id, session.opponent_name,
+                    session.proposer_offer,
+                )
+                self._transfer_offer(
+                    cursor,
+                    session.opponent_id, session.opponent_name,
+                    session.proposer_id, session.proposer_name,
+                    session.opponent_offer,
+                )
+        except Exception as exc:
+            session.state = TradeState.CANCELLED
+            channel_id = session.channel_id
+            self._cleanup_session(session.proposer_id)
+            if self._trade_callback:
+                try:
+                    await self._trade_callback(
+                        "failed", session.proposer_id, channel_id, session,
+                        f"Trade failed — {exc}",
+                    )
+                except Exception:
+                    pass
+            return
 
         session.state = TradeState.COMPLETED
         channel_id = session.channel_id

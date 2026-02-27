@@ -43,6 +43,7 @@ class NoodleStarBot(commands.Bot):
             "cogs.moderator.handlers",
             "cogs.fishing.handlers",
             "cogs.farming.handlers",
+            "cogs.trading.handlers",
         ]
 
     async def setup_hook(self):
@@ -84,18 +85,18 @@ class NoodleStarBot(commands.Bot):
         dev_user_ids = {249969537066205185, 85538959156850688, 445641460507869185}
         if ctx.author.id not in dev_user_ids:
             return
-        
+
         # Get the original exception if it's wrapped
         original = getattr(error, "original", error)
-        
+
         # Format the traceback
         tb_lines = traceback.format_exception(type(original), original, original.__traceback__)
         tb_text = "".join(tb_lines)
-        
+
         # Truncate if too long for Discord (max 2000 chars)
         if len(tb_text) > 1900:
             tb_text = tb_text[:1900] + "\n... (truncated)"
-        
+
         # Send to user's DMs (private)
         try:
             await ctx.author.send(

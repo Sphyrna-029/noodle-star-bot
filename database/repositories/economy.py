@@ -141,6 +141,20 @@ class EconomyRepository(BaseRepository):
             row = cursor.fetchone()
             return row["earned"] if row else 0
 
+    def get_stars_lost_between(self, start: datetime, end: datetime) -> int:
+        """Get total stars lost (negative deltas only) in a time range."""
+        with self.db.get_cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT COALESCE(SUM(CASE WHEN delta < 0 THEN -delta ELSE 0 END), 0) AS lost
+                FROM star_ledger
+                WHERE changed_at >= ? AND changed_at < ?
+                """,
+                (start.isoformat(), end.isoformat()),
+            )
+            row = cursor.fetchone()
+            return row["lost"] if row else 0
+
     def get_top_gainers_between(
         self,
         start: datetime,
@@ -167,6 +181,11 @@ class EconomyRepository(BaseRepository):
         """Get total stars earned in a specific calendar month."""
         start, end = self._month_bounds(year, month)
         return self.get_stars_earned_between(start, end)
+
+    def get_monthly_stars_lost(self, year: int, month: int) -> int:
+        """Get total stars lost in a specific calendar month."""
+        start, end = self._month_bounds(year, month)
+        return self.get_stars_lost_between(start, end)
 
     def get_top_gainers_for_month(
         self,
