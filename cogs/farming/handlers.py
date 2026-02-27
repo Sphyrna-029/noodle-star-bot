@@ -216,7 +216,7 @@ class FarmingCog(commands.Cog):
 
         embed = discord.Embed(
             title="🌾 Available Crops",
-            description="Plant crops with `!plant <crop> <plot_number>`",
+            description="Plant crops with `!plant <crop> <plot_number>`\nYou do NOT need to pre-purchase crops, they will automatically purchase when you plant them!",
             color=discord.Color.green(),
         )
 
