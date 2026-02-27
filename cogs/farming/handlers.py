@@ -216,7 +216,7 @@ class FarmingCog(commands.Cog):
 
         embed = discord.Embed(
             title="🌾 Available Crops",
-            description="Plant crops with `!plant <crop> <plot_number>`\nYou do NOT need to pre-purchase crops, they will automatically purchase when you plant them!",
+            description="Plant crops with `!plant <crop> <plot_number>`",
             color=discord.Color.green(),
         )
 
@@ -236,7 +236,7 @@ class FarmingCog(commands.Cog):
                 inline=True,
             )
 
-        embed.set_footer(text="Longer crops = higher hourly rate, but require patience!")
+        embed.set_footer(text="You do **NOT** need to pre-purchase crops, they will automatically purchase when you plant them!\nLonger crops = higher hourly rate, but require patience!")
         await ctx.send(embed=embed)
 
 
