@@ -11,6 +11,17 @@ import sys
 from dataclasses import dataclass, field
 from typing import Optional
 
+from config.bot import COMMAND_PREFIX
+from cogs.fishing.constants import FISHING_BAIT_TIERS
+from cogs.shop.constants import SHOP_ITEMS
+from database.migrations import MigrationManager
+from cogs.economy.use_cases import EconomyUseCases
+from cogs.fishing.use_cases import FishingUseCases
+from cogs.fishing.dto import FishingState
+from cogs.gambling.use_cases import GambleUseCase, CoinflipUseCase, DuelUseCase
+from cogs.mining.use_cases import MiningUseCases
+from cogs.shop.use_cases import ShopUseCases
+
 # Set up paths - add parent directory so we can import bot modules
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
@@ -25,16 +36,6 @@ if sys.platform == "win32":
     except Exception:
         pass  # Ignore if reconfigure not available
 
-from config.bot import COMMAND_PREFIX
-from cogs.fishing.constants import FISHING_BAIT_TIERS
-from cogs.shop.constants import SHOP_ITEMS
-from database.migrations import MigrationManager
-from cogs.economy.use_cases import EconomyUseCases
-from cogs.fishing.use_cases import FishingUseCases
-from cogs.fishing.dto import FishingState
-from cogs.gambling.use_cases import GamblingUseCases
-from cogs.mining.use_cases import MiningUseCases
-from cogs.shop.use_cases import ShopUseCases
 
 # =============================================================================
 # Mock Discord Objects
@@ -118,7 +119,9 @@ class ConsoleBot:
         # Use-cases
         self.economy = EconomyUseCases()
         self.fishing = FishingUseCases()
-        self.gambling = GamblingUseCases()
+        self.gambling_gamble = GambleUseCase()
+        self.gambling_coinflip = CoinflipUseCase()
+        self.gambling_duel = DuelUseCase()
         self.mining = MiningUseCases()
         self.shop = ShopUseCases()
 
@@ -367,7 +370,7 @@ BOT COMMANDS (use ! prefix):
             else:
                 try:
                     amount = int(args[0])
-                    result = self.gambling.gamble(
+                    result = self.gambling_gamble.execute(
                         self.current_user.id, str(self.current_user), amount
                     )
                     if not result.success:
@@ -396,7 +399,7 @@ BOT COMMANDS (use ! prefix):
                 try:
                     amount = int(args[0])
                     choice = args[1]
-                    result = self.gambling.coinflip(
+                    result = self.gambling_coinflip.execute(
                         self.current_user.id, str(self.current_user), amount, choice
                     )
                     if not result.success:
@@ -429,7 +432,7 @@ BOT COMMANDS (use ! prefix):
                     return
                 try:
                     amount = int(args[1])
-                    result = self.gambling.duel(
+                    result = self.gambling_duel.execute(
                         self.current_user.id,
                         str(self.current_user),
                         opponent.id,

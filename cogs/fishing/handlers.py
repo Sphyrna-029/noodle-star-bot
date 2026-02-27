@@ -291,6 +291,12 @@ class FishingCog(commands.Cog):
             # Switch active level
             success, msg = self.fishing.set_active_fish_level(ctx.author.id, level)
             if success:
+                # Add bank risk warning for levels 4-5
+                if level >= 4:
+                    level_config = FISH_LEVELS[level]
+                    max_bank_loss = max(h.bank_loss_pct for h in level_config["hazards"])
+                    warning = f"\n⚠️ **WARNING:** This level has disasters that can take up to {int(max_bank_loss * 100)}% of your BANK! Use protection items!"
+                    msg += warning
                 await ctx.send(f"🎣 {ctx.author.mention}, {msg}")
             else:
                 await ctx.send(f"❌ {ctx.author.mention}, {msg}")
@@ -306,7 +312,13 @@ class FishingCog(commands.Cog):
                 active = " ◀️" if lvl_num == info.active_level else ""
                 hazard_warning = ""
                 if lvl["disaster_chance"] > 0:
-                    hazard_warning = f" ⚠️ {int(lvl['disaster_chance'] * 100)}% hazard"
+                    hazard_info = f" ⚠️ {int(lvl['disaster_chance'] * 100)}% hazard"
+                    # Add bank risk info for levels 4-5
+                    if lvl_num >= 4:
+                        max_bank_loss = max(h.bank_loss_pct for h in lvl["hazards"])
+                        if max_bank_loss > 0:
+                            hazard_info += f" | Bank risk: {int(max_bank_loss * 100)}%"
+                    hazard_warning = hazard_info
                 lines.append(
                     f"{lvl['emoji']} **Level {lvl_num} — {lvl['name']}** ✅{active}{hazard_warning}"
                 )
@@ -315,8 +327,9 @@ class FishingCog(commands.Cog):
                     f"🔒 **Level {lvl_num} — {lvl['name']}** — *Unlock in mine first*"
                 )
 
-        lines.append(f"\nUse `!fishlevel <number>` to switch levels")
-        lines.append(f"Fishing levels share unlocks with mining — use `!unlock <number>` to unlock new levels")
+        lines.append("\nUse `!fishlevel <number>` to switch levels")
+        lines.append("Fishing levels share unlocks with mining — use `!unlock <number>` to unlock new levels")
+        lines.append("\n💡 Levels 4-5 have disasters that can affect your bank balance!")
 
         await ctx.send("\n".join(lines))
 

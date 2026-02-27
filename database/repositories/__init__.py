@@ -2,6 +2,7 @@
 
 from database.repositories.base import BaseRepository
 from database.repositories.economy import EconomyRepository
+from database.repositories.farming import FarmingRepository
 from database.repositories.fishing import FishingRepository
 from database.repositories.gambling import GamblingRepository
 from database.repositories.inventory import InventoryRepository
@@ -16,4 +17,5 @@ __all__ = [
     "MiningRepository",
     "FishingRepository",
     "GamblingRepository",
+    "FarmingRepository",
 ]

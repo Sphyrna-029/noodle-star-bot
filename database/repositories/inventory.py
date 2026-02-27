@@ -23,6 +23,7 @@ class InventoryRepository(BaseRepository):
         "active_fish_level",
         "golden_axe",
         "mithril_shield",
+        "bank_insurance",
     }
 
     def _ensure_inventory_row(self, cursor, user_id: int) -> None:
@@ -31,8 +32,9 @@ class InventoryRepository(BaseRepository):
             INSERT INTO user_inventory (
                 user_id, gold_pickaxe, helmet, sword, raw_potato, golden_mushroom,
                 bait_worm, bait_herring, bait_sturgeon, equipped_bait, telescope,
-                mine_level, active_mine_level, active_fish_level, golden_axe, mithril_shield
-            ) VALUES (?, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 1, 1, 1, 0, 0)
+                mine_level, active_mine_level, active_fish_level, golden_axe, mithril_shield,
+                bank_insurance
+            ) VALUES (?, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 1, 1, 1, 0, 0, 0)
             ON CONFLICT(user_id) DO NOTHING
             """,
             (user_id,),
@@ -46,7 +48,8 @@ class InventoryRepository(BaseRepository):
                 """
                 SELECT gold_pickaxe, helmet, sword, raw_potato, golden_mushroom,
                        bait_worm, bait_herring, bait_sturgeon, telescope,
-                       mine_level, active_mine_level, golden_axe, mithril_shield
+                       mine_level, active_mine_level, golden_axe, mithril_shield,
+                       bank_insurance
                 FROM user_inventory WHERE user_id = ?
                 """,
                 (user_id,),
@@ -68,6 +71,7 @@ class InventoryRepository(BaseRepository):
                     "active_mine_level": 1,
                     "golden_axe": 0,
                     "mithril_shield": 0,
+                    "bank_insurance": 0,
                 }
 
             return {
@@ -84,12 +88,14 @@ class InventoryRepository(BaseRepository):
                 "active_mine_level": row["active_mine_level"] or 1,
                 "golden_axe": row["golden_axe"] or 0,
                 "mithril_shield": row["mithril_shield"] or 0,
+                "bank_insurance": (row["bank_insurance"] if "bank_insurance" in row.keys() else 0) or 0,
             }
 
     def update_user_inventory(self, user_id: int, item: str, amount: int) -> None:
         """Update a specific inventory item for a user."""
         if item not in self._INVENTORY_COLUMNS:
             raise ValueError(f"Unsupported inventory column: {item}")
+        
         with self.db.get_cursor() as cursor:
             self._ensure_inventory_row(cursor, user_id)
             cursor.execute(
@@ -120,7 +126,8 @@ class InventoryRepository(BaseRepository):
                 SET gold_pickaxe = 0, helmet = 0, sword = 0,
                     raw_potato = 0, golden_mushroom = 0, telescope = 0,
                     bait_worm = 0, bait_herring = 0, bait_sturgeon = 0,
-                    equipped_bait = NULL, golden_axe = 0, mithril_shield = 0
+                    equipped_bait = NULL, golden_axe = 0, mithril_shield = 0,
+                    bank_insurance = 0
                 WHERE user_id = ?
                 """,
                 (user_id,),

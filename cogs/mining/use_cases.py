@@ -1,4 +1,23 @@
-"""Mining service with cooldowns, disasters, and mine levels."""
+"""Mining service with cooldowns, disasters, and mine levels.
+
+Average Returns (per mine):
+    Level 1 (Normal):        17.00 stars | (Gold Pickaxe): 21.50 stars
+    Level 2 (Normal):        34.50 stars | (Gold Pickaxe): 44.00 stars
+    Level 3 (Normal):        52.00 stars | (Gold Pickaxe): 67.50 stars
+    Level 4 (Normal):        63.50 stars | (Gold Pickaxe): 88.00 stars  ⚠️ Bank risk: 10%
+    Level 5 (Normal):        93.00 stars | (Gold Pickaxe): 128.00 stars ⚠️ Bank risk: 25%
+
+Disaster Chances:
+    Levels 1-3: 3% chance
+    Level 4:    5% chance (Lava Flow - 10% bank loss)
+    Level 5:    8% chance (Shadow Wraith - 25% bank loss)
+
+Protection:
+    - Helmet: Protects from mine collapse and lava flow
+    - Sword: Protects from goblin raids and shadow wraith
+    - Mithril Shield: 10 uses, protects from helmet-type disasters
+    - Golden Axe: 50 uses, protects from sword-type disasters
+"""
 
 import random
 from datetime import datetime, timedelta
@@ -6,8 +25,7 @@ from typing import Optional
 
 from cogs.mining.constants import (
     MINE_LEVELS,
-    MINERALS_GOLD_PICKAXE,
-    MINERALS_NORMAL,
+    MINERAL_TABLES,
     MINING_BASE_COOLDOWN,
     MINING_POTATO_COOLDOWN,
 )
@@ -138,7 +156,8 @@ class MiningUseCases:
         has_sword = inventory["sword"] > 0
 
         # Select minerals based on pickaxe and level
-        minerals = level_config["minerals_gold"] if has_gold_pickaxe else level_config["minerals_normal"]
+        mineral_table = MINERAL_TABLES[active_level]
+        minerals = mineral_table["gold"] if has_gold_pickaxe else mineral_table["normal"]
 
         # Select random mineral based on weights
         mineral = random.choices(minerals, weights=[m.weight for m in minerals])[0]
@@ -219,20 +238,40 @@ class MiningUseCases:
 
                 # Calculate bank loss if applicable
                 bank_lost = 0
+                bank_insurance_used = False
                 if hazard.bank_loss_pct > 0:
                     current_bank = self.repo.get_user_bank(user_id)
-                    bank_lost = int(current_bank * hazard.bank_loss_pct)
-                    if bank_lost > 0:
-                        self.repo.update_user_bank(user_id, username, current_bank - bank_lost)
+                    potential_bank_loss = int(current_bank * hazard.bank_loss_pct)
+                    
+                    # Check if user has bank insurance
+                    inventory = self.repo.get_user_inventory(user_id)
+                    bank_insurance_uses = inventory.get("bank_insurance", 0)
+                    if bank_insurance_uses > 0 and potential_bank_loss > 0:
+                        # Bank insurance protects the bank
+                        bank_insurance_used = True
+                        self.repo.update_user_inventory(user_id, "bank_insurance", bank_insurance_uses - 1)
+                        bank_lost = 0  # Bank is protected
+                    else:
+                        # No insurance, apply bank loss
+                        bank_lost = potential_bank_loss
+                        if bank_lost > 0:
+                            self.repo.update_user_bank(user_id, username, current_bank - bank_lost)
 
                 self.repo.clear_user_inventory(user_id)
                 result.stars_lost = stars_lost
                 result.bank_lost = bank_lost
                 result.items_destroyed = True
                 result.new_balance = new_stars
-                result.disaster_unprotected_msg = hazard.unprotected_msg.format(
+                
+                # Update disaster message to indicate bank insurance usage
+                disaster_msg = hazard.unprotected_msg.format(
                     stars_lost=stars_lost, bank_lost=bank_lost
                 )
+                if bank_insurance_used:
+                    remaining_insurance = bank_insurance_uses - 1
+                    disaster_msg += f"\n\n🛡️ **Bank Insurance activated!** Your bank was protected from losing {potential_bank_loss} stars.\n*({remaining_insurance} uses remaining)*"
+                
+                result.disaster_unprotected_msg = disaster_msg
 
         return result
 

@@ -7,6 +7,7 @@ __all__ = [
     "FISHING_COOLDOWN",
     "FISHING_BAIT_TIERS",
     "FISHING_CATCH_TABLE",
+    "CATCH_TABLES",
     "FISH_LEVELS",
 ]
 
@@ -339,6 +340,18 @@ FISH_HAZARD_LEVIATHAN = MineHazard(
 )
 
 # ---------------------------------------------------------------------------
+# Catch tables by level
+# ---------------------------------------------------------------------------
+
+CATCH_TABLES: Final[dict[int, dict[str, CatchBucket]]] = {
+    1: _L1_CATCHES,
+    2: _L2_CATCHES,
+    3: _L3_CATCHES,
+    4: _L4_CATCHES,
+    5: _L5_CATCHES,
+}
+
+# ---------------------------------------------------------------------------
 # Fish Level definitions
 # ---------------------------------------------------------------------------
 
@@ -347,28 +360,24 @@ FISH_LEVELS: Final[dict[int, dict]] = {
         "name": "Calm Pond",
         "emoji": "🎣",
         "disaster_chance": 0.0,
-        "catches": _L1_CATCHES,
         "hazards": (),
     },
     2: {
         "name": "River Rapids",
         "emoji": "🏞️",
         "disaster_chance": 0.08,
-        "catches": _L2_CATCHES,
         "hazards": (FISH_HAZARD_RIPTIDE, FISH_HAZARD_SHARK),
     },
     3: {
         "name": "Coral Reef",
         "emoji": "🪸",
         "disaster_chance": 0.10,
-        "catches": _L3_CATCHES,
         "hazards": (FISH_HAZARD_RIPTIDE, FISH_HAZARD_SHARK, FISH_HAZARD_WHIRLPOOL),
     },
     4: {
         "name": "Shipwreck Depths",
         "emoji": "🚢",
         "disaster_chance": 0.12,
-        "catches": _L4_CATCHES,
         "hazards": (
             FISH_HAZARD_RIPTIDE,
             FISH_HAZARD_SHARK,
@@ -380,7 +389,6 @@ FISH_LEVELS: Final[dict[int, dict]] = {
         "name": "The Abyss Trench",
         "emoji": "🌊",
         "disaster_chance": 0.14,
-        "catches": _L5_CATCHES,
         "hazards": (
             FISH_HAZARD_RIPTIDE,
             FISH_HAZARD_SHARK,

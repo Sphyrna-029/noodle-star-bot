@@ -1,14 +1,38 @@
-"""Fishing use-cases for the fishing minigame."""
+"""Fishing use-cases for the fishing minigame.
+
+Average Returns (per fish, varies by bait):
+    Level 1 (Stream):    Worm: 35 | Herring: 45 | Sturgeon: 52 stars
+    Level 2 (River):     Worm: 83 | Herring: 106 | Sturgeon: 123 stars
+    Level 3 (Coral):     Worm: 158 | Herring: 201 | Sturgeon: 235 stars
+    Level 4 (Shipwreck): Worm: 269 | Herring: 342 | Sturgeon: 399 stars  ⚠️ Bank risk: 10%
+    Level 5 (Abyss):     Worm: 408 | Herring: 521 | Sturgeon: 607 stars  ⚠️ Bank risk: 20%
+
+Bait Effects:
+    - Worm (33⭐):     Base odds (1.0x rare boost)
+    - Herring (79⭐):  1.5x rare/legendary boost
+    - Sturgeon (110⭐): 2.0x rare/legendary boost
+
+Disaster Chances:
+    Levels 1-3: 3% chance
+    Level 4:    5% chance (Siren - 10% bank loss)
+    Level 5:    8% chance (Leviathan - 20% bank loss)
+
+Protection:
+    - Helmet: Protects from kraken and siren attacks
+    - Sword: Protects from sea serpent and leviathan
+    - Mithril Shield: 10 uses, protects from helmet-type disasters
+    - Golden Axe: 50 uses, protects from sword-type disasters
+"""
 
 import asyncio
 import random
 from datetime import datetime, timedelta
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, Optional
 
 from cogs.fishing.constants import (
+    CATCH_TABLES,
     FISH_LEVELS,
     FISHING_BAIT_TIERS,
-    FISHING_CATCH_TABLE,
     FISHING_COOLDOWN,
 )
 from config.models import MineHazard
@@ -460,20 +484,40 @@ class FishingUseCases:
 
                     # Calculate bank loss if applicable
                     bank_lost = 0
+                    bank_insurance_used = False
                     if hazard.bank_loss_pct > 0:
                         current_bank = self.repo.get_user_bank(user_id)
-                        bank_lost = int(current_bank * hazard.bank_loss_pct)
-                        if bank_lost > 0:
-                            self.repo.update_user_bank(user_id, username, current_bank - bank_lost)
+                        potential_bank_loss = int(current_bank * hazard.bank_loss_pct)
+                        
+                        # Check if user has bank insurance
+                        inventory = self.repo.get_user_inventory(user_id)
+                        bank_insurance_uses = inventory.get("bank_insurance", 0)
+                        if bank_insurance_uses > 0 and potential_bank_loss > 0:
+                            # Bank insurance protects the bank
+                            bank_insurance_used = True
+                            self.repo.update_user_inventory(user_id, "bank_insurance", bank_insurance_uses - 1)
+                            bank_lost = 0  # Bank is protected
+                        else:
+                            # No insurance, apply bank loss
+                            bank_lost = potential_bank_loss
+                            if bank_lost > 0:
+                                self.repo.update_user_bank(user_id, username, current_bank - bank_lost)
 
                     self.repo.clear_user_inventory(user_id)
                     result.stars_lost = stars_lost
                     result.bank_lost = bank_lost
                     result.items_destroyed = True
                     result.new_balance = new_stars
-                    result.disaster_unprotected_msg = hazard.unprotected_msg.format(
+                    
+                    # Update disaster message to indicate bank insurance usage
+                    disaster_msg = hazard.unprotected_msg.format(
                         stars_lost=stars_lost, bank_lost=bank_lost
                     )
+                    if bank_insurance_used:
+                        remaining_insurance = bank_insurance_uses - 1
+                        disaster_msg += f"\n\n🛡️ **Bank Insurance activated!** Your bank was protected from losing {potential_bank_loss} stars.\n*({remaining_insurance} uses remaining)*"
+                    
+                    result.disaster_unprotected_msg = disaster_msg
 
             return result
 
@@ -493,8 +537,8 @@ class FishingUseCases:
         bait_config = FISHING_BAIT_TIERS[bait_type]
         rare_boost = bait_config.rare_boost
 
-        # Look up catch table from level config
-        catch_table = FISH_LEVELS[level]["catches"]
+        # Look up catch table from CATCH_TABLES
+        catch_table = CATCH_TABLES[level]
 
         # Calculate adjusted weights
         common_weight = catch_table["common"].weight
