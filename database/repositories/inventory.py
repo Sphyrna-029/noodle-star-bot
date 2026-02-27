@@ -7,15 +7,47 @@ from database.repositories.base import BaseRepository
 class InventoryRepository(BaseRepository):
     """Item inventory read/write operations."""
 
+    _INVENTORY_COLUMNS = {
+        "gold_pickaxe",
+        "helmet",
+        "sword",
+        "raw_potato",
+        "golden_mushroom",
+        "bait_worm",
+        "bait_herring",
+        "bait_sturgeon",
+        "equipped_bait",
+        "telescope",
+        "mine_level",
+        "active_mine_level",
+        "active_fish_level",
+        "golden_axe",
+        "mithril_shield",
+    }
+
+    def _ensure_inventory_row(self, cursor, user_id: int) -> None:
+        cursor.execute(
+            """
+            INSERT INTO user_inventory (
+                user_id, gold_pickaxe, helmet, sword, raw_potato, golden_mushroom,
+                bait_worm, bait_herring, bait_sturgeon, equipped_bait, telescope,
+                mine_level, active_mine_level, active_fish_level, golden_axe, mithril_shield
+            ) VALUES (?, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 1, 1, 1, 0, 0)
+            ON CONFLICT(user_id) DO NOTHING
+            """,
+            (user_id,),
+        )
+
     def get_user_inventory(self, user_id: int) -> dict:
         """Get user's inventory as a dictionary."""
         with self.db.get_cursor() as cursor:
+            self._ensure_inventory_row(cursor, user_id)
             cursor.execute(
                 """
                 SELECT gold_pickaxe, helmet, sword, raw_potato, golden_mushroom,
                        bait_worm, bait_herring, bait_sturgeon, telescope,
                        mine_level, active_mine_level, golden_axe, mithril_shield
-                FROM noodle_stars WHERE user_id = ?
+                FROM user_inventory WHERE user_id = ?
                 """,
                 (user_id,),
             )
@@ -56,18 +88,22 @@ class InventoryRepository(BaseRepository):
 
     def update_user_inventory(self, user_id: int, item: str, amount: int) -> None:
         """Update a specific inventory item for a user."""
+        if item not in self._INVENTORY_COLUMNS:
+            raise ValueError(f"Unsupported inventory column: {item}")
         with self.db.get_cursor() as cursor:
+            self._ensure_inventory_row(cursor, user_id)
             cursor.execute(
-                f"UPDATE noodle_stars SET {item} = ? WHERE user_id = ?",
+                f"UPDATE user_inventory SET {item} = ? WHERE user_id = ?",
                 (amount, user_id),
             )
 
     def clear_user_inventory(self, user_id: int) -> None:
         """Remove all items from user's inventory except gold pickaxe."""
         with self.db.get_cursor() as cursor:
+            self._ensure_inventory_row(cursor, user_id)
             cursor.execute(
                 """
-                UPDATE noodle_stars
+                UPDATE user_inventory
                 SET helmet = 0, sword = 0, raw_potato = 0, golden_mushroom = 0
                 WHERE user_id = ?
                 """,
@@ -77,9 +113,10 @@ class InventoryRepository(BaseRepository):
     def clear_all_items(self, user_id: int) -> None:
         """Remove all inventory items, including tools and bait."""
         with self.db.get_cursor() as cursor:
+            self._ensure_inventory_row(cursor, user_id)
             cursor.execute(
                 """
-                UPDATE noodle_stars
+                UPDATE user_inventory
                 SET gold_pickaxe = 0, helmet = 0, sword = 0,
                     raw_potato = 0, golden_mushroom = 0, telescope = 0,
                     bait_worm = 0, bait_herring = 0, bait_sturgeon = 0,

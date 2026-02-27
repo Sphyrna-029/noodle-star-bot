@@ -12,44 +12,76 @@ from database.repositories.base import BaseRepository
 class UserCoreRepository(BaseRepository):
     """Core user operations such as creation and profile updates."""
 
+    def _ensure_profile_rows(self, cursor, user_id: int) -> None:
+        """Ensure per-user rows exist in normalized tables."""
+        cursor.execute(
+            """
+            INSERT INTO user_inventory (
+                user_id, gold_pickaxe, helmet, sword, raw_potato, golden_mushroom,
+                bait_worm, bait_herring, bait_sturgeon, equipped_bait, telescope,
+                mine_level, active_mine_level, active_fish_level, golden_axe, mithril_shield
+            ) VALUES (?, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 1, 1, 1, 0, 0)
+            ON CONFLICT(user_id) DO NOTHING
+            """,
+            (user_id,),
+        )
+        now = datetime.now().isoformat()
+        cursor.execute(
+            """
+            INSERT INTO user_activity (
+                user_id, stamina, stamina_last_updated, stamina_last_reset,
+                last_duel_amount, last_duel_at, last_mine, last_deposit,
+                last_withdraw, last_fish, last_blackjack
+            ) VALUES (?, 100, ?, ?, 0, NULL, NULL, NULL, NULL, NULL, NULL)
+            ON CONFLICT(user_id) DO NOTHING
+            """,
+            (user_id, now, now),
+        )
+
     def get_user(self, user_id: int, username: str) -> User:
         """Get a user by ID, creating them if they don't exist."""
         with self.db.get_cursor() as cursor:
             cursor.execute(
-                "SELECT * FROM noodle_stars WHERE user_id = ?",
+                """
+                SELECT
+                    ns.user_id, ns.username, ns.stars, ns.bank,
+                    COALESCE(ua.stamina, 100) AS stamina,
+                    ua.stamina_last_updated,
+                    ua.stamina_last_reset,
+                    COALESCE(ua.last_duel_amount, 0) AS last_duel_amount,
+                    ua.last_duel_at,
+                    ua.last_mine,
+                    COALESCE(ui.gold_pickaxe, 0) AS gold_pickaxe,
+                    COALESCE(ui.helmet, 0) AS helmet,
+                    COALESCE(ui.sword, 0) AS sword,
+                    COALESCE(ui.raw_potato, 0) AS raw_potato,
+                    COALESCE(ui.golden_mushroom, 0) AS golden_mushroom,
+                    COALESCE(ui.telescope, 0) AS telescope,
+                    COALESCE(ui.mine_level, 1) AS mine_level,
+                    COALESCE(ui.active_mine_level, 1) AS active_mine_level
+                FROM noodle_stars ns
+                LEFT JOIN user_inventory ui ON ui.user_id = ns.user_id
+                LEFT JOIN user_activity ua ON ua.user_id = ns.user_id
+                WHERE ns.user_id = ?
+                """,
                 (user_id,),
             )
             row = cursor.fetchone()
 
             if row is None:
-                now = datetime.now().isoformat()
                 cursor.execute(
                     """
-                    INSERT INTO noodle_stars
-                    (user_id, username, stars, bank, last_mine,
-                     gold_pickaxe, helmet, sword, raw_potato, golden_mushroom, telescope,
-                     stamina, stamina_last_updated, stamina_last_reset, last_duel_amount, last_duel_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO noodle_stars (user_id, username, stars, bank)
+                    VALUES (?, ?, ?, ?)
                     """,
                     (
                         user_id,
                         username,
                         STARTING_STARS,
                         STARTING_BANK,
-                        None,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        100,
-                        now,
-                        now,
-                        0,
-                        None,
                     ),
                 )
+                self._ensure_profile_rows(cursor, user_id)
 
                 return User(
                     user_id=user_id,
@@ -58,6 +90,7 @@ class UserCoreRepository(BaseRepository):
                     bank=STARTING_BANK,
                 )
 
+            self._ensure_profile_rows(cursor, user_id)
             return User.from_row(row)
 
     def get_user_stars(self, user_id: int, username: str) -> int:

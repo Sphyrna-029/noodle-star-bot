@@ -10,6 +10,19 @@ from database.repositories.base import BaseRepository
 class EconomyRepository(BaseRepository):
     """Wallet, bank, leaderboard, and bank cooldown operations."""
 
+    def _ensure_activity_row(self, cursor, user_id: int) -> None:
+        cursor.execute(
+            """
+            INSERT INTO user_activity (
+                user_id, stamina, stamina_last_updated, stamina_last_reset,
+                last_duel_amount, last_duel_at, last_mine, last_deposit,
+                last_withdraw, last_fish, last_blackjack
+            ) VALUES (?, 100, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL)
+            ON CONFLICT(user_id) DO NOTHING
+            """,
+            (user_id,),
+        )
+
     def get_user_bank(self, user_id: int) -> int:
         """Get user's bank balance."""
         with self.db.get_cursor() as cursor:
@@ -58,8 +71,9 @@ class EconomyRepository(BaseRepository):
     def get_last_deposit(self, user_id: int) -> Optional[datetime]:
         """Get the user's last deposit timestamp."""
         with self.db.get_cursor() as cursor:
+            self._ensure_activity_row(cursor, user_id)
             cursor.execute(
-                "SELECT last_deposit FROM noodle_stars WHERE user_id = ?",
+                "SELECT last_deposit FROM user_activity WHERE user_id = ?",
                 (user_id,),
             )
             row = cursor.fetchone()
@@ -72,17 +86,19 @@ class EconomyRepository(BaseRepository):
     def update_last_deposit(self, user_id: int) -> None:
         """Update the user's last deposit timestamp to now."""
         with self.db.get_cursor() as cursor:
+            self._ensure_activity_row(cursor, user_id)
             now = datetime.now().isoformat()
             cursor.execute(
-                "UPDATE noodle_stars SET last_deposit = ? WHERE user_id = ?",
+                "UPDATE user_activity SET last_deposit = ? WHERE user_id = ?",
                 (now, user_id),
             )
 
     def get_last_withdraw(self, user_id: int) -> Optional[datetime]:
         """Get the user's last withdraw timestamp."""
         with self.db.get_cursor() as cursor:
+            self._ensure_activity_row(cursor, user_id)
             cursor.execute(
-                "SELECT last_withdraw FROM noodle_stars WHERE user_id = ?",
+                "SELECT last_withdraw FROM user_activity WHERE user_id = ?",
                 (user_id,),
             )
             row = cursor.fetchone()
@@ -95,8 +111,9 @@ class EconomyRepository(BaseRepository):
     def update_last_withdraw(self, user_id: int) -> None:
         """Update the user's last withdraw timestamp to now."""
         with self.db.get_cursor() as cursor:
+            self._ensure_activity_row(cursor, user_id)
             now = datetime.now().isoformat()
             cursor.execute(
-                "UPDATE noodle_stars SET last_withdraw = ? WHERE user_id = ?",
+                "UPDATE user_activity SET last_withdraw = ? WHERE user_id = ?",
                 (now, user_id),
             )
