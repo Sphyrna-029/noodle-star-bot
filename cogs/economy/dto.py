@@ -1,9 +1,6 @@
 """DTOs for economy use-cases."""
 
 from dataclasses import dataclass
-from msilib import datasizemask
-
-from discord.components import MessageComponentType
 
 
 @dataclass(slots=True)
