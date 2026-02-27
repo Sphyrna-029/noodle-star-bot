@@ -242,7 +242,7 @@ MINE_LEVELS: Final[dict[int, dict]] = {
     2: {
         "name": "Caverns",
         "emoji": "🕳️",
-        "cost": 2000,
+        "cost": 1500,
         "disaster_chance": 0.12,
         "hazards": (HAZARD_COLLAPSE, HAZARD_GOBLIN, HAZARD_FLOOD),
     },
@@ -264,7 +264,7 @@ MINE_LEVELS: Final[dict[int, dict]] = {
         "name": "The Abyss",
         "emoji": "🌑",
         "cost": 5000,
-        "disaster_chance": 0.18,
+        "disaster_chance": 0.20,
         "hazards": (HAZARD_COLLAPSE, HAZARD_GOBLIN, HAZARD_FLOOD, HAZARD_CAVE_TROLL, HAZARD_LAVA_FLOW, HAZARD_SHADOW_WRAITH),
     },
 }

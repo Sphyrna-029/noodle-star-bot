@@ -87,7 +87,7 @@ SHOP_ITEMS: Final[dict[str, ShopItem]] = {
         aliases=("telescope",),
     ),
     "bank_insurance": ShopItem(
-        price=225,
+        price=250,
         db_column="bank_insurance",
         consumable=True,
         emoji="💸",
