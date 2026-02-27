@@ -117,7 +117,7 @@ class EconomyCog(commands.Cog):
             return
 
         await ctx.send(
-            f"The economy has a total of **{result.total_stars}** stars in circulation!"
+            f"🏦 {ctx.author.mention}\nThe economy has a total of **{result.total_stars}** stars in circulation!"
         )
 
 
