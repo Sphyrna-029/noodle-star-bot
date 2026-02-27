@@ -42,44 +42,65 @@ class FarmingCog(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-        # Build the cute grid display
+        # Build the cute grid display - simple square grid (3 columns)
         grid_lines = []
         grid_lines.append("```")
-        grid_lines.append("┌─────────────────────────┐")
         
-        for plot in status.plots:
-            if plot.is_empty:
-                # Empty plot - 25 chars total width
-                line1 = f"│ [{plot.plot_number}] 🟫 Empty         │"
-                line2 = "│     ~~~~~~~~~~~~~~~~   │"
-            elif plot.is_ready:
-                # Ready to harvest - sparkles!
-                emoji = plot.crop_emoji
-                name = plot.crop_name[:6].ljust(6)
-                line1 = f"│ [{plot.plot_number}] {emoji} {name} ✨      │"
-                line2 = "│     READY! Harvest!    │"
+        # Pad plots list to always show owned plots in one grid
+        plots_to_show = status.plots[:]
+        plots_per_row = 3
+        
+        # Calculate total rows needed
+        num_rows = (len(plots_to_show) + plots_per_row - 1) // plots_per_row
+        
+        for row in range(num_rows):
+            start_idx = row * plots_per_row
+            end_idx = min(start_idx + plots_per_row, len(plots_to_show))
+            row_plots = plots_to_show[start_idx:end_idx]
+            
+            # Top border
+            if len(row_plots) == 1:
+                grid_lines.append("┌───┐")
             else:
-                # Growing
-                emoji = plot.crop_emoji
-                name = plot.crop_name[:6].ljust(6)
-                seconds = plot.time_remaining_seconds
-                hours = seconds // 3600
-                minutes = (seconds % 3600) // 60
-                if hours > 0:
-                    time_str = f"{hours}h {minutes}m".ljust(8)
+                grid_lines.append("┌" + "───┬" * (len(row_plots) - 1) + "───┐")
+            
+            # Plot cells with emojis
+            cells = []
+            for plot in row_plots:
+                if plot.is_empty:
+                    cells.append("🟫")
+                elif plot.is_ready:
+                    cells.append(f"{plot.crop_emoji}✨")
                 else:
-                    time_str = f"{minutes}m".ljust(8)
-                line1 = f"│ [{plot.plot_number}] {emoji} {name}        │"
-                line2 = f"│     🌱 {time_str}      │"
+                    cells.append(f"{plot.crop_emoji}")
+            grid_lines.append("│" + "│".join(cells) + "│")
             
-            grid_lines.append(line1)
-            grid_lines.append(line2)
+            # Bottom border
+            if len(row_plots) == 1:
+                grid_lines.append("└───┘")
+            else:
+                grid_lines.append("└" + "───┴" * (len(row_plots) - 1) + "───┘")
             
-            # Add separator between plots (but not after last)
-            if plot.plot_number < status.total_plots:
-                grid_lines.append("├─────────────────────────┤")
+            # Plot details below each row
+            for plot in row_plots:
+                if plot.is_empty:
+                    grid_lines.append(f"Plot {plot.plot_number}: Empty")
+                #elif plot.is_ready:
+                #    grid_lines.append(f"Plot {plot.plot_number}: {plot.crop_name} - ✨ READY!")
+                else:
+                    seconds = plot.time_remaining_seconds
+                    hours = seconds // 3600
+                    minutes = (seconds % 3600) // 60
+                    if hours > 0:
+                        time_str = f"{hours}h {minutes}m"
+                    else:
+                        time_str = f"{minutes}m"
+                    grid_lines.append(f"Plot {plot.plot_number}: {plot.crop_name} - {time_str} remaining")
+            
+            # Add spacing between rows if not the last row
+            if row < num_rows - 1:
+                grid_lines.append("")
         
-        grid_lines.append("└─────────────────────────┘")
         grid_lines.append("```")
 
         # Build legend for ready crops
