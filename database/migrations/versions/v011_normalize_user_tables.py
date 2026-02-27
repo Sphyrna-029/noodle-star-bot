@@ -55,6 +55,13 @@ def upgrade(cursor) -> None:
     """)
 
     if _table_has_column(cursor, "noodle_stars", "gold_pickaxe"):
+        # 2026-02-26 prod issue w/ missing column
+        if not _table_has_column(cursor, "noodle_stars", "last_blackjack"):
+            cursor.execute("""
+                ALTER TABLE noodle_stars
+                ADD COLUMN last_blackjack TEXT
+            """)
+
         cursor.execute("""
             INSERT OR IGNORE INTO user_inventory (
                 user_id, gold_pickaxe, helmet, sword, raw_potato, golden_mushroom,
