@@ -20,38 +20,25 @@ class PlantedCropRow:
 class FarmingRepository(BaseRepository):
     """Farming plot and crop operations."""
 
-    def _ensure_inventory_row(self, cursor, user_id: int) -> None:
-        """Ensure user has an inventory row (reuse from other repos)."""
-        cursor.execute(
-            """
-            INSERT INTO user_inventory (
-                user_id, gold_pickaxe, helmet, sword, raw_potato, golden_mushroom,
-                bait_worm, bait_herring, bait_sturgeon, equipped_bait, telescope,
-                mine_level, active_mine_level, active_fish_level, golden_axe, mithril_shield,
-                bank_insurance, farm_plots
-            ) VALUES (?, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 1, 1, 1, 0, 0, 0, 0)
-            ON CONFLICT(user_id) DO NOTHING
-            """,
-            (user_id,),
-        )
-
     def get_farm_plots(self, user_id: int) -> int:
         """Get the number of farm plots a user owns."""
         with self.db.get_cursor() as cursor:
-            self._ensure_inventory_row(cursor, user_id)
+            # Check if user has inventory row, create minimal one if not
             cursor.execute(
                 "SELECT farm_plots FROM user_inventory WHERE user_id = ?",
                 (user_id,),
             )
             row = cursor.fetchone()
-            if row is None or row["farm_plots"] is None:
+            if row is None:
+                return 0
+            if row["farm_plots"] is None:
                 return 0
             return row["farm_plots"]
 
     def set_farm_plots(self, user_id: int, count: int) -> None:
         """Set the number of farm plots for a user."""
         with self.db.get_cursor() as cursor:
-            self._ensure_inventory_row(cursor, user_id)
+            # User should already exist from buy_plot flow, just update
             cursor.execute(
                 "UPDATE user_inventory SET farm_plots = ? WHERE user_id = ?",
                 (count, user_id),
