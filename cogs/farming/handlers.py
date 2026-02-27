@@ -221,7 +221,6 @@ class FarmingCog(commands.Cog):
         )
 
         for name, emoji, seed_cost, sell_price, profit, growth_hours in info.crops:
-            hourly_rate = profit / growth_hours
             if growth_hours == 1:
                 time_str = "1 hour"
             else:
@@ -230,11 +229,9 @@ class FarmingCog(commands.Cog):
             embed.add_field(
                 name=f"{emoji} {name}",
                 value=(
-                    f"🌱 Seed: **{seed_cost}**⭐\n"
-                    f"💰 Sell: **{sell_price}**⭐\n"
-                    f"📈 Profit: **+{profit}**⭐\n"
+                    f"🌱 Cost: **{seed_cost}**\n"
+                    f"💰 Sell: **{sell_price}**\n"
                     f"⏰ Growth: **{time_str}**\n"
-                    f"💵 Rate: **{hourly_rate:.0f}**⭐/hr"
                 ),
                 inline=True,
             )
