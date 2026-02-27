@@ -88,7 +88,7 @@ class InventoryRepository(BaseRepository):
                 "active_mine_level": row["active_mine_level"] or 1,
                 "golden_axe": row["golden_axe"] or 0,
                 "mithril_shield": row["mithril_shield"] or 0,
-                "bank_insurance": row.get("bank_insurance", 0) or 0,
+                "bank_insurance": (row["bank_insurance"] if "bank_insurance" in row.keys() else 0) or 0,
             }
 
     def update_user_inventory(self, user_id: int, item: str, amount: int) -> None:
