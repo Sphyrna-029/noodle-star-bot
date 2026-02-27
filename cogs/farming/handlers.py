@@ -69,10 +69,10 @@ class FarmingCog(commands.Cog):
             for plot in row_plots:
                 if plot.is_empty:
                     cells.append("🟫")
-                elif plot.is_ready:
-                    cells.append(f"{plot.crop_emoji}✨")
+                #elif plot.is_ready:
+                #    cells.append(f"{plot.crop_emoji}✨")
                 else:
-                    cells.append(f"{plot.crop_emoji}")
+                    cells.append(f"{plot.crop_emoji} ")
             grid_lines.append("│" + "│".join(cells) + "│")
             
             # Bottom border
