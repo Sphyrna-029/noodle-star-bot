@@ -21,7 +21,7 @@ class FarmingCog(commands.Cog):
 
         if status.total_plots == 0:
             embed = discord.Embed(
-                title="� Your Farm",
+                title="🏡 Your Farm",
                 description=(
                     f"{ctx.author.mention}, you don't own any farm plots yet!\n\n"
                     f"```\n"

@@ -110,7 +110,7 @@ class FarmingUseCases:
             )
 
         # Check if user has enough stars
-        balance = self.repo.get_user_stars(user_id)
+        balance = self.repo.get_user_stars(user_id, username)
         if balance < cost:
             return BuyPlotResult(
                 success=False,
@@ -172,7 +172,7 @@ class FarmingUseCases:
             )
 
         # Check if user has enough stars for seeds
-        balance = self.repo.get_user_stars(user_id)
+        balance = self.repo.get_user_stars(user_id, username)
         if balance < crop.seed_cost:
             return PlantResult(
                 success=False,
@@ -273,7 +273,7 @@ class FarmingUseCases:
             self.repo.remove_crops(user_id, plots_to_clear)
 
         # Add stars to user
-        balance = self.repo.get_user_stars(user_id)
+        balance = self.repo.get_user_stars(user_id, username)
         new_balance = balance + total_stars
         self.repo.update_user_stars(user_id, username, new_balance)
 
