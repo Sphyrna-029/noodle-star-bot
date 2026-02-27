@@ -39,6 +39,7 @@ class NoodleStarBot(commands.Bot):
             "cogs.shop.handlers",
             "cogs.moderator.handlers",
             "cogs.fishing.handlers",
+            "cogs.farming.handlers",
         ]
 
     async def setup_hook(self):

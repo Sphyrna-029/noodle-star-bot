@@ -1,8 +1,7 @@
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Final
 
-__all__ = ["Mineral", "MineHazard", "ShopItem", "BaitTier", "Catch", "CatchBucket"]
+__all__ = ["Mineral", "MineHazard", "ShopItem", "BaitTier", "Catch", "CatchBucket", "Crop"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,3 +57,13 @@ class Catch:
 class CatchBucket:
     weight: int
     catches: tuple[Catch, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class Crop:
+    """Definition of a crop type for farming."""
+    name: str
+    emoji: str
+    seed_cost: int
+    sell_price: int
+    growth_hours: int

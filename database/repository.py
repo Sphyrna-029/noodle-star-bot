@@ -2,6 +2,7 @@
 
 from database.repositories import (
     EconomyRepository,
+    FarmingRepository,
     FishingRepository,
     GamblingRepository,
     InventoryRepository,
@@ -17,6 +18,7 @@ class UserRepository(
     MiningRepository,
     FishingRepository,
     GamblingRepository,
+    FarmingRepository,
 ):
     """Unified repository composed from smaller domain repositories."""
 
