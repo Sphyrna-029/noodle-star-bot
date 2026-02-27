@@ -122,24 +122,30 @@ class EconomyCog(commands.Cog):
             f"🏦 {ctx.author.mention}\nThe economy has a total of **{result.total_stars}** stars in circulation!"
         )
 
-    @commands.command(name="starstats")
-    async def star_stats(self, ctx, period: str = "last"):
-        """Show monthly earned stars. Usage: !starstats [last|YYYY-MM]"""
-        period = period.strip().lower()
+    @commands.command(name="stats")
+    async def star_stats(self, ctx, period: str | None = None):
+        """Show monthly earned stars and more. Usage: !stats [last|YYYY-MM]"""
 
-        if period == "last":
-            earned, year, month = self.economy.get_last_month_stars_earned()
-        else:
-            try:
-                parsed = datetime.strptime(period, "%Y-%m")
-                year, month = parsed.year, parsed.month
-            except ValueError:
-                await ctx.send(
-                    f"❌ {ctx.author.mention}, invalid period. Use `last` or `YYYY-MM` (example: `2026-01`)."
-                )
-                return
-
+        if period is None:
+            now = datetime.utcnow()
+            year, month = now.year, now.month
             earned = self.economy.get_monthly_stars_earned(year, month)
+        else:
+            period = period.strip().lower()
+
+            if period == "last":
+                earned, year, month = self.economy.get_last_month_stars_earned()
+            else:
+                try:
+                    parsed = datetime.strptime(period, "%Y-%m")
+                    year, month = parsed.year, parsed.month
+                except ValueError:
+                    await ctx.send(
+                        f"❌ {ctx.author.mention}, invalid period. Use `last` or `YYYY-MM` (example: `2026-01`)."
+                    )
+                    return
+
+                earned = self.economy.get_monthly_stars_earned(year, month)
 
         month_label = f"{year}-{month:02d}"
         embed = discord.Embed(
@@ -147,7 +153,7 @@ class EconomyCog(commands.Cog):
             color=discord.Color.blurple(),
         )
         embed.add_field(
-            name="Total Stars Earned",
+            name="Total stars earned in ZGAF",
             value=f"**{earned}**",
             inline=False,
         )
