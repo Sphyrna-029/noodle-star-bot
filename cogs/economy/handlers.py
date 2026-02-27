@@ -1,5 +1,7 @@
 """Economy commands cog."""
 
+from datetime import datetime
+
 import discord
 from discord.ext import commands
 
@@ -30,7 +32,7 @@ class EconomyCog(commands.Cog):
 
     @commands.command(name="topstars")
     async def top_stars(self, ctx):
-        """Show top 10 users with the most noodle stars"""
+        """Show top 10 users with the most noodle stars."""
         results = self.economy.get_leaderboard(limit=10, ascending=False)
 
         if not results:
@@ -47,8 +49,8 @@ class EconomyCog(commands.Cog):
 
     @commands.command(name="bottomstars")
     async def bottom_stars(self, ctx):
-        """Show bottom 10 users with the least noodle stars"""
-        results = self.economy.get_leaderboard(limit=10, ascending=True)
+        """Show bottom 5 users with the least noodle stars."""
+        results = self.economy.get_leaderboard(limit=5, ascending=True)
 
         if not results:
             await ctx.send("No noodle stars have been awarded yet!")
@@ -63,8 +65,8 @@ class EconomyCog(commands.Cog):
 
     @commands.command(name="deposit")
     async def deposit(self, ctx, amount: str = ''):
-        """Deposit noodle stars into your bank for safekeeping"""
-        if amount is None:
+        """Deposit noodle stars into your bank for safekeeping."""
+        if amount is '':
             await ctx.send(
                 f"❌ {ctx.author.mention}, please specify an amount to deposit! "
                 f"Usage: `!deposit <amount>` or `!deposit all`"
@@ -86,8 +88,8 @@ class EconomyCog(commands.Cog):
 
     @commands.command(name="withdraw")
     async def withdraw(self, ctx, amount: str = ''):
-        """Withdraw noodle stars from your bank"""
-        if amount is None:
+        """Withdraw noodle stars from your bank."""
+        if amount is '':
             await ctx.send(
                 f"❌ {ctx.author.mention}, please specify an amount to withdraw! "
                 f"Usage: `!withdraw <amount>` or `!withdraw all`"
@@ -106,6 +108,51 @@ class EconomyCog(commands.Cog):
             f"🏦 Bank: **{result.bank}** stars\n"
             f"📊 Total: **{result.total}** stars"
         )
+
+    @commands.command(name="economystats")
+    async def noodle_star_economy(self, ctx):
+        """Get information about the economy."""
+        result = self.economy.get_economy_stats()
+
+        if not result.success:
+            await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
+            return
+
+        await ctx.send(
+            f"🏦 {ctx.author.mention}\nThe economy has a total of **{result.total_stars}** stars in circulation!"
+        )
+
+    @commands.command(name="starstats")
+    async def star_stats(self, ctx, period: str = "last"):
+        """Show monthly earned stars. Usage: !starstats [last|YYYY-MM]"""
+        period = period.strip().lower()
+
+        if period == "last":
+            earned, year, month = self.economy.get_last_month_stars_earned()
+        else:
+            try:
+                parsed = datetime.strptime(period, "%Y-%m")
+                year, month = parsed.year, parsed.month
+            except ValueError:
+                await ctx.send(
+                    f"❌ {ctx.author.mention}, invalid period. Use `last` or `YYYY-MM` (example: `2026-01`)."
+                )
+                return
+
+            earned = self.economy.get_monthly_stars_earned(year, month)
+
+        month_label = f"{year}-{month:02d}"
+        embed = discord.Embed(
+            title=f"📈 Star Stats ({month_label})",
+            color=discord.Color.blurple(),
+        )
+        embed.add_field(
+            name="Total Stars Earned",
+            value=f"**{earned}**",
+            inline=False,
+        )
+
+        await ctx.send(embed=embed)
 
 
 async def setup(bot):

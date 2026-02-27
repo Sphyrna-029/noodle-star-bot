@@ -15,3 +15,11 @@ class BalanceResult:
     @property
     def total(self) -> int:
         return self.wallet + self.bank
+
+@dataclass(slots=True)
+class EconomyStats:
+    """Stats of the economy."""
+
+    success: bool
+    message: str
+    total_stars: int = 0

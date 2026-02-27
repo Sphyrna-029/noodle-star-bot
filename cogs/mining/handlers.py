@@ -58,7 +58,7 @@ class MiningCog(commands.Cog):
     @commands.command(name="minelevel")
     async def minelevel(self, ctx, level: int = 0):
         """View or switch your mine level. Usage: !minelevel [number]"""
-        if level is not None:
+        if level != 0:
             # Switch active level
             success, msg = self.mining.set_active_level(ctx.author.id, level)
             if success:
