@@ -128,7 +128,7 @@ class FarmingCog(commands.Cog):
         # Add footer with next plot info
         if status.can_buy_more and status.next_plot_cost:
             embed.set_footer(
-                text=f"💰 Next plot: {status.next_plot_cost}⭐ • !buyplot to expand • !harvest to collect"
+                text=f"💰 Next plot: {status.next_plot_cost}⭐ • !buyplot <number> to expand • !harvest to collect"
             )
         elif not status.can_buy_more:
             embed.set_footer(text=f"🌟 Maximum plots reached ({MAX_PLOTS}) • !harvest to collect")
@@ -136,9 +136,49 @@ class FarmingCog(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(name="buyplot")
-    async def buyplot(self, ctx):
-        """Buy a new farm plot."""
-        result = self.farming.buy_plot(ctx.author.id, str(ctx.author))
+    async def buyplot(self, ctx, plot_number: int = 0):
+        """Buy a new farm plot. Usage: !buyplot <plot_number>"""
+        # If no plot number specified, show plot status
+        if plot_number == 0:
+            status = self.farming.get_farm_status(ctx.author.id, str(ctx.author))
+            
+            embed = discord.Embed(
+                title="🏡 Farm Plot Status",
+                description="Use `!buyplot <number>` to purchase a specific plot.",
+                color=discord.Color.gold(),
+            )
+            
+            # Show all plots (owned and available)
+            plot_lines = []
+            for i in range(1, MAX_PLOTS + 1):
+                if i <= status.total_plots:
+                    plot_lines.append(f"✅ **Plot {i}**: Owned")
+                else:
+                    cost = PLOT_COSTS.get(i, 0)
+                    plot_lines.append(f"🔒 **Plot {i}**: Available for **{cost}⭐**")
+            
+            embed.add_field(
+                name="Your Plots",
+                value="\n".join(plot_lines),
+                inline=False,
+            )
+            
+            embed.add_field(
+                name="Your Balance",
+                value=f"💰 **{status.stars}⭐**",
+                inline=False,
+            )
+            
+            if status.can_buy_more:
+                embed.set_footer(text=f"💡 Example: !buyplot {status.total_plots + 1}")
+            else:
+                embed.set_footer(text="🌟 You own all plots!")
+            
+            await ctx.send(embed=embed)
+            return
+        
+        # Actually buy the plot
+        result = self.farming.buy_plot(ctx.author.id, str(ctx.author), plot_number)
 
         if not result.success:
             await ctx.send(f"❌ {ctx.author.mention}, {result.message}")

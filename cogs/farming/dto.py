@@ -25,6 +25,7 @@ class FarmStatus:
     plots: list[PlotStatus] = field(default_factory=list)
     next_plot_cost: Optional[int] = None
     can_buy_more: bool = True
+    stars: int = 0  # User's current star balance
 
 
 @dataclass(slots=True)

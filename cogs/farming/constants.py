@@ -76,7 +76,7 @@ CROPS: Final[dict[str, Crop]] = {
 # ---------------------------------------------------------------------------
 # Plot Costs (scaling)
 # ---------------------------------------------------------------------------
-# Total investment for 5 plots: 2,500⭐
+# Total investment for 6 plots: 3,300⭐
 
 PLOT_COSTS: Final[dict[int, int]] = {
     1: 300,
@@ -84,9 +84,10 @@ PLOT_COSTS: Final[dict[int, int]] = {
     3: 500,
     4: 600,
     5: 700,
+    6: 800,
 }
 
-MAX_PLOTS: Final[int] = 5
+MAX_PLOTS: Final[int] = 6
 
 
 def get_crop_by_name(name: str) -> Crop | None:

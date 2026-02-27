@@ -79,30 +79,60 @@ class FarmingUseCases:
         next_plot_num = total_plots + 1
         next_plot_cost = PLOT_COSTS.get(next_plot_num)
         can_buy_more = next_plot_num <= MAX_PLOTS
+        
+        # Get user's star balance
+        stars = self.repo.get_user_stars(user_id, username)
 
         return FarmStatus(
             total_plots=total_plots,
             plots=plots,
             next_plot_cost=next_plot_cost,
             can_buy_more=can_buy_more,
+            stars=stars,
         )
 
-    def buy_plot(self, user_id: int, username: str) -> BuyPlotResult:
-        """Buy a new farm plot."""
+    def buy_plot(self, user_id: int, username: str, plot_number: int = 0) -> BuyPlotResult:
+        """Buy a new farm plot.
+        
+        Args:
+            user_id: The user's Discord ID
+            username: The user's Discord username
+            plot_number: Specific plot to buy (1-6). If 0, buys the next available plot.
+        """
         # Ensure user exists
         self.repo.get_user(user_id, username)
 
         current_plots = self.repo.get_farm_plots(user_id)
-        next_plot_num = current_plots + 1
+        
+        # Determine which plot to buy
+        if plot_number == 0:
+            # Buy next available plot (old behavior for backward compatibility)
+            target_plot_num = current_plots + 1
+        else:
+            # Buy specific plot
+            target_plot_num = plot_number
+            
+            # Validate they're buying in order
+            if target_plot_num != current_plots + 1:
+                if target_plot_num <= current_plots:
+                    return BuyPlotResult(
+                        success=False,
+                        message=f"You already own plot #{target_plot_num}!",
+                    )
+                else:
+                    return BuyPlotResult(
+                        success=False,
+                        message=f"You must buy plots in order! Buy plot #{current_plots + 1} first.",
+                    )
 
         # Check if can buy more
-        if next_plot_num > MAX_PLOTS:
+        if target_plot_num > MAX_PLOTS:
             return BuyPlotResult(
                 success=False,
                 message=f"You already own the maximum of {MAX_PLOTS} plots!",
             )
 
-        cost = PLOT_COSTS.get(next_plot_num)
+        cost = PLOT_COSTS.get(target_plot_num)
         if cost is None:
             return BuyPlotResult(
                 success=False,
@@ -114,18 +144,18 @@ class FarmingUseCases:
         if balance < cost:
             return BuyPlotResult(
                 success=False,
-                message=f"You need **{cost}** stars to buy plot #{next_plot_num}, but you only have **{balance}** stars!",
+                message=f"You need **{cost}** stars to buy plot #{target_plot_num}, but you only have **{balance}** stars!",
             )
 
         # Deduct stars and add plot
         new_balance = balance - cost
         self.repo.update_user_stars(user_id, username, new_balance)
-        self.repo.set_farm_plots(user_id, next_plot_num)
+        self.repo.set_farm_plots(user_id, target_plot_num)
 
         return BuyPlotResult(
             success=True,
-            message=f"You bought plot #{next_plot_num} for **{cost}** stars!",
-            plot_number=next_plot_num,
+            message=f"You bought plot #{target_plot_num} for **{cost}** stars!",
+            plot_number=target_plot_num,
             cost=cost,
             new_balance=new_balance,
         )
