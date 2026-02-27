@@ -257,15 +257,26 @@ class FarmingCog(commands.Cog):
         # Build harvest summary
         if len(result.harvested) == 1:
             plot_num, name, emoji, stars = result.harvested[0]
+            
+            # Check if this crop had weather bonus
+            bonus_msg = ""
+            if result.weather_blessed:
+                bonus_msg = "\n✨ **Weather Bonus Applied!** +100% harvest value!"
+            
             await ctx.send(
                 f"🌾 {ctx.author.mention} harvested {emoji} **{name}** from Plot #{plot_num}!\n"
-                f"💰 Earned **{stars}** stars!\n"
+                f"💰 Earned **{stars}** stars!{bonus_msg}\n"
                 f"New balance: **{result.new_balance}** stars"
             )
         else:
             lines = [f"🌾 {ctx.author.mention} harvested **{len(result.harvested)}** crops!\n"]
             for plot_num, name, emoji, stars in result.harvested:
                 lines.append(f"  • Plot #{plot_num}: {emoji} {name} (+{stars}⭐)")
+            
+            # Show weather bonus summary if any
+            if result.weather_blessed:
+                lines.append(f"\n✨ **Weather Bonus Applied!** ({len(result.weather_blessed)} crop(s) got +100% value!)")
+            
             lines.append(f"\n💰 Total: **{result.total_stars}** stars!")
             lines.append(f"New balance: **{result.new_balance}** stars")
             await ctx.send("\n".join(lines))

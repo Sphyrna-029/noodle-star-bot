@@ -35,6 +35,7 @@ class NoodleStarBot(commands.Bot):
         # List of cogs to load
         self.cog_list = [
             "cogs.events.alien_abduction",
+            "cogs.events.farming_weather",
             "cogs.economy.handlers",
             "cogs.gambling.handlers",
             "cogs.mining.handlers",

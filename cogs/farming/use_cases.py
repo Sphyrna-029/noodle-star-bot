@@ -288,15 +288,24 @@ class FarmingUseCases:
         harvested = []
         total_stars = 0
         plots_to_clear = []
+        weather_blessed = []  # Track which crops had weather bonus
 
         for crop_data in ready_crops:
             crop_info = get_crop_by_name(crop_data.crop_type)
             if crop_info:
+                # Apply weather bonus if present
+                base_price = crop_info.sell_price
+                actual_price = int(base_price * crop_data.weather_bonus)
+                
                 harvested.append(
-                    (crop_data.plot_number, crop_info.name, crop_info.emoji, crop_info.sell_price)
+                    (crop_data.plot_number, crop_info.name, crop_info.emoji, actual_price)
                 )
-                total_stars += crop_info.sell_price
+                total_stars += actual_price
                 plots_to_clear.append(crop_data.plot_number)
+                
+                # Track if this crop had a weather bonus
+                if crop_data.weather_bonus > 1.0:
+                    weather_blessed.append((crop_info.name, crop_info.emoji, base_price, actual_price))
 
         # Update database
         if plots_to_clear:
@@ -313,6 +322,7 @@ class FarmingUseCases:
             harvested=harvested,
             total_stars=total_stars,
             new_balance=new_balance,
+            weather_blessed=weather_blessed,
         )
 
     def get_crops_info(self) -> CropsInfo:

@@ -15,6 +15,7 @@ class PlantedCropRow:
     crop_type: str
     planted_at: datetime
     ready_at: datetime
+    weather_bonus: float = 1.0  # Default no bonus
 
 
 class FarmingRepository(BaseRepository):
@@ -49,7 +50,8 @@ class FarmingRepository(BaseRepository):
         with self.db.get_cursor() as cursor:
             cursor.execute(
                 """
-                SELECT id, user_id, plot_number, crop_type, planted_at, ready_at
+                SELECT id, user_id, plot_number, crop_type, planted_at, ready_at, 
+                       COALESCE(weather_bonus, 1.0) as weather_bonus
                 FROM planted_crops
                 WHERE user_id = ?
                 ORDER BY plot_number
@@ -65,6 +67,7 @@ class FarmingRepository(BaseRepository):
                     crop_type=row["crop_type"],
                     planted_at=datetime.fromisoformat(row["planted_at"]),
                     ready_at=datetime.fromisoformat(row["ready_at"]),
+                    weather_bonus=float(row["weather_bonus"]),
                 )
                 for row in rows
             ]
@@ -74,7 +77,8 @@ class FarmingRepository(BaseRepository):
         with self.db.get_cursor() as cursor:
             cursor.execute(
                 """
-                SELECT id, user_id, plot_number, crop_type, planted_at, ready_at
+                SELECT id, user_id, plot_number, crop_type, planted_at, ready_at,
+                       COALESCE(weather_bonus, 1.0) as weather_bonus
                 FROM planted_crops
                 WHERE user_id = ? AND plot_number = ?
                 """,
@@ -90,6 +94,7 @@ class FarmingRepository(BaseRepository):
                 crop_type=row["crop_type"],
                 planted_at=datetime.fromisoformat(row["planted_at"]),
                 ready_at=datetime.fromisoformat(row["ready_at"]),
+                weather_bonus=float(row["weather_bonus"]),
             )
 
     def plant_crop(
