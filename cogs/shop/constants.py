@@ -86,6 +86,15 @@ SHOP_ITEMS: Final[dict[str, ShopItem]] = {
         description="See the stars in a whole new way! Use `!telescope` to view a random starfield.",
         aliases=("telescope",),
     ),
+    "bank_insurance": ShopItem(
+        price=225,
+        db_column="bank_insurance",
+        consumable=True,
+        emoji="🛡️",
+        display_name="Bank Insurance",
+        description="Protects your bank from disasters for 10 mines/fishes at Level 4-5. Your wallet is still at risk!",
+        aliases=("bank insurance", "insurance", "bank shield"),
+    ),
 }
 
 

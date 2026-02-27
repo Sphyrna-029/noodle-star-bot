@@ -11,6 +11,7 @@ __all__ = [
     "MINING_GOBLIN_LOSS_PERCENT",
     "MINERALS_NORMAL",
     "MINERALS_GOLD_PICKAXE",
+    "MINERAL_TABLES",
     "MINE_LEVELS",
 ]
 
@@ -221,14 +222,21 @@ HAZARD_SHADOW_WRAITH = MineHazard(
 # Level definitions
 # ---------------------------------------------------------------------------
 
+# Mineral tables by level
+MINERAL_TABLES: Final[dict[int, dict[str, tuple[Mineral, ...]]]] = {
+    1: {"normal": MINERALS_NORMAL, "gold": MINERALS_GOLD_PICKAXE},
+    2: {"normal": _L2_NORMAL, "gold": _L2_GOLD},
+    3: {"normal": _L3_NORMAL, "gold": _L3_GOLD},
+    4: {"normal": _L4_NORMAL, "gold": _L4_GOLD},
+    5: {"normal": _L5_NORMAL, "gold": _L5_GOLD},
+}
+
 MINE_LEVELS: Final[dict[int, dict]] = {
     1: {
         "name": "Surface Mine",
         "emoji": "⛏️",
         "cost": 0,
         "disaster_chance": 0.10,
-        "minerals_normal": MINERALS_NORMAL,
-        "minerals_gold": MINERALS_GOLD_PICKAXE,
         "hazards": (HAZARD_COLLAPSE, HAZARD_GOBLIN),
     },
     2: {
@@ -236,8 +244,6 @@ MINE_LEVELS: Final[dict[int, dict]] = {
         "emoji": "🕳️",
         "cost": 2000,
         "disaster_chance": 0.12,
-        "minerals_normal": _L2_NORMAL,
-        "minerals_gold": _L2_GOLD,
         "hazards": (HAZARD_COLLAPSE, HAZARD_GOBLIN, HAZARD_FLOOD),
     },
     3: {
@@ -245,8 +251,6 @@ MINE_LEVELS: Final[dict[int, dict]] = {
         "emoji": "🪨",
         "cost": 3000,
         "disaster_chance": 0.14,
-        "minerals_normal": _L3_NORMAL,
-        "minerals_gold": _L3_GOLD,
         "hazards": (HAZARD_COLLAPSE, HAZARD_GOBLIN, HAZARD_FLOOD, HAZARD_CAVE_TROLL),
     },
     4: {
@@ -254,8 +258,6 @@ MINE_LEVELS: Final[dict[int, dict]] = {
         "emoji": "🌋",
         "cost": 4000,
         "disaster_chance": 0.16,
-        "minerals_normal": _L4_NORMAL,
-        "minerals_gold": _L4_GOLD,
         "hazards": (HAZARD_COLLAPSE, HAZARD_GOBLIN, HAZARD_FLOOD, HAZARD_CAVE_TROLL, HAZARD_LAVA_FLOW),
     },
     5: {
@@ -263,8 +265,6 @@ MINE_LEVELS: Final[dict[int, dict]] = {
         "emoji": "🌑",
         "cost": 5000,
         "disaster_chance": 0.18,
-        "minerals_normal": _L5_NORMAL,
-        "minerals_gold": _L5_GOLD,
         "hazards": (HAZARD_COLLAPSE, HAZARD_GOBLIN, HAZARD_FLOOD, HAZARD_CAVE_TROLL, HAZARD_LAVA_FLOW, HAZARD_SHADOW_WRAITH),
     },
 }
