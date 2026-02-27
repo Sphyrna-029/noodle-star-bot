@@ -10,6 +10,15 @@ from database.repositories.base import BaseRepository
 class EconomyRepository(BaseRepository):
     """Wallet, bank, leaderboard, and bank cooldown operations."""
 
+    @staticmethod
+    def _month_bounds(year: int, month: int) -> tuple[datetime, datetime]:
+        start = datetime(year, month, 1)
+        if month == 12:
+            end = datetime(year + 1, 1, 1)
+        else:
+            end = datetime(year, month + 1, 1)
+        return start, end
+
     def _ensure_activity_row(self, cursor, user_id: int) -> None:
         cursor.execute(
             """
@@ -117,3 +126,72 @@ class EconomyRepository(BaseRepository):
                 "UPDATE user_activity SET last_withdraw = ? WHERE user_id = ?",
                 (now, user_id),
             )
+
+    def get_stars_earned_between(self, start: datetime, end: datetime) -> int:
+        """Get total stars earned (positive deltas only) in a time range."""
+        with self.db.get_cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT COALESCE(SUM(CASE WHEN delta > 0 THEN delta ELSE 0 END), 0) AS earned
+                FROM star_ledger
+                WHERE changed_at >= ? AND changed_at < ?
+                """,
+                (start.isoformat(), end.isoformat()),
+            )
+            row = cursor.fetchone()
+            return row["earned"] if row else 0
+
+    def get_top_gainers_between(
+        self,
+        start: datetime,
+        end: datetime,
+        limit: int = 3,
+    ) -> list[tuple[str, int]]:
+        """Get top users by stars gained (positive deltas) in a time range."""
+        with self.db.get_cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT ns.username, COALESCE(SUM(sl.delta), 0) AS gained
+                FROM star_ledger sl
+                JOIN noodle_stars ns ON ns.user_id = sl.user_id
+                WHERE sl.changed_at >= ? AND sl.changed_at < ? AND sl.delta > 0
+                GROUP BY sl.user_id, ns.username
+                ORDER BY gained DESC
+                LIMIT ?
+                """,
+                (start.isoformat(), end.isoformat(), limit),
+            )
+            return [(row["username"], row["gained"]) for row in cursor.fetchall()]
+
+    def get_monthly_stars_earned(self, year: int, month: int) -> int:
+        """Get total stars earned in a specific calendar month."""
+        start, end = self._month_bounds(year, month)
+        return self.get_stars_earned_between(start, end)
+
+    def get_top_gainers_for_month(
+        self,
+        year: int,
+        month: int,
+        limit: int = 3,
+    ) -> list[tuple[str, int]]:
+        """Get top users by stars gained for a specific calendar month."""
+        start, end = self._month_bounds(year, month)
+        return self.get_top_gainers_between(start, end, limit)
+
+    def get_last_month_stars_earned(self) -> int:
+        """Get total stars earned in the previous calendar month."""
+        now = datetime.now()
+        if now.month == 1:
+            year, month = now.year - 1, 12
+        else:
+            year, month = now.year, now.month - 1
+        return self.get_monthly_stars_earned(year, month)
+
+    def get_top_gainers_last_month(self, limit: int = 3) -> list[tuple[str, int]]:
+        """Get top users by stars gained in the previous calendar month."""
+        now = datetime.now()
+        if now.month == 1:
+            year, month = now.year - 1, 12
+        else:
+            year, month = now.year, now.month - 1
+        return self.get_top_gainers_for_month(year, month, limit)

@@ -1,5 +1,7 @@
 """Economy commands cog."""
 
+from datetime import datetime
+
 import discord
 from discord.ext import commands
 
@@ -119,6 +121,38 @@ class EconomyCog(commands.Cog):
         await ctx.send(
             f"🏦 {ctx.author.mention}\nThe economy has a total of **{result.total_stars}** stars in circulation!"
         )
+
+    @commands.command(name="starstats")
+    async def star_stats(self, ctx, period: str = "last"):
+        """Show monthly earned stars. Usage: !starstats [last|YYYY-MM]"""
+        period = period.strip().lower()
+
+        if period == "last":
+            earned, year, month = self.economy.get_last_month_stars_earned()
+        else:
+            try:
+                parsed = datetime.strptime(period, "%Y-%m")
+                year, month = parsed.year, parsed.month
+            except ValueError:
+                await ctx.send(
+                    f"❌ {ctx.author.mention}, invalid period. Use `last` or `YYYY-MM` (example: `2026-01`)."
+                )
+                return
+
+            earned = self.economy.get_monthly_stars_earned(year, month)
+
+        month_label = f"{year}-{month:02d}"
+        embed = discord.Embed(
+            title=f"📈 Star Stats ({month_label})",
+            color=discord.Color.blurple(),
+        )
+        embed.add_field(
+            name="Total Stars Earned",
+            value=f"**{earned}**",
+            inline=False,
+        )
+
+        await ctx.send(embed=embed)
 
 
 async def setup(bot):

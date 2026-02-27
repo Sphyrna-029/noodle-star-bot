@@ -262,3 +262,18 @@ class EconomyUseCases:
             List of (username, stars) tuples
         """
         return self.repo.get_leaderboard(limit, ascending)
+
+    def get_monthly_stars_earned(self, year: int, month: int) -> int:
+        """Get stars earned for a specific month."""
+        return self.repo.get_monthly_stars_earned(year, month)
+
+    def get_last_month_stars_earned(self) -> tuple[int, int, int]:
+        """Get stars earned for the previous calendar month."""
+        now = datetime.now()
+        if now.month == 1:
+            year, month = now.year - 1, 12
+        else:
+            year, month = now.year, now.month - 1
+
+        earned = self.repo.get_monthly_stars_earned(year, month)
+        return earned, year, month
