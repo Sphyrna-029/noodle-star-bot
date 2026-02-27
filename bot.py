@@ -1,5 +1,7 @@
 """Custom Bot class for Noodle Star Bot."""
 
+import traceback
+
 import discord
 from discord.ext import commands
 
@@ -74,3 +76,21 @@ class NoodleStarBot(commands.Bot):
         print(f"{self.user} has connected to Discord!")
         print("Bot is ready to track noodle stars!")
         print(f"Serving {len(self.guilds)} guild(s)")
+
+    async def on_command_error(self, ctx, error):
+        """Global error handler - sends traceback to Discord for debugging."""
+        # Get the original exception if it's wrapped
+        original = getattr(error, "original", error)
+        
+        # Format the traceback
+        tb_lines = traceback.format_exception(type(original), original, original.__traceback__)
+        tb_text = "".join(tb_lines)
+        
+        # Truncate if too long for Discord (max 2000 chars)
+        if len(tb_text) > 1900:
+            tb_text = tb_text[:1900] + "\n... (truncated)"
+        
+        # Send to Discord
+        await ctx.send(
+            f"❌ **Error in `{ctx.command}`:**\n```python\n{tb_text}\n```"
+        )
