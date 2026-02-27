@@ -236,7 +236,7 @@ class FarmingCog(commands.Cog):
                 inline=True,
             )
 
-        embed.set_footer(text="You do **NOT** need to pre-purchase crops, they will automatically purchase when you plant them!\nLonger crops = higher hourly rate, but require patience!")
+        embed.set_footer(text="You do not need to pre-purchase crops, they will automatically purchase when you plant them!\nLonger crops = higher hourly rate, but require patience!")
         await ctx.send(embed=embed)
 
 
