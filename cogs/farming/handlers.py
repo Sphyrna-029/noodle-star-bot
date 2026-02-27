@@ -45,41 +45,41 @@ class FarmingCog(commands.Cog):
         # Build the cute grid display
         grid_lines = []
         grid_lines.append("```")
-        grid_lines.append("┌" + "─" * 23 + "┐")
+        grid_lines.append("┌─────────────────────────┐")
         
         for plot in status.plots:
             if plot.is_empty:
-                # Empty plot
-                line1 = f"│  [{plot.plot_number}] 🟫 Empty          │"
-                line2 = f"│      ~~~~~~~~~~~~~~~  │"
+                # Empty plot - 25 chars total width
+                line1 = f"│ [{plot.plot_number}] 🟫 Empty         │"
+                line2 = "│     ~~~~~~~~~~~~~~~~   │"
             elif plot.is_ready:
                 # Ready to harvest - sparkles!
                 emoji = plot.crop_emoji
-                name = plot.crop_name[:8].ljust(8)
-                line1 = f"│  [{plot.plot_number}] {emoji} {name} ✨    │"
-                line2 = f"│      READY! Harvest!  │"
+                name = plot.crop_name[:6].ljust(6)
+                line1 = f"│ [{plot.plot_number}] {emoji} {name} ✨      │"
+                line2 = "│     READY! Harvest!    │"
             else:
                 # Growing
                 emoji = plot.crop_emoji
-                name = plot.crop_name[:8].ljust(8)
+                name = plot.crop_name[:6].ljust(6)
                 seconds = plot.time_remaining_seconds
                 hours = seconds // 3600
                 minutes = (seconds % 3600) // 60
                 if hours > 0:
-                    time_str = f"{hours}h {minutes}m".ljust(7)
+                    time_str = f"{hours}h {minutes}m".ljust(8)
                 else:
-                    time_str = f"{minutes}m".ljust(7)
-                line1 = f"│  [{plot.plot_number}] {emoji} {name}       │"
-                line2 = f"│      🌱 {time_str}       │"
+                    time_str = f"{minutes}m".ljust(8)
+                line1 = f"│ [{plot.plot_number}] {emoji} {name}        │"
+                line2 = f"│     🌱 {time_str}      │"
             
             grid_lines.append(line1)
             grid_lines.append(line2)
             
             # Add separator between plots (but not after last)
             if plot.plot_number < status.total_plots:
-                grid_lines.append("│" + "─" * 23 + "│")
+                grid_lines.append("├─────────────────────────┤")
         
-        grid_lines.append("└" + "─" * 23 + "┘")
+        grid_lines.append("└─────────────────────────┘")
         grid_lines.append("```")
 
         # Build legend for ready crops
