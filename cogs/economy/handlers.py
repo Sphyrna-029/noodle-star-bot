@@ -109,19 +109,6 @@ class EconomyCog(commands.Cog):
             f"📊 Total: **{result.total}** stars"
         )
 
-    @commands.command(name="economystats")
-    async def noodle_star_economy(self, ctx):
-        """Get information about the economy."""
-        result = self.economy.get_economy_stats()
-
-        if not result.success:
-            await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
-            return
-
-        await ctx.send(
-            f"🏦 {ctx.author.mention}\nThe economy has a total of **{result.total_stars}** stars in circulation!"
-        )
-
     @commands.command(name="stats")
     async def star_stats(self, ctx, period: str | None = None):
         """Show monthly earned stars and more. Usage: !stats [last|YYYY-MM]"""
@@ -147,6 +134,10 @@ class EconomyCog(commands.Cog):
 
                 earned = self.economy.get_monthly_stars_earned(year, month)
 
+        lost = self.economy.get_monthly_stars_lost(year, month)
+        economy_stats = self.economy.get_economy_stats()
+        total_in_circulation = economy_stats.total_stars if economy_stats.success else 0
+
         month_label = f"{year}-{month:02d}"
         embed = discord.Embed(
             title=f"📈 Star Stats ({month_label})",
@@ -155,6 +146,16 @@ class EconomyCog(commands.Cog):
         embed.add_field(
             name="Total stars earned in ZGAF",
             value=f"**{earned}**",
+            inline=False,
+        )
+        embed.add_field(
+            name="Total stars lost in ZGAF",
+            value=f"**{lost}**",
+            inline=False,
+        )
+        embed.add_field(
+            name="Stars in circulation",
+            value=f"**{total_in_circulation}**",
             inline=False,
         )
 
