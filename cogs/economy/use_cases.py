@@ -9,7 +9,7 @@ from cogs.economy.constants import (
 )
 from database.repository import UserRepository
 from utils.formatters import format_time_remaining
-from .dto import BalanceResult
+from .dto import BalanceResult, EconomyStats
 
 
 class EconomyUseCases:
@@ -227,6 +227,26 @@ class EconomyUseCases:
             wallet=new_stars,
             bank=new_bank,
         )
+
+    def get_economy_stats(self):
+        """Get total stats of the economy."""
+        try:
+            total_stars = self.repo.get_all_total_stars()
+        except:
+            total_stars = 0
+
+        if total_stars == 0:
+            return EconomyStats(
+                success=False,
+                message="The economy has no stars in circulation!",
+                total_stars=total_stars,
+            )
+        else:
+            return EconomyStats(
+                success=True,
+                message="The economy has a total of **{total_stars}** stars in circulation!",
+                total_stars=total_stars,
+            )
 
     def get_leaderboard(
         self, limit: int = 10, ascending: bool = False

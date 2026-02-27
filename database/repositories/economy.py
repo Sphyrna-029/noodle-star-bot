@@ -20,6 +20,15 @@ class EconomyRepository(BaseRepository):
             row = cursor.fetchone()
             return row["bank"] if row else 0
 
+    def get_all_total_stars(self) -> int:
+        """Get total stars in the economy."""
+        with self.db.get_cursor() as cursor:
+            cursor.execute(
+                "SELECT SUM(stars) AS total FROM noodle_stars"
+            )
+            row = cursor.fetchone()
+            return row["total"] if row else 0
+
     def update_user_stars(self, user_id: int, username: str, stars: int) -> None:
         """Update user's wallet stars."""
         with self.db.get_cursor() as cursor:

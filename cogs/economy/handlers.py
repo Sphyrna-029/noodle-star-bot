@@ -30,7 +30,7 @@ class EconomyCog(commands.Cog):
 
     @commands.command(name="topstars")
     async def top_stars(self, ctx):
-        """Show top 10 users with the most noodle stars"""
+        """Show top 10 users with the most noodle stars."""
         results = self.economy.get_leaderboard(limit=10, ascending=False)
 
         if not results:
@@ -47,8 +47,8 @@ class EconomyCog(commands.Cog):
 
     @commands.command(name="bottomstars")
     async def bottom_stars(self, ctx):
-        """Show bottom 10 users with the least noodle stars"""
-        results = self.economy.get_leaderboard(limit=10, ascending=True)
+        """Show bottom 5 users with the least noodle stars."""
+        results = self.economy.get_leaderboard(limit=5, ascending=True)
 
         if not results:
             await ctx.send("No noodle stars have been awarded yet!")
@@ -63,8 +63,8 @@ class EconomyCog(commands.Cog):
 
     @commands.command(name="deposit")
     async def deposit(self, ctx, amount: str = ''):
-        """Deposit noodle stars into your bank for safekeeping"""
-        if amount is None:
+        """Deposit noodle stars into your bank for safekeeping."""
+        if amount is '':
             await ctx.send(
                 f"❌ {ctx.author.mention}, please specify an amount to deposit! "
                 f"Usage: `!deposit <amount>` or `!deposit all`"
@@ -86,8 +86,8 @@ class EconomyCog(commands.Cog):
 
     @commands.command(name="withdraw")
     async def withdraw(self, ctx, amount: str = ''):
-        """Withdraw noodle stars from your bank"""
-        if amount is None:
+        """Withdraw noodle stars from your bank."""
+        if amount is '':
             await ctx.send(
                 f"❌ {ctx.author.mention}, please specify an amount to withdraw! "
                 f"Usage: `!withdraw <amount>` or `!withdraw all`"
@@ -105,6 +105,19 @@ class EconomyCog(commands.Cog):
             f"💰 Wallet: **{result.wallet}** stars\n"
             f"🏦 Bank: **{result.bank}** stars\n"
             f"📊 Total: **{result.total}** stars"
+        )
+
+    @commands.command(name="economy")
+    async def noodle_star_economy(self, ctx):
+        """Get information about the economy."""
+        result = self.economy.get_economy_stats()
+
+        if not result.success:
+            await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
+            return
+
+        await ctx.send(
+            f"The economy has a total of **{result.total}** stars in circulation!"
         )
 
 
