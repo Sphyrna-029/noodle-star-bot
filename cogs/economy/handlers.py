@@ -107,7 +107,7 @@ class EconomyCog(commands.Cog):
             f"📊 Total: **{result.total}** stars"
         )
 
-    @commands.command(name="economy")
+    @commands.command(name="economystats")
     async def noodle_star_economy(self, ctx):
         """Get information about the economy."""
         result = self.economy.get_economy_stats()
@@ -117,7 +117,7 @@ class EconomyCog(commands.Cog):
             return
 
         await ctx.send(
-            f"The economy has a total of **{result.total}** stars in circulation!"
+            f"The economy has a total of **{result.total_stars}** stars in circulation!"
         )
 
 
