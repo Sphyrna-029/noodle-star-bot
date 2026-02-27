@@ -38,7 +38,7 @@ class FarmingUseCases:
     def get_farm_status(self, user_id: int, username: str) -> FarmStatus:
         """Get the current status of a user's farm."""
         # Ensure user exists
-        self.repo.get_or_create_user(user_id, username)
+        self.repo.get_user(user_id, username)
 
         total_plots = self.repo.get_farm_plots(user_id)
         planted_crops = self.repo.get_planted_crops(user_id)
@@ -90,7 +90,7 @@ class FarmingUseCases:
     def buy_plot(self, user_id: int, username: str) -> BuyPlotResult:
         """Buy a new farm plot."""
         # Ensure user exists
-        self.repo.get_or_create_user(user_id, username)
+        self.repo.get_user(user_id, username)
 
         current_plots = self.repo.get_farm_plots(user_id)
         next_plot_num = current_plots + 1
@@ -135,7 +135,7 @@ class FarmingUseCases:
     ) -> PlantResult:
         """Plant a crop in a specific plot."""
         # Ensure user exists
-        self.repo.get_or_create_user(user_id, username)
+        self.repo.get_user(user_id, username)
 
         total_plots = self.repo.get_farm_plots(user_id)
 
@@ -204,7 +204,7 @@ class FarmingUseCases:
     ) -> HarvestResult:
         """Harvest ready crops from one or all plots."""
         # Ensure user exists
-        self.repo.get_or_create_user(user_id, username)
+        self.repo.get_user(user_id, username)
 
         total_plots = self.repo.get_farm_plots(user_id)
 
