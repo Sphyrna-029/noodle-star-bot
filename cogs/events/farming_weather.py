@@ -44,6 +44,15 @@ class FarmingWeatherCog(commands.Cog):
     @tasks.loop(time=time(hour=0, minute=0))  # Run at midnight
     async def daily_weather_check(self):
         """Check daily if weather events should occur for users with active farms."""
+        await self.run_weather_check()
+
+    async def run_weather_check(self, announcement_target_user: discord.abc.Messageable | None = None):
+        """Run weather check once.
+
+        Args:
+            announcement_target_user: If provided, send event announcement to this user's DMs
+                instead of the public announcement channel.
+        """
         try:
             # Get all users with active farms (have planted crops)
             users_with_crops = self._get_users_with_active_farms()
@@ -84,7 +93,10 @@ class FarmingWeatherCog(commands.Cog):
 
             # Post announcement in a channel (find the first text channel we can post to)
             if blessed_users:
-                await self._post_weather_announcement(blessed_users)
+                if announcement_target_user is not None:
+                    await self._post_weather_announcement_dm(announcement_target_user, blessed_users)
+                else:
+                    await self._post_weather_announcement(blessed_users)
 
             print("Weather event complete!")
 
@@ -230,6 +242,38 @@ class FarmingWeatherCog(commands.Cog):
             print(f"Error posting weather announcement: {e}")
             if hasattr(self.bot, "report_background_error"):
                 await self.bot.report_background_error("farming_weather._post_weather_announcement", e)
+            import traceback
+            traceback.print_exc()
+
+    async def _post_weather_announcement_dm(self, user: discord.abc.Messageable, blessed_users: list[tuple[int, int]]):
+        """Send weather announcement privately to a specific user."""
+        try:
+            total_crops = sum(crop_count for _, crop_count in blessed_users)
+
+            embed = discord.Embed(
+                title=f"{WEATHER_EVENT['emoji']} {WEATHER_EVENT['name']} {WEATHER_EVENT['emoji']}",
+                description=(
+                    f"{WEATHER_EVENT['description']}\n\n"
+                    f"🌟 **{len(blessed_users)} farmer{'s' if len(blessed_users) != 1 else ''}** "
+                    f"with **{total_crops} growing crop{'s' if total_crops != 1 else ''}** "
+                    f"will receive a **100% harvest bonus**!\n\n"
+                    f"💚 Your blessed crops will be worth double when you harvest them!"
+                ),
+                color=discord.Color.green(),
+            )
+
+            mentions = [f"<@{user_id}>" for user_id, _ in blessed_users[:50]]
+            if len(blessed_users) > 50:
+                mentions.append(f"...and {len(blessed_users) - 50} more!")
+
+            embed.add_field(name="Lucky Farmers", value=" ".join(mentions), inline=False)
+            embed.set_footer(text=f"Use {COMMAND_PREFIX}harvest to collect your bonus crops!")
+
+            await user.send(embed=embed)
+        except Exception as e:
+            print(f"Error sending DM weather announcement: {e}")
+            if hasattr(self.bot, "report_background_error"):
+                await self.bot.report_background_error("farming_weather._post_weather_announcement_dm", e)
             import traceback
             traceback.print_exc()
 

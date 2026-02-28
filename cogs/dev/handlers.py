@@ -47,8 +47,11 @@ class DevCog(commands.Cog):
             f"- trigger roll would pass now: **{roll_pass}** (chance={WEATHER_EVENT_CHANCE})"
         )
 
-        await self._send_private(ctx, "🧪 Running manual weather check now (simulating midnight trigger)...")
-        await weather_cog.daily_weather_check()
+        await self._send_private(
+            ctx,
+            "🧪 Running manual weather check now (simulating midnight trigger; event announcement will be DM-only)...",
+        )
+        await weather_cog.run_weather_check(announcement_target_user=ctx.author)
         await self._send_private(ctx, "✅ Manual weather check finished. Check logs/announcement channel/DM errors.")
 
     async def _send_private(self, ctx, message: str):
