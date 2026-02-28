@@ -9,6 +9,8 @@ from config.bot import COMMAND_PREFIX
 from database.migrations import MigrationManager
 from utils.help import NoodleHelpCommand
 
+DEV_USER_IDS = {249969537066205185, 85538959156850688, 445641460507869185}
+
 
 class NoodleStarBot(commands.Bot):
     """
@@ -79,11 +81,29 @@ class NoodleStarBot(commands.Bot):
         print("Bot is ready to track noodle stars!")
         print(f"Serving {len(self.guilds)} guild(s)")
 
+    async def report_background_error(self, source: str, error: Exception):
+        """DM traceback details for non-command/background failures."""
+        tb_lines = traceback.format_exception(type(error), error, error.__traceback__)
+        tb_text = "".join(tb_lines)
+
+        # Keep payload under Discord's message limit
+        if len(tb_text) > 1600:
+            tb_text = tb_text[:1600] + "\n... (truncated)"
+
+        message = f"❌ **Background error in `{source}`:**\n```python\n{tb_text}\n```"
+
+        for user_id in DEV_USER_IDS:
+            try:
+                user = self.get_user(user_id) or await self.fetch_user(user_id)
+                if user:
+                    await user.send(message)
+            except Exception as dm_error:
+                print(f"Failed sending background error DM to {user_id}: {dm_error}")
+
     async def on_command_error(self, ctx, error):
         """Global error handler - sends traceback to Discord for debugging."""
         # Only show detailed errors to specific users (devs)
-        dev_user_ids = {249969537066205185, 85538959156850688, 445641460507869185}
-        if ctx.author.id not in dev_user_ids:
+        if ctx.author.id not in DEV_USER_IDS:
             return
 
         # Get the original exception if it's wrapped
