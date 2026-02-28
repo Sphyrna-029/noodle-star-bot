@@ -23,17 +23,6 @@ class NoodleHelpCommand(commands.HelpCommand):
         "Dev",
         "Other",
     ]
-    PRIMARY_COMMAND_HINTS = {
-        "Economy": "stars",
-        "Gambling": "gamble",
-        "Mining": "mine",
-        "Fishing": "fish",
-        "Farming": "farm",
-        "Shop": "store",
-        "Trading": "trade",
-        "Moderator": "addstar",
-        "Dev": "dev",
-    }
 
     def __init__(self):
         # Base HelpCommand doesn't define `no_category`, so set it here.
@@ -68,19 +57,16 @@ class NoodleHelpCommand(commands.HelpCommand):
     def _sort_commands(self, cmds: Iterable[commands.Command]) -> List[commands.Command]:
         return sorted(cmds, key=lambda c: c.name)
 
-    def _pick_primary_command(
-        self, category: str, commands_list: List[commands.Command]
-    ) -> Optional[commands.Command]:
-        if not commands_list:
+    def _find_cog_by_help_name(self, name: str) -> Optional[commands.Cog]:
+        if self.context is None:
             return None
-
-        preferred = self.PRIMARY_COMMAND_HINTS.get(category)
-        if preferred:
-            for command in commands_list:
-                if command.name == preferred:
-                    return command
-
-        return commands_list[0]
+        target = name.strip().lower()
+        for cog in self.context.bot.cogs.values():
+            cleaned = self._clean_cog_name(cog).lower()
+            qualified = getattr(cog, "qualified_name", "").lower()
+            if target in {cleaned, qualified}:
+                return cog
+        return None
 
     def _build_chunks(self, lines: List[str], *, max_len: int = 1024) -> List[str]:
         if not lines:
@@ -143,7 +129,7 @@ class NoodleHelpCommand(commands.HelpCommand):
 
         embed = discord.Embed(
             title="✨ Noodle Star Bot — Help",
-            description="Start with one category command, then use help on that command for details.",
+            description="Available cogs. Use help on a cog name to see its commands.",
             color=discord.Color.blurple(),
         )
 
@@ -164,20 +150,11 @@ class NoodleHelpCommand(commands.HelpCommand):
             fallback_lines.append("No commands are currently available.")
         else:
             for category in self._sort_categories(category_map.keys()):
-                commands_list = self._sort_commands(category_map[category])
-                primary = self._pick_primary_command(category, commands_list)
-                help_target = primary.name if primary else category.lower()
-                count = len(commands_list)
-                label = "command" if count == 1 else "commands"
-                value = (
-                    f"Start with `{prefix}help {help_target}`\n"
-                    f"`{count}` {label} in this category"
-                )
-                embed.add_field(name=category, value=value, inline=False)
+                help_target = category.lower()
+                embed.add_field(name=category, value=f"Use `{prefix}help {help_target}`", inline=False)
 
                 fallback_lines.append(f"\n[{category}]")
-                fallback_lines.append(f"Start with {prefix}help {help_target}")
-                fallback_lines.append(f"{count} {label} in this category")
+                fallback_lines.append(f"Use {prefix}help {help_target}")
 
         embed.set_footer(
             text=(
@@ -191,6 +168,17 @@ class NoodleHelpCommand(commands.HelpCommand):
         )
 
         await self._safe_send_embed(embed, fallback_text=self._truncate("\n".join(fallback_lines)))
+
+    async def command_callback(self, ctx, /, *, command=None):
+        """Resolve cleaned cog names like `farming` before default lookup."""
+        if command is not None:
+            normalized = command.strip()
+            if " " not in normalized and ctx.bot.get_command(normalized) is None:
+                cog = self._find_cog_by_help_name(normalized)
+                if cog is not None:
+                    self.context = ctx
+                    return await self.send_cog_help(cog)
+        return await super().command_callback(ctx, command=command)
 
     async def send_command_help(self, command: commands.Command):
         embed = discord.Embed(
