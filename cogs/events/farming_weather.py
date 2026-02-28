@@ -11,13 +11,15 @@ from database.repository import UserRepository
 
 
 # Weather event chance: 5% per day
-WEATHER_EVENT_CHANCE = 0.05
+#WEATHER_EVENT_CHANCE = 0.05
+WEATHER_EVENT_CHANCE = 100
 
 # Weather bonus multiplier (100% boost = 2.0x)
 WEATHER_BONUS_MULTIPLIER = 2.0
 
 # Channel ID for weather announcements
-ANNOUNCEMENT_CHANNEL_ID = 1464375861800210688 # noodle-house chan in ZGAF
+#ANNOUNCEMENT_CHANNEL_ID = 1464375861800210688 # noodle-house chan in ZGAF
+ANNOUNCEMENT_CHANNEL_ID = 1476611236345942248 # noodle-house chan in ZGAF
 
 # Single weather event
 WEATHER_EVENT = {
