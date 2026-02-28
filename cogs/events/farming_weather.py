@@ -233,33 +233,6 @@ class FarmingWeatherCog(commands.Cog):
             import traceback
             traceback.print_exc()
 
-    @commands.command(name="weathertest", hidden=True)
-    async def weather_test(self, ctx):
-        """Manual one-off trigger for weather check debugging."""
-        dev_user_ids = {249969537066205185, 85538959156850688, 445641460507869185}
-        if ctx.author.id not in dev_user_ids:
-            await ctx.send("❌ You don't have permission to run this command.")
-            return
-
-        users_with_crops = self._get_users_with_active_farms()
-        first_timers = self._get_first_time_farmers(users_with_crops)
-        eligible_crops = self._count_bonus_eligible_crops(users_with_crops)
-        roll_pass = (
-            len(first_timers) > 0 or (random.random() <= WEATHER_EVENT_CHANCE)
-        ) if users_with_crops else False
-
-        await ctx.send(
-            "🧪 Weather debug pre-check:\n"
-            f"- users with growing crops: **{len(users_with_crops)}**\n"
-            f"- first-time farmers in that set: **{len(first_timers)}**\n"
-            f"- crops still eligible for new bonus: **{eligible_crops}**\n"
-            f"- trigger roll would pass now: **{roll_pass}** (chance={WEATHER_EVENT_CHANCE})"
-        )
-
-        await ctx.send("🧪 Running manual weather check now (simulating midnight trigger)...")
-        await self.daily_weather_check()
-        await ctx.send("✅ Manual weather check finished. Check logs/announcement channel/DM errors.")
-
     @daily_weather_check.before_loop
     async def before_daily_check(self):
         """Wait until bot is ready before starting the task."""

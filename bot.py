@@ -5,11 +5,9 @@ import traceback
 import discord
 from discord.ext import commands
 
-from config.bot import COMMAND_PREFIX
+from config.bot import COMMAND_PREFIX, DEV_USER_IDS
 from database.migrations import MigrationManager
 from utils.help import NoodleHelpCommand
-
-DEV_USER_IDS = {249969537066205185, 85538959156850688, 445641460507869185}
 
 
 class NoodleStarBot(commands.Bot):
@@ -43,6 +41,7 @@ class NoodleStarBot(commands.Bot):
             "cogs.mining.handlers",
             "cogs.shop.handlers",
             "cogs.moderator.handlers",
+            "cogs.dev.handlers",
             "cogs.fishing.handlers",
             "cogs.farming.handlers",
             "cogs.trading.handlers",
