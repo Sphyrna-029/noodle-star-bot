@@ -16,10 +16,24 @@ class NoodleHelpCommand(commands.HelpCommand):
         "Gambling",
         "Mining",
         "Fishing",
+        "Farming",
         "Shop",
+        "Trading",
         "Moderator",
+        "Dev",
         "Other",
     ]
+    PRIMARY_COMMAND_HINTS = {
+        "Economy": "stars",
+        "Gambling": "gamble",
+        "Mining": "mine",
+        "Fishing": "fish",
+        "Farming": "farm",
+        "Shop": "store",
+        "Trading": "trade",
+        "Moderator": "addstar",
+        "Dev": "dev",
+    }
 
     def __init__(self):
         # Base HelpCommand doesn't define `no_category`, so set it here.
@@ -53,6 +67,20 @@ class NoodleHelpCommand(commands.HelpCommand):
 
     def _sort_commands(self, cmds: Iterable[commands.Command]) -> List[commands.Command]:
         return sorted(cmds, key=lambda c: c.name)
+
+    def _pick_primary_command(
+        self, category: str, commands_list: List[commands.Command]
+    ) -> Optional[commands.Command]:
+        if not commands_list:
+            return None
+
+        preferred = self.PRIMARY_COMMAND_HINTS.get(category)
+        if preferred:
+            for command in commands_list:
+                if command.name == preferred:
+                    return command
+
+        return commands_list[0]
 
     def _build_chunks(self, lines: List[str], *, max_len: int = 1024) -> List[str]:
         if not lines:
@@ -115,7 +143,7 @@ class NoodleHelpCommand(commands.HelpCommand):
 
         embed = discord.Embed(
             title="✨ Noodle Star Bot — Help",
-            description="Here are the available commands grouped by category.",
+            description="Start with one category command, then use help on that command for details.",
             color=discord.Color.blurple(),
         )
 
@@ -137,30 +165,19 @@ class NoodleHelpCommand(commands.HelpCommand):
         else:
             for category in self._sort_categories(category_map.keys()):
                 commands_list = self._sort_commands(category_map[category])
-                lines = [self._format_command_line(cmd) for cmd in commands_list]
-                chunks = self._build_chunks(lines)
-
-                if not chunks:
-                    chunks = ["No commands."]
-
-                # Respect Discord embed field limit (25 fields total).
-                for index, chunk in enumerate(chunks):
-                    if len(embed.fields) >= 24:
-                        remaining = sum(len(self._sort_commands(v)) for v in category_map.values())
-                        embed.add_field(
-                            name="More Commands",
-                            value=(
-                                "There are additional commands not shown here due to Discord limits. "
-                                f"Use `{prefix}help <category>` for full details."
-                            ),
-                            inline=False,
-                        )
-                        break
-                    name = category if index == 0 else f"{category} (cont.)"
-                    embed.add_field(name=name, value=chunk, inline=False)
+                primary = self._pick_primary_command(category, commands_list)
+                help_target = primary.name if primary else category.lower()
+                count = len(commands_list)
+                label = "command" if count == 1 else "commands"
+                value = (
+                    f"Start with `{prefix}help {help_target}`\n"
+                    f"`{count}` {label} in this category"
+                )
+                embed.add_field(name=category, value=value, inline=False)
 
                 fallback_lines.append(f"\n[{category}]")
-                fallback_lines.extend(line.replace("`", "") for line in lines)
+                fallback_lines.append(f"Start with {prefix}help {help_target}")
+                fallback_lines.append(f"{count} {label} in this category")
 
         embed.set_footer(
             text=(
