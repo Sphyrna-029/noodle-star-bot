@@ -11,7 +11,8 @@ from database.repository import UserRepository
 
 
 # Weather event chance: 5% per day
-WEATHER_EVENT_CHANCE = 0.05
+#WEATHER_EVENT_CHANCE = 0.05
+WEATHER_EVENT_CHANCE = 100
 
 # Weather bonus multiplier (100% boost = 2.0x)
 WEATHER_BONUS_MULTIPLIER = 2.0
@@ -43,8 +44,6 @@ class FarmingWeatherCog(commands.Cog):
     @tasks.loop(time=time(hour=0, minute=0))  # Run at midnight
     async def daily_weather_check(self):
         """Check daily if weather events should occur for users with active farms."""
-        print(f"[{datetime.now()}] Running daily farming weather check...")
-
         try:
             # Get all users with active farms (have planted crops)
             users_with_crops = self._get_users_with_active_farms()
@@ -52,8 +51,6 @@ class FarmingWeatherCog(commands.Cog):
             if not users_with_crops:
                 print("No active farms found.")
                 return
-
-            print(f"Found {len(users_with_crops)} users with active farms.")
 
             # Check for first-time farmers (sneaky bonus!)
             first_timers = self._get_first_time_farmers(users_with_crops)
