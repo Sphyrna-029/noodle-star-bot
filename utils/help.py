@@ -125,11 +125,9 @@ class NoodleHelpCommand(commands.HelpCommand):
     # --- Send helpers --------------------------------------------------------
 
     async def send_bot_help(self, mapping):
-        prefix = self._get_prefix()
-
         embed = discord.Embed(
             title="✨ Noodle Star Bot — Help",
-            description="Available cogs. Use help on a cog name to see its commands.",
+            description="Available cogs:",
             color=discord.Color.blurple(),
         )
 
@@ -143,29 +141,19 @@ class NoodleHelpCommand(commands.HelpCommand):
             category = self._clean_cog_name(cog)
             category_map.setdefault(category, []).extend(filtered)
 
-        fallback_lines: List[str] = ["Noodle Star Bot Commands"]
+        fallback_lines: List[str] = ["Noodle Star Bot Cogs"]
 
         if not category_map:
-            embed.add_field(name="Commands", value="No commands are currently available.", inline=False)
+            embed.add_field(name="Cogs", value="No cogs are currently available.", inline=False)
             fallback_lines.append("No commands are currently available.")
         else:
-            for category in self._sort_categories(category_map.keys()):
-                help_target = category.lower()
-                embed.add_field(name=category, value=f"Use `{prefix}help {help_target}`", inline=False)
-
-                fallback_lines.append(f"\n[{category}]")
-                fallback_lines.append(f"Use {prefix}help {help_target}")
-
-        embed.set_footer(
-            text=(
-                f"Use {prefix}help <command> for details • "
-                f"Use {prefix}help <category> for a category"
+            categories = self._sort_categories(category_map.keys())
+            embed.add_field(
+                name="Cogs",
+                value="\n".join(f"`{category.lower()}`" for category in categories),
+                inline=False,
             )
-        )
-
-        fallback_lines.append(
-            f"\nUse {prefix}help <command> for details • Use {prefix}help <category> for a category"
-        )
+            fallback_lines.extend(category.lower() for category in categories)
 
         await self._safe_send_embed(embed, fallback_text=self._truncate("\n".join(fallback_lines)))
 
