@@ -17,7 +17,8 @@ WEATHER_EVENT_CHANCE = 0.05
 WEATHER_BONUS_MULTIPLIER = 2.0
 
 # Channel ID for weather announcements
-ANNOUNCEMENT_CHANNEL_ID = 1464375861800210688 # noodle-house chan in ZGAF
+#ANNOUNCEMENT_CHANNEL_ID = 1464375861800210688 # noodle-house chan in ZGAF
+ANNOUNCEMENT_CHANNEL_ID = 1476611236345942248 # noodle-house chan in ZGAF
 
 # Single weather event
 WEATHER_EVENT = {
@@ -220,8 +221,7 @@ class FarmingWeatherCog(commands.Cog):
     async def weather_test(self, ctx):
         """Manual one-off trigger for weather check debugging."""
         dev_user_ids = {249969537066205185, 85538959156850688, 445641460507869185}
-        is_admin = bool(getattr(ctx.author.guild_permissions, "administrator", False))
-        if ctx.author.id not in dev_user_ids and not is_admin:
+        if ctx.author.id not in dev_user_ids:
             await ctx.send("❌ You don't have permission to run this command.")
             return
 
