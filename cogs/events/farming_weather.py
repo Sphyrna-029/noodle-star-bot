@@ -46,12 +46,17 @@ class FarmingWeatherCog(commands.Cog):
         """Check daily if weather events should occur for users with active farms."""
         await self.run_weather_check()
 
-    async def run_weather_check(self, announcement_target_user: discord.abc.Messageable | None = None):
+    async def run_weather_check(
+        self,
+        announcement_target_user: discord.abc.Messageable | None = None,
+        dry_run: bool = False,
+    ):
         """Run weather check once.
 
         Args:
             announcement_target_user: If provided, send event announcement to this user's DMs
                 instead of the public announcement channel.
+            dry_run: If True, evaluate and announce only; do not mutate database state.
         """
         try:
             # Get all users with active farms (have planted crops)
@@ -81,13 +86,17 @@ class FarmingWeatherCog(commands.Cog):
             # Apply weather bonus to all users with active farms
             blessed_users = []
             for user_id in users_with_crops:
-                affected_count = self._apply_weather_bonus(user_id)
+                if dry_run:
+                    affected_count = self._count_user_bonus_eligible_crops(user_id)
+                else:
+                    affected_count = self._apply_weather_bonus(user_id)
                 if affected_count > 0:
                     blessed_users.append((user_id, affected_count))
 
             # Mark first-timers as having received their bonus
-            for user_id in first_timers:
-                self._mark_first_weather_bonus_used(user_id)
+            if not dry_run:
+                for user_id in first_timers:
+                    self._mark_first_weather_bonus_used(user_id)
 
             print(f"Applied weather bonus to {len(blessed_users)} users.")
 
@@ -191,6 +200,22 @@ class FarmingWeatherCog(commands.Cog):
                   AND weather_bonus = 1.0
                 """,
                 [*user_ids, datetime.now().isoformat()],
+            )
+            row = cursor.fetchone()
+            return int(row["count"]) if row and row["count"] is not None else 0
+
+    def _count_user_bonus_eligible_crops(self, user_id: int) -> int:
+        """Count crops for one user that could receive a new weather bonus now."""
+        with self.repo.db.get_cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT COUNT(*) AS count
+                FROM planted_crops
+                WHERE user_id = ?
+                  AND ready_at > ?
+                  AND weather_bonus = 1.0
+                """,
+                (user_id, datetime.now().isoformat()),
             )
             row = cursor.fetchone()
             return int(row["count"]) if row and row["count"] is not None else 0

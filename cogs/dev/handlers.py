@@ -49,10 +49,13 @@ class DevCog(commands.Cog):
 
         await self._send_private(
             ctx,
-            "🧪 Running manual weather check now (simulating midnight trigger; event announcement will be DM-only)...",
+            "🧪 Running manual weather check now (dry run; DM preview only; no state changes)...",
         )
-        await weather_cog.run_weather_check(announcement_target_user=ctx.author)
-        await self._send_private(ctx, "✅ Manual weather check finished. Check logs/announcement channel/DM errors.")
+        await weather_cog.run_weather_check(announcement_target_user=ctx.author, dry_run=True)
+        await self._send_private(
+            ctx,
+            "✅ Manual weather check finished. No bonuses/flags were consumed; midnight behavior remains unchanged.",
+        )
 
     async def _send_private(self, ctx, message: str):
         """Send dev command output privately to the caller via DM."""
