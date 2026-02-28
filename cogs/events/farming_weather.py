@@ -11,13 +11,15 @@ from database.repository import UserRepository
 
 
 # Weather event chance: 5% per day
-WEATHER_EVENT_CHANCE = 0.05
+#WEATHER_EVENT_CHANCE = 0.05
+WEATHER_EVENT_CHANCE = 100
 
 # Weather bonus multiplier (100% boost = 2.0x)
 WEATHER_BONUS_MULTIPLIER = 2.0
 
 # Channel ID for weather announcements
-ANNOUNCEMENT_CHANNEL_ID = 1464375861800210688 # noodle-house chan in ZGAF
+#ANNOUNCEMENT_CHANNEL_ID = 1464375861800210688 # noodle-house chan in ZGAF
+ANNOUNCEMENT_CHANNEL_ID = 1476611236345942248 # noodle-house chan in ZGAF
 
 # Single weather event
 WEATHER_EVENT = {
@@ -42,75 +44,94 @@ class FarmingWeatherCog(commands.Cog):
     @tasks.loop(time=time(hour=0, minute=0))  # Run at midnight
     async def daily_weather_check(self):
         """Check daily if weather events should occur for users with active farms."""
-        print(f"[{datetime.now()}] Running daily farming weather check...")
-        
+        await self.run_weather_check()
+
+    async def run_weather_check(
+        self,
+        announcement_target_user: discord.abc.Messageable | None = None,
+        dry_run: bool = False,
+    ):
+        """Run weather check once.
+
+        Args:
+            announcement_target_user: If provided, send event announcement to this user's DMs
+                instead of the public announcement channel.
+            dry_run: If True, evaluate and announce only; do not mutate database state.
+        """
         try:
             # Get all users with active farms (have planted crops)
             users_with_crops = self._get_users_with_active_farms()
-            
+
             if not users_with_crops:
                 print("No active farms found.")
                 return
-            
-            print(f"Found {len(users_with_crops)} users with active farms.")
-            
+
             # Check for first-time farmers (sneaky bonus!)
             first_timers = self._get_first_time_farmers(users_with_crops)
-            
+
             # Determine if weather event should happen
             force_event = len(first_timers) > 0  # Force event if any first-timers
             should_trigger = force_event or (random.random() <= WEATHER_EVENT_CHANCE)
-            
+
             if not should_trigger:
                 print("No weather event today.")
                 return
-            
+
             # Weather event triggered!
             if force_event:
                 print(f"Weather event triggered for {len(first_timers)} first-time farmer(s)! (Sneaky welcome bonus)")
             else:
                 print(f"Weather event triggered: {WEATHER_EVENT['name']} {WEATHER_EVENT['emoji']}")
-            
+
             # Apply weather bonus to all users with active farms
             blessed_users = []
             for user_id in users_with_crops:
-                affected_count = self._apply_weather_bonus(user_id)
+                if dry_run:
+                    affected_count = self._count_user_bonus_eligible_crops(user_id)
+                else:
+                    affected_count = self._apply_weather_bonus(user_id)
                 if affected_count > 0:
                     blessed_users.append((user_id, affected_count))
-            
+
             # Mark first-timers as having received their bonus
-            for user_id in first_timers:
-                self._mark_first_weather_bonus_used(user_id)
-            
+            if not dry_run:
+                for user_id in first_timers:
+                    self._mark_first_weather_bonus_used(user_id)
+
             print(f"Applied weather bonus to {len(blessed_users)} users.")
-            
+
             # Post announcement in a channel (find the first text channel we can post to)
             if blessed_users:
-                await self._post_weather_announcement(blessed_users)
-            
+                if announcement_target_user is not None:
+                    await self._post_weather_announcement_dm(announcement_target_user, blessed_users)
+                else:
+                    await self._post_weather_announcement(blessed_users)
+
             print("Weather event complete!")
-            
+
         except Exception as e:
             print(f"Error in daily weather check: {e}")
+            if hasattr(self.bot, "report_background_error"):
+                await self.bot.report_background_error("farming_weather.daily_weather_check", e)
             import traceback
             traceback.print_exc()
 
     def _get_users_with_active_farms(self) -> list[int]:
         """Get list of user IDs who have crops currently planted."""
-        conn = self.repo._get_connection()
-        cursor = conn.cursor()
-        
-        cursor.execute("""
-            SELECT DISTINCT user_id
-            FROM planted_crops
-            WHERE ready_at > ?
-        """, (datetime.now(),))
-        
-        return [row[0] for row in cursor.fetchall()]
+        with self.repo.db.get_cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT DISTINCT user_id
+                FROM planted_crops
+                WHERE ready_at > ?
+                """,
+                (datetime.now().isoformat(),),
+            )
+            return [row[0] for row in cursor.fetchall()]
 
     def _get_first_time_farmers(self, user_ids: list[int]) -> list[int]:
         """Get users who are first-time farmers (haven't received bonus yet and have crops planted).
-        
+
         A first-time farmer is someone who:
         1. Has at least 1 plot
         2. Has never received the first weather bonus
@@ -118,75 +139,107 @@ class FarmingWeatherCog(commands.Cog):
         """
         if not user_ids:
             return []
-        
-        conn = self.repo._get_connection()
-        cursor = conn.cursor()
-        
-        placeholders = ','.join('?' * len(user_ids))
-        cursor.execute(f"""
-            SELECT user_id
-            FROM user_inventory
-            WHERE user_id IN ({placeholders})
-              AND farm_plots >= 1
-              AND COALESCE(first_weather_bonus, 0) = 0
-        """, user_ids)
-        
-        return [row[0] for row in cursor.fetchall()]
+
+        with self.repo.db.get_cursor() as cursor:
+            placeholders = ",".join("?" * len(user_ids))
+            cursor.execute(
+                f"""
+                SELECT user_id
+                FROM user_inventory
+                WHERE user_id IN ({placeholders})
+                  AND farm_plots >= 1
+                  AND COALESCE(first_weather_bonus, 0) = 0
+                """,
+                user_ids,
+            )
+            return [row[0] for row in cursor.fetchall()]
 
     def _mark_first_weather_bonus_used(self, user_id: int):
         """Mark that a user has received their first-time weather bonus."""
-        conn = self.repo._get_connection()
-        cursor = conn.cursor()
-        
-        cursor.execute("""
-            UPDATE user_inventory
-            SET first_weather_bonus = 1
-            WHERE user_id = ?
-        """, (user_id,))
-        
-        conn.commit()
+        with self.repo.db.get_cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE user_inventory
+                SET first_weather_bonus = 1
+                WHERE user_id = ?
+                """,
+                (user_id,),
+            )
 
     def _apply_weather_bonus(self, user_id: int) -> int:
         """Apply weather bonus to all growing crops for a user.
-        
+
         Returns the number of crops affected.
         """
-        conn = self.repo._get_connection()
-        cursor = conn.cursor()
-        
-        # Only apply to crops that are still growing (not ready yet) and don't already have bonus
-        cursor.execute("""
-            UPDATE planted_crops
-            SET weather_bonus = ?
-            WHERE user_id = ?
-              AND ready_at > ?
-              AND weather_bonus = 1.0
-        """, (WEATHER_BONUS_MULTIPLIER, user_id, datetime.now()))
-        
-        affected = cursor.rowcount
-        conn.commit()
-        return affected
+        with self.repo.db.get_cursor() as cursor:
+            # Only apply to crops that are still growing (not ready yet) and don't already have bonus
+            cursor.execute(
+                """
+                UPDATE planted_crops
+                SET weather_bonus = ?
+                WHERE user_id = ?
+                  AND ready_at > ?
+                  AND weather_bonus = 1.0
+                """,
+                (WEATHER_BONUS_MULTIPLIER, user_id, datetime.now().isoformat()),
+            )
+            return cursor.rowcount
+
+    def _count_bonus_eligible_crops(self, user_ids: list[int]) -> int:
+        """Count crops that could receive a new weather bonus right now."""
+        if not user_ids:
+            return 0
+        with self.repo.db.get_cursor() as cursor:
+            placeholders = ",".join("?" * len(user_ids))
+            cursor.execute(
+                f"""
+                SELECT COUNT(*) AS count
+                FROM planted_crops
+                WHERE user_id IN ({placeholders})
+                  AND ready_at > ?
+                  AND weather_bonus = 1.0
+                """,
+                [*user_ids, datetime.now().isoformat()],
+            )
+            row = cursor.fetchone()
+            return int(row["count"]) if row and row["count"] is not None else 0
+
+    def _count_user_bonus_eligible_crops(self, user_id: int) -> int:
+        """Count crops for one user that could receive a new weather bonus now."""
+        with self.repo.db.get_cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT COUNT(*) AS count
+                FROM planted_crops
+                WHERE user_id = ?
+                  AND ready_at > ?
+                  AND weather_bonus = 1.0
+                """,
+                (user_id, datetime.now().isoformat()),
+            )
+            row = cursor.fetchone()
+            return int(row["count"]) if row and row["count"] is not None else 0
 
     async def _post_weather_announcement(self, blessed_users: list[tuple[int, int]]):
         """Post a public announcement about the weather event."""
         try:
             # Get the specific channel
             channel = self.bot.get_channel(ANNOUNCEMENT_CHANNEL_ID)
-            
+
             if not channel:
                 print(f"Could not find channel with ID {ANNOUNCEMENT_CHANNEL_ID}.")
                 return
-            
+
             # Build mention string (limit to avoid message too long)
             mentions = []
             total_crops = 0
             for user_id, crop_count in blessed_users[:50]:  # Limit to 50 mentions
                 mentions.append(f"<@{user_id}>")
                 total_crops += crop_count
-            
+
             if len(blessed_users) > 50:
                 mentions.append(f"...and {len(blessed_users) - 50} more!")
-            
+
             embed = discord.Embed(
                 title=f"{WEATHER_EVENT['emoji']} {WEATHER_EVENT['name']} {WEATHER_EVENT['emoji']}",
                 description=(
@@ -198,20 +251,54 @@ class FarmingWeatherCog(commands.Cog):
                 ),
                 color=discord.Color.green(),
             )
-            
+
             embed.add_field(
                 name="Lucky Farmers",
                 value=" ".join(mentions),
                 inline=False,
             )
-            
+
             embed.set_footer(text=f"Use {COMMAND_PREFIX}harvest to collect your bonus crops!")
-            
+
             await channel.send(embed=embed)
             print(f"Posted weather announcement in {channel.name} ({channel.guild.name})")
-            
+
         except Exception as e:
             print(f"Error posting weather announcement: {e}")
+            if hasattr(self.bot, "report_background_error"):
+                await self.bot.report_background_error("farming_weather._post_weather_announcement", e)
+            import traceback
+            traceback.print_exc()
+
+    async def _post_weather_announcement_dm(self, user: discord.abc.Messageable, blessed_users: list[tuple[int, int]]):
+        """Send weather announcement privately to a specific user."""
+        try:
+            total_crops = sum(crop_count for _, crop_count in blessed_users)
+
+            embed = discord.Embed(
+                title=f"{WEATHER_EVENT['emoji']} {WEATHER_EVENT['name']} {WEATHER_EVENT['emoji']}",
+                description=(
+                    f"{WEATHER_EVENT['description']}\n\n"
+                    f"🌟 **{len(blessed_users)} farmer{'s' if len(blessed_users) != 1 else ''}** "
+                    f"with **{total_crops} growing crop{'s' if total_crops != 1 else ''}** "
+                    f"will receive a **100% harvest bonus**!\n\n"
+                    f"💚 Your blessed crops will be worth double when you harvest them!"
+                ),
+                color=discord.Color.green(),
+            )
+
+            mentions = [f"<@{user_id}>" for user_id, _ in blessed_users[:50]]
+            if len(blessed_users) > 50:
+                mentions.append(f"...and {len(blessed_users) - 50} more!")
+
+            embed.add_field(name="Lucky Farmers", value=" ".join(mentions), inline=False)
+            embed.set_footer(text=f"Use {COMMAND_PREFIX}harvest to collect your bonus crops!")
+
+            await user.send(embed=embed)
+        except Exception as e:
+            print(f"Error sending DM weather announcement: {e}")
+            if hasattr(self.bot, "report_background_error"):
+                await self.bot.report_background_error("farming_weather._post_weather_announcement_dm", e)
             import traceback
             traceback.print_exc()
 

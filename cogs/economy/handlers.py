@@ -109,7 +109,7 @@ class EconomyCog(commands.Cog):
             f"📊 Total: **{result.total}** stars"
         )
 
-    @commands.command(name="stats")
+    @commands.command(name="starstats")
     async def star_stats(self, ctx, period: str | None = None):
         """Show monthly earned stars and more. Usage: !stats [last|YYYY-MM]"""
 
