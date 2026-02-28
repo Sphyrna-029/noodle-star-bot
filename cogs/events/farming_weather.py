@@ -164,6 +164,25 @@ class FarmingWeatherCog(commands.Cog):
             )
             return cursor.rowcount
 
+    def _count_bonus_eligible_crops(self, user_ids: list[int]) -> int:
+        """Count crops that could receive a new weather bonus right now."""
+        if not user_ids:
+            return 0
+        with self.repo.db.get_cursor() as cursor:
+            placeholders = ",".join("?" * len(user_ids))
+            cursor.execute(
+                f"""
+                SELECT COUNT(*) AS count
+                FROM planted_crops
+                WHERE user_id IN ({placeholders})
+                  AND ready_at > ?
+                  AND weather_bonus = 1.0
+                """,
+                [*user_ids, datetime.now().isoformat()],
+            )
+            row = cursor.fetchone()
+            return int(row["count"]) if row and row["count"] is not None else 0
+
     async def _post_weather_announcement(self, blessed_users: list[tuple[int, int]]):
         """Post a public announcement about the weather event."""
         try:
@@ -221,6 +240,21 @@ class FarmingWeatherCog(commands.Cog):
         if ctx.author.id not in dev_user_ids:
             await ctx.send("❌ You don't have permission to run this command.")
             return
+
+        users_with_crops = self._get_users_with_active_farms()
+        first_timers = self._get_first_time_farmers(users_with_crops)
+        eligible_crops = self._count_bonus_eligible_crops(users_with_crops)
+        roll_pass = (
+            len(first_timers) > 0 or (random.random() <= WEATHER_EVENT_CHANCE)
+        ) if users_with_crops else False
+
+        await ctx.send(
+            "🧪 Weather debug pre-check:\n"
+            f"- users with growing crops: **{len(users_with_crops)}**\n"
+            f"- first-time farmers in that set: **{len(first_timers)}**\n"
+            f"- crops still eligible for new bonus: **{eligible_crops}**\n"
+            f"- trigger roll would pass now: **{roll_pass}** (chance={WEATHER_EVENT_CHANCE})"
+        )
 
         await ctx.send("🧪 Running manual weather check now (simulating midnight trigger)...")
         await self.daily_weather_check()
