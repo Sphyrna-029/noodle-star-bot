@@ -472,17 +472,17 @@ class HelpView(discord.ui.View):
         for item in self.children:
             item.disabled = True  # type: ignore[union-attr]
 
-    @discord.ui.button(label="Mining", style=discord.ButtonStyle.primary, emoji="⛏️", row=0)
+    @discord.ui.button(label="Mining", style=discord.ButtonStyle.secondary, emoji="⛏️", row=0)
     async def mining_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = SubHelpView(self.author_id)
         await interaction.response.edit_message(embed=_mining_embed(), view=view)
 
-    @discord.ui.button(label="Fishing", style=discord.ButtonStyle.primary, emoji="🎣", row=0)
+    @discord.ui.button(label="Fishing", style=discord.ButtonStyle.secondary, emoji="🎣", row=0)
     async def fishing_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = SubHelpView(self.author_id)
         await interaction.response.edit_message(embed=_fishing_embed(), view=view)
 
-    @discord.ui.button(label="Farming", style=discord.ButtonStyle.primary, emoji="🌾", row=0)
+    @discord.ui.button(label="Farming", style=discord.ButtonStyle.secondary, emoji="🌾", row=0)
     async def farming_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = SubHelpView(self.author_id)
         await interaction.response.edit_message(embed=_farming_embed(), view=view)
@@ -528,17 +528,17 @@ class SubHelpView(discord.ui.View):
         view = HelpView(self.author_id)
         await interaction.response.edit_message(embed=_main_embed(), view=view)
 
-    @discord.ui.button(label="Mining", style=discord.ButtonStyle.primary, emoji="⛏️", row=1)
+    @discord.ui.button(label="Mining", style=discord.ButtonStyle.secondary, emoji="⛏️", row=1)
     async def mining_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = SubHelpView(self.author_id)
         await interaction.response.edit_message(embed=_mining_embed(), view=view)
 
-    @discord.ui.button(label="Fishing", style=discord.ButtonStyle.primary, emoji="🎣", row=1)
+    @discord.ui.button(label="Fishing", style=discord.ButtonStyle.secondary, emoji="🎣", row=1)
     async def fishing_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = SubHelpView(self.author_id)
         await interaction.response.edit_message(embed=_fishing_embed(), view=view)
 
-    @discord.ui.button(label="Farming", style=discord.ButtonStyle.primary, emoji="🌾", row=1)
+    @discord.ui.button(label="Farming", style=discord.ButtonStyle.secondary, emoji="🌾", row=1)
     async def farming_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = SubHelpView(self.author_id)
         await interaction.response.edit_message(embed=_farming_embed(), view=view)
