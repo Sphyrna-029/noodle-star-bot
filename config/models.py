@@ -67,3 +67,4 @@ class Crop:
     seed_cost: int
     sell_price: int
     growth_hours: int
+    golden_mushroom_yield: int = 0

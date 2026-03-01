@@ -14,10 +14,20 @@ Design Philosophy:
     - Leaves room for v2 bonuses (fertilizer, water, etc.)
 """
 
+import random
 from datetime import datetime, timedelta
 from typing import Optional
 
-from cogs.farming.constants import CROPS, MAX_PLOTS, PLOT_COSTS, get_crop_by_name
+from cogs.farming.constants import (
+    CROPS,
+    FARM_LEVEL_UPGRADE_COSTS,
+    MAX_FARM_LEVEL,
+    MAX_PLOTS,
+    PLOT_COSTS,
+    QUALITY_MULTIPLIERS,
+    QUALITY_WEIGHTS_BY_LEVEL,
+    get_crop_by_name,
+)
 from cogs.farming.dto import (
     BuyPlotResult,
     CropsInfo,
@@ -25,6 +35,7 @@ from cogs.farming.dto import (
     HarvestResult,
     PlantResult,
     PlotStatus,
+    UpgradeFarmLevelResult,
 )
 from database.repository import UserRepository
 
@@ -79,9 +90,11 @@ class FarmingUseCases:
         next_plot_num = total_plots + 1
         next_plot_cost = PLOT_COSTS.get(next_plot_num)
         can_buy_more = next_plot_num <= MAX_PLOTS
-        
+
         # Get user's star balance
         stars = self.repo.get_user_stars(user_id, username)
+        farm_level = self.repo.get_farm_level(user_id)
+        next_farm_level_cost = FARM_LEVEL_UPGRADE_COSTS.get(farm_level + 1)
 
         return FarmStatus(
             total_plots=total_plots,
@@ -89,11 +102,72 @@ class FarmingUseCases:
             next_plot_cost=next_plot_cost,
             can_buy_more=can_buy_more,
             stars=stars,
+            farm_level=farm_level,
+            next_farm_level_cost=next_farm_level_cost,
         )
+
+    def get_farm_level_info(self, user_id: int, username: str) -> tuple[int, Optional[int], int]:
+        """Return (farm_level, next_upgrade_cost, current_stars)."""
+        self.repo.get_user(user_id, username)
+        farm_level = self.repo.get_farm_level(user_id)
+        next_cost = FARM_LEVEL_UPGRADE_COSTS.get(farm_level + 1)
+        stars = self.repo.get_user_stars(user_id, username)
+        return farm_level, next_cost, stars
+
+    def upgrade_farm_level(self, user_id: int, username: str) -> UpgradeFarmLevelResult:
+        """Upgrade farm level to improve harvest quality odds."""
+        self.repo.get_user(user_id, username)
+        current_level = self.repo.get_farm_level(user_id)
+
+        if current_level >= MAX_FARM_LEVEL:
+            return UpgradeFarmLevelResult(
+                success=False,
+                message=f"Your farm is already max level ({MAX_FARM_LEVEL})!",
+                old_level=current_level,
+                new_level=current_level,
+            )
+
+        next_level = current_level + 1
+        cost = FARM_LEVEL_UPGRADE_COSTS.get(next_level, 0)
+        balance = self.repo.get_user_stars(user_id, username)
+
+        if balance < cost:
+            return UpgradeFarmLevelResult(
+                success=False,
+                message=f"You need **{cost}** stars to upgrade to farm level {next_level}, but you only have **{balance}** stars.",
+                old_level=current_level,
+                new_level=current_level,
+                cost=cost,
+                new_balance=balance,
+            )
+
+        new_balance = balance - cost
+        self.repo.update_user_stars(user_id, username, new_balance)
+        self.repo.set_farm_level(user_id, next_level)
+
+        return UpgradeFarmLevelResult(
+            success=True,
+            message=f"Farm upgraded to **Level {next_level}**!",
+            old_level=current_level,
+            new_level=next_level,
+            cost=cost,
+            new_balance=new_balance,
+        )
+
+    @staticmethod
+    def _roll_quality(farm_level: int) -> tuple[str, float]:
+        level = min(max(farm_level, 1), MAX_FARM_LEVEL)
+        entries = QUALITY_WEIGHTS_BY_LEVEL[level]
+        quality = random.choices(
+            [entry[0] for entry in entries],
+            weights=[entry[1] for entry in entries],
+            k=1,
+        )[0]
+        return quality, QUALITY_MULTIPLIERS[quality]
 
     def buy_plot(self, user_id: int, username: str, plot_number: int = 0) -> BuyPlotResult:
         """Buy a new farm plot.
-        
+
         Args:
             user_id: The user's Discord ID
             username: The user's Discord username
@@ -103,7 +177,7 @@ class FarmingUseCases:
         self.repo.get_user(user_id, username)
 
         current_plots = self.repo.get_farm_plots(user_id)
-        
+
         # Determine which plot to buy
         if plot_number == 0:
             # Buy next available plot (old behavior for backward compatibility)
@@ -111,7 +185,7 @@ class FarmingUseCases:
         else:
             # Buy specific plot
             target_plot_num = plot_number
-            
+
             # Validate they're buying in order
             if target_plot_num != current_plots + 1:
                 if target_plot_num <= current_plots:
@@ -288,24 +362,38 @@ class FarmingUseCases:
         harvested = []
         total_stars = 0
         plots_to_clear = []
-        weather_blessed = []  # Track which crops had weather bonus
+        weather_blessed = []
+        quality_rolls = []
+        farm_level = self.repo.get_farm_level(user_id)
+        mushrooms_earned = 0
 
         for crop_data in ready_crops:
             crop_info = get_crop_by_name(crop_data.crop_type)
             if crop_info:
-                # Apply weather bonus if present
-                base_price = crop_info.sell_price
-                actual_price = int(base_price * crop_data.weather_bonus)
-                
+                # Special crop: mushroom plants yield mining mushrooms, not stars.
+                if crop_info.golden_mushroom_yield > 0:
+                    actual_price = 0
+                    mushrooms_earned += crop_info.golden_mushroom_yield
+                else:
+                    quality_name, quality_multiplier = self._roll_quality(farm_level)
+                    weather_multiplier = crop_data.weather_bonus
+                    # Apply bonuses additively to match gameplay expectation:
+                    # +20% great quality and +100% perfect weather = +120% total.
+                    combined_multiplier = 1.0 + (quality_multiplier - 1.0) + (weather_multiplier - 1.0)
+                    actual_price = max(0, int(crop_info.sell_price * combined_multiplier))
+                    quality_rolls.append(
+                        (crop_data.plot_number, quality_name, quality_multiplier, weather_multiplier)
+                    )
+                    if weather_multiplier != 1.0:
+                        weather_blessed.append(
+                            (crop_info.name, crop_info.emoji, crop_info.sell_price, actual_price)
+                        )
+
                 harvested.append(
                     (crop_data.plot_number, crop_info.name, crop_info.emoji, actual_price)
                 )
                 total_stars += actual_price
                 plots_to_clear.append(crop_data.plot_number)
-                
-                # Track if this crop had a weather bonus
-                if crop_data.weather_bonus > 1.0:
-                    weather_blessed.append((crop_info.name, crop_info.emoji, base_price, actual_price))
 
         # Update database
         if plots_to_clear:
@@ -316,12 +404,26 @@ class FarmingUseCases:
         new_balance = balance + total_stars
         self.repo.update_user_stars(user_id, username, new_balance)
 
+        if mushrooms_earned > 0:
+            inventory = self.repo.get_user_inventory(user_id)
+            self.repo.update_user_inventory(
+                user_id,
+                "golden_mushroom",
+                inventory.get("golden_mushroom", 0) + mushrooms_earned,
+            )
+
+        summary = f"Harvested {len(harvested)} crop(s) for **{total_stars}** stars!"
+        if mushrooms_earned > 0:
+            summary += f" Found **{mushrooms_earned}** golden mushroom(s)!"
+
         return HarvestResult(
             success=True,
-            message=f"Harvested {len(harvested)} crop(s) for **{total_stars}** stars!",
+            message=summary,
             harvested=harvested,
             total_stars=total_stars,
             new_balance=new_balance,
+            mushrooms_earned=mushrooms_earned,
+            quality_rolls=quality_rolls,
             weather_blessed=weather_blessed,
         )
 
@@ -329,7 +431,10 @@ class FarmingUseCases:
         """Get information about all available crops."""
         crops_list = []
         for crop_key, crop in CROPS.items():
-            profit = crop.sell_price - crop.seed_cost
+            if crop.golden_mushroom_yield > 0:
+                profit = 0
+            else:
+                profit = crop.sell_price - crop.seed_cost
             crops_list.append(
                 (crop.name, crop.emoji, crop.seed_cost, crop.sell_price, profit, crop.growth_hours)
             )

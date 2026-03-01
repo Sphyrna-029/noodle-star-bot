@@ -10,22 +10,35 @@ from config.bot import COMMAND_PREFIX
 from database.repository import UserRepository
 
 
-# Weather event chance: 5% per day
+# Weather event chance: 5% per day (per event)
 WEATHER_EVENT_CHANCE = 0.05
-
-# Weather bonus multiplier (100% boost = 2.0x)
-WEATHER_BONUS_MULTIPLIER = 2.0
 
 # Channel ID for weather announcements
 ANNOUNCEMENT_CHANNEL_ID = 1464375861800210688 # noodle-house chan in ZGAF
 
-
-# Single weather event
-WEATHER_EVENT = {
+# Weather events
+PERFECT_WEATHER_EVENT = {
     "name": "Perfect Weather",
     "emoji": "🌤️",
     "description": "Perfect growing conditions blanket the region!",
+    "multiplier": 2.0,
 }
+
+WEATHER_EVENTS = [
+    PERFECT_WEATHER_EVENT,
+    {
+        "name": "Starlit Dew",
+        "emoji": "✨",
+        "description": "A shimmering dew nourishes the fields overnight.",
+        "multiplier": 1.5,
+    },
+    {
+        "name": "Blight Winds",
+        "emoji": "🍂",
+        "description": "Dry, biting winds sap the vitality of young crops.",
+        "multiplier": 0.5,
+    },
+]
 
 
 class FarmingWeatherCog(commands.Cog):
@@ -70,17 +83,21 @@ class FarmingWeatherCog(commands.Cog):
 
             # Determine if weather event should happen
             force_event = len(first_timers) > 0  # Force event if any first-timers
-            should_trigger = force_event or (random.random() <= WEATHER_EVENT_CHANCE)
-
-            if not should_trigger:
-                print("No weather event today.")
-                return
-
-            # Weather event triggered!
             if force_event:
+                selected_event = PERFECT_WEATHER_EVENT
                 print(f"Weather event triggered for {len(first_timers)} first-time farmer(s)! (Sneaky welcome bonus)")
             else:
-                print(f"Weather event triggered: {WEATHER_EVENT['name']} {WEATHER_EVENT['emoji']}")
+                rolled_events = [
+                    event for event in WEATHER_EVENTS if random.random() <= WEATHER_EVENT_CHANCE
+                ]
+                if not rolled_events:
+                    print("No weather event today.")
+                    return
+                selected_event = random.choice(rolled_events)
+                print(
+                    f"Weather event triggered: {selected_event['name']} {selected_event['emoji']} "
+                    f"(x{selected_event['multiplier']})"
+                )
 
             # Apply weather bonus to all users with active farms
             blessed_users = []
@@ -88,7 +105,7 @@ class FarmingWeatherCog(commands.Cog):
                 if dry_run:
                     affected_count = self._count_user_bonus_eligible_crops(user_id)
                 else:
-                    affected_count = self._apply_weather_bonus(user_id)
+                    affected_count = self._apply_weather_bonus(user_id, selected_event["multiplier"])
                 if affected_count > 0:
                     blessed_users.append((user_id, affected_count))
 
@@ -102,9 +119,11 @@ class FarmingWeatherCog(commands.Cog):
             # Post announcement in a channel (find the first text channel we can post to)
             if blessed_users:
                 if announcement_target_user is not None:
-                    await self._post_weather_announcement_dm(announcement_target_user, blessed_users)
+                    await self._post_weather_announcement_dm(
+                        announcement_target_user, blessed_users, selected_event
+                    )
                 else:
-                    await self._post_weather_announcement(blessed_users)
+                    await self._post_weather_announcement(blessed_users, selected_event)
 
             print("Weather event complete!")
 
@@ -165,22 +184,21 @@ class FarmingWeatherCog(commands.Cog):
                 (user_id,),
             )
 
-    def _apply_weather_bonus(self, user_id: int) -> int:
+    def _apply_weather_bonus(self, user_id: int, multiplier: float) -> int:
         """Apply weather bonus to all growing crops for a user.
 
         Returns the number of crops affected.
         """
         with self.repo.db.get_cursor() as cursor:
-            # Only apply to crops that are still growing (not ready yet) and don't already have bonus
+            # Only apply to crops that are still growing (not ready yet)
             cursor.execute(
                 """
                 UPDATE planted_crops
                 SET weather_bonus = ?
                 WHERE user_id = ?
                   AND ready_at > ?
-                  AND weather_bonus = 1.0
                 """,
-                (WEATHER_BONUS_MULTIPLIER, user_id, datetime.now().isoformat()),
+                (multiplier, user_id, datetime.now().isoformat()),
             )
             return cursor.rowcount
 
@@ -196,7 +214,6 @@ class FarmingWeatherCog(commands.Cog):
                 FROM planted_crops
                 WHERE user_id IN ({placeholders})
                   AND ready_at > ?
-                  AND weather_bonus = 1.0
                 """,
                 [*user_ids, datetime.now().isoformat()],
             )
@@ -212,14 +229,15 @@ class FarmingWeatherCog(commands.Cog):
                 FROM planted_crops
                 WHERE user_id = ?
                   AND ready_at > ?
-                  AND weather_bonus = 1.0
                 """,
                 (user_id, datetime.now().isoformat()),
             )
             row = cursor.fetchone()
             return int(row["count"]) if row and row["count"] is not None else 0
 
-    async def _post_weather_announcement(self, blessed_users: list[tuple[int, int]]):
+    async def _post_weather_announcement(
+        self, blessed_users: list[tuple[int, int]], weather_event: dict
+    ):
         """Post a public announcement about the weather event."""
         try:
             # Get the specific channel
@@ -239,20 +257,30 @@ class FarmingWeatherCog(commands.Cog):
             if len(blessed_users) > 50:
                 mentions.append(f"...and {len(blessed_users) - 50} more!")
 
+            multiplier = weather_event["multiplier"]
+            if multiplier >= 1.0:
+                effect_text = f"**{int((multiplier - 1) * 100)}% harvest bonus**"
+                outcome_text = "worth more when you harvest them"
+                color = discord.Color.green()
+            else:
+                effect_text = f"**{int((1 - multiplier) * 100)}% harvest penalty**"
+                outcome_text = "worth less when you harvest them"
+                color = discord.Color.red()
+
             embed = discord.Embed(
-                title=f"{WEATHER_EVENT['emoji']} {WEATHER_EVENT['name']} {WEATHER_EVENT['emoji']}",
+                title=f"{weather_event['emoji']} {weather_event['name']} {weather_event['emoji']}",
                 description=(
-                    f"{WEATHER_EVENT['description']}\n\n"
+                    f"{weather_event['description']}\n\n"
                     f"🌟 **{len(blessed_users)} farmer{'s' if len(blessed_users) != 1 else ''}** "
                     f"with **{total_crops} growing crop{'s' if total_crops != 1 else ''}** "
-                    f"will receive a **100% harvest bonus**!\n\n"
-                    f"💚 Your blessed crops will be worth double when you harvest them!"
+                    f"will receive a {effect_text}!\n\n"
+                    f"💚 Those crops will be {outcome_text}."
                 ),
-                color=discord.Color.green(),
+                color=color,
             )
 
             embed.add_field(
-                name="Lucky Farmers",
+                name="Affected Farmers",
                 value=" ".join(mentions),
                 inline=False,
             )
@@ -269,28 +297,43 @@ class FarmingWeatherCog(commands.Cog):
             import traceback
             traceback.print_exc()
 
-    async def _post_weather_announcement_dm(self, user: discord.abc.Messageable, blessed_users: list[tuple[int, int]]):
+    async def _post_weather_announcement_dm(
+        self,
+        user: discord.abc.Messageable,
+        blessed_users: list[tuple[int, int]],
+        weather_event: dict,
+    ):
         """Send weather announcement privately to a specific user."""
         try:
             total_crops = sum(crop_count for _, crop_count in blessed_users)
 
+            multiplier = weather_event["multiplier"]
+            if multiplier >= 1.0:
+                effect_text = f"**{int((multiplier - 1) * 100)}% harvest bonus**"
+                outcome_text = "worth more when you harvest them"
+                color = discord.Color.green()
+            else:
+                effect_text = f"**{int((1 - multiplier) * 100)}% harvest penalty**"
+                outcome_text = "worth less when you harvest them"
+                color = discord.Color.red()
+
             embed = discord.Embed(
-                title=f"{WEATHER_EVENT['emoji']} {WEATHER_EVENT['name']} {WEATHER_EVENT['emoji']}",
+                title=f"{weather_event['emoji']} {weather_event['name']} {weather_event['emoji']}",
                 description=(
-                    f"{WEATHER_EVENT['description']}\n\n"
+                    f"{weather_event['description']}\n\n"
                     f"🌟 **{len(blessed_users)} farmer{'s' if len(blessed_users) != 1 else ''}** "
                     f"with **{total_crops} growing crop{'s' if total_crops != 1 else ''}** "
-                    f"will receive a **100% harvest bonus**!\n\n"
-                    f"💚 Your blessed crops will be worth double when you harvest them!"
+                    f"will receive a {effect_text}!\n\n"
+                    f"💚 Those crops will be {outcome_text}."
                 ),
-                color=discord.Color.green(),
+                color=color,
             )
 
             mentions = [f"<@{user_id}>" for user_id, _ in blessed_users[:50]]
             if len(blessed_users) > 50:
                 mentions.append(f"...and {len(blessed_users) - 50} more!")
 
-            embed.add_field(name="Lucky Farmers", value=" ".join(mentions), inline=False)
+            embed.add_field(name="Affected Farmers", value=" ".join(mentions), inline=False)
             embed.set_footer(text=f"Use {COMMAND_PREFIX}harvest to collect your bonus crops!")
 
             await user.send(embed=embed)

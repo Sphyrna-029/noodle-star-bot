@@ -21,6 +21,26 @@ class PlantedCropRow:
 class FarmingRepository(BaseRepository):
     """Farming plot and crop operations."""
 
+    def get_farm_level(self, user_id: int) -> int:
+        """Get a user's farm level."""
+        with self.db.get_cursor() as cursor:
+            cursor.execute(
+                "SELECT farm_level FROM user_inventory WHERE user_id = ?",
+                (user_id,),
+            )
+            row = cursor.fetchone()
+            if row is None or row["farm_level"] is None:
+                return 1
+            return row["farm_level"]
+
+    def set_farm_level(self, user_id: int, level: int) -> None:
+        """Set a user's farm level."""
+        with self.db.get_cursor() as cursor:
+            cursor.execute(
+                "UPDATE user_inventory SET farm_level = ? WHERE user_id = ?",
+                (level, user_id),
+            )
+
     def get_farm_plots(self, user_id: int) -> int:
         """Get the number of farm plots a user owns."""
         with self.db.get_cursor() as cursor:
@@ -50,7 +70,7 @@ class FarmingRepository(BaseRepository):
         with self.db.get_cursor() as cursor:
             cursor.execute(
                 """
-                SELECT id, user_id, plot_number, crop_type, planted_at, ready_at, 
+                SELECT id, user_id, plot_number, crop_type, planted_at, ready_at,
                        COALESCE(weather_bonus, 1.0) as weather_bonus
                 FROM planted_crops
                 WHERE user_id = ?

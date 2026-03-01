@@ -47,7 +47,7 @@ SHOP_ITEMS: Final[dict[str, ShopItem]] = {
         consumable=True,
         emoji="🍄",
         display_name="Golden Mushroom",
-        description="Mine instantly with no cooldown! Single use. Use: `!mine mushroom`",
+        description="Mine instantly with no cooldown! Single use. Gained from farming harvests.",
         aliases=("golden mushroom", "mushroom"),
     ),
     "bait_worm": ShopItem(

@@ -144,7 +144,7 @@ class MiningUseCases:
                     remaining = MINING_BASE_COOLDOWN - time_since
                     return MineResult(
                         success=False,
-                        message=f"You're too tired to mine right now!\nCome back in **{format_time_remaining(remaining)}** to mine again!\n💡 *Use `!mine potato` to reduce cooldown or `!mine mushroom` to mine instantly!*",
+                        message=f"You're too tired to mine right now!\nCome back in **{format_time_remaining(remaining)}** to mine again!\n💡 *Use `!mine potato` to reduce cooldown or `!mine mushroom` (from farming harvests) to mine instantly!*",
                     )
 
         # Get active mine level config
@@ -242,7 +242,7 @@ class MiningUseCases:
                 if hazard.bank_loss_pct > 0:
                     current_bank = self.repo.get_user_bank(user_id)
                     potential_bank_loss = int(current_bank * hazard.bank_loss_pct)
-                    
+
                     # Check if user has bank insurance
                     inventory = self.repo.get_user_inventory(user_id)
                     bank_insurance_uses = inventory.get("bank_insurance", 0)
@@ -262,7 +262,7 @@ class MiningUseCases:
                 result.bank_lost = bank_lost
                 result.items_destroyed = True
                 result.new_balance = new_stars
-                
+
                 # Update disaster message to indicate bank insurance usage
                 disaster_msg = hazard.unprotected_msg.format(
                     stars_lost=stars_lost, bank_lost=bank_lost
@@ -270,7 +270,7 @@ class MiningUseCases:
                 if bank_insurance_used:
                     remaining_insurance = bank_insurance_uses - 1
                     disaster_msg += f"\n\n🛡️ **Bank Insurance activated!** Your bank was protected from losing {potential_bank_loss} stars.\n*({remaining_insurance} uses remaining)*"
-                
+
                 result.disaster_unprotected_msg = disaster_msg
 
         return result
@@ -369,4 +369,3 @@ class MiningUseCases:
             user_id, "golden_mushroom", inventory["golden_mushroom"] - 1
         )
         return True
-

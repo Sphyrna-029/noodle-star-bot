@@ -26,6 +26,8 @@ class FarmStatus:
     next_plot_cost: Optional[int] = None
     can_buy_more: bool = True
     stars: int = 0  # User's current star balance
+    farm_level: int = 1
+    next_farm_level_cost: Optional[int] = None
 
 
 @dataclass(slots=True)
@@ -62,7 +64,21 @@ class HarvestResult:
     harvested: list[tuple[int, str, str, int]] = field(default_factory=list)  # (plot, name, emoji, stars)
     total_stars: int = 0
     new_balance: int = 0
+    mushrooms_earned: int = 0
+    quality_rolls: list[tuple[int, str, float, float]] = field(default_factory=list)  # (plot, quality, quality_mult, weather_mult)
     weather_blessed: list[tuple[str, str, int, int]] = field(default_factory=list)  # (name, emoji, base_price, actual_price) for bonus crops
+
+
+@dataclass(slots=True)
+class UpgradeFarmLevelResult:
+    """Result of upgrading farm level."""
+
+    success: bool
+    message: str
+    old_level: int = 1
+    new_level: int = 1
+    cost: int = 0
+    new_balance: int = 0
 
 
 @dataclass(slots=True)
