@@ -1,5 +1,8 @@
 """Gambling commands cog."""
 
+import asyncio
+import traceback
+
 import discord
 from discord.ext import commands
 
@@ -10,11 +13,24 @@ from cogs.gambling.dto import BlackJackGameState, BlackJackResult
 class BlackJackView(discord.ui.View):
     """Interactive view for BlackJack game with Hit/Stand buttons."""
 
-    def __init__(self, game_state: BlackJackGameState, use_case: BlackJackUseCase, author_id: int):
-        super().__init__(timeout=30)  # 30 second timeout
+    def __init__(
+        self,
+        game_state: BlackJackGameState,
+        use_case: BlackJackUseCase,
+        author_id: int,
+        player_name: str,
+    ):
+        super().__init__(timeout=120)  # Give users enough time to act
         self.game_state = game_state
         self.use_case = use_case
         self.author_id = author_id
+        self.player_name = player_name
+        self.message = None
+        self._finish_lock = asyncio.Lock()
+
+    def _disable_buttons(self) -> None:
+        for item in self.children:
+            item.disabled = True
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         """Ensure only the person who started the game can use the buttons."""
@@ -105,40 +121,86 @@ class BlackJackView(discord.ui.View):
     async def hit_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Handle Hit button press."""
         try:
-            result = self.use_case.hit(self.game_state)
+            await interaction.response.defer()
+            async with self._finish_lock:
+                if self.game_state.game_over:
+                    self._disable_buttons()
+                    await interaction.edit_original_response(view=self)
+                    return
 
-            if result.game_over:
-                # Disable buttons when game is over
-                for item in self.children:
-                    item.disabled = True
+                result = self.use_case.hit(self.game_state)
 
-            embed = self._create_embed(result, interaction.user.name)
-            await interaction.response.edit_message(embed=embed, view=self)
+                if result.game_over:
+                    self.game_state.game_over = True
+                    self._disable_buttons()
+
+                embed = self._create_embed(result, self.player_name)
+                await interaction.edit_original_response(embed=embed, view=self)
         except Exception as e:
-            await interaction.response.send_message(
-                f"❌ Error: {type(e).__name__}: {str(e)}",
-                ephemeral=True
-            )
-            raise
+            traceback.print_exc()
+            if interaction.response.is_done():
+                await interaction.followup.send(f"❌ Error: {type(e).__name__}: {str(e)}", ephemeral=True)
+            else:
+                await interaction.response.send_message(
+                    f"❌ Error: {type(e).__name__}: {str(e)}",
+                    ephemeral=True
+                )
 
     @discord.ui.button(label="Stand", style=discord.ButtonStyle.secondary, emoji="✋")
     async def stand_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Handle Stand button press."""
         try:
-            result = self.use_case.stand(self.game_state)
+            await interaction.response.defer()
+            async with self._finish_lock:
+                if self.game_state.game_over:
+                    self._disable_buttons()
+                    await interaction.edit_original_response(view=self)
+                    return
 
-            # Game is always over after standing
-            for item in self.children:
-                item.disabled = True
+                result = self.use_case.stand(self.game_state)
+                self.game_state.game_over = True
 
-            embed = self._create_embed(result, interaction.user.name)
-            await interaction.response.edit_message(embed=embed, view=self)
+                # Game is always over after standing
+                self._disable_buttons()
+
+                embed = self._create_embed(result, self.player_name)
+                await interaction.edit_original_response(embed=embed, view=self)
         except Exception as e:
-            await interaction.response.send_message(
-                f"❌ Error: {type(e).__name__}: {str(e)}",
-                ephemeral=True
-            )
-            raise
+            traceback.print_exc()
+            if interaction.response.is_done():
+                await interaction.followup.send(f"❌ Error: {type(e).__name__}: {str(e)}", ephemeral=True)
+            else:
+                await interaction.response.send_message(
+                    f"❌ Error: {type(e).__name__}: {str(e)}",
+                    ephemeral=True
+                )
+
+    async def on_timeout(self) -> None:
+        """Auto-stand on timeout so bets are always resolved."""
+        async with self._finish_lock:
+            self._disable_buttons()
+            if self.message is None:
+                return
+
+            if self.game_state.game_over:
+                await self.message.edit(view=self)
+                return
+
+            try:
+                result = self.use_case.stand(self.game_state)
+                self.game_state.game_over = True
+                embed = self._create_embed(result, self.player_name)
+                await self.message.edit(embed=embed, view=self)
+            except Exception:
+                traceback.print_exc()
+                await self.message.edit(
+                    content=(
+                        "⏰ This blackjack game timed out and could not be auto-resolved.\n"
+                        "An admin should check your balance and refund the bet if needed."
+                    ),
+                    embed=None,
+                    view=self,
+                )
 
 
 class GamblingCog(commands.Cog):
@@ -286,7 +348,7 @@ class GamblingCog(commands.Cog):
 
             # Send a thinking message to show the bot is responding
             thinking_msg = await ctx.send(f"🎴 {ctx.author.mention}, dealing cards...")
-            
+
             # Start the game
             result = self.blackjack_use_case.start_game(ctx.author.id, str(ctx.author), amount)
 
@@ -348,12 +410,17 @@ class GamblingCog(commands.Cog):
             )
 
             # Create the interactive view
-            view = BlackJackView(game_state, self.blackjack_use_case, ctx.author.id)
+            view = BlackJackView(
+                game_state,
+                self.blackjack_use_case,
+                ctx.author.id,
+                ctx.author.name,
+            )
             embed = view._create_embed(result, ctx.author.name)
 
-            await thinking_msg.edit(content=None, embed=embed, view=view)
+            message = await thinking_msg.edit(content=None, embed=embed, view=view)
+            view.message = message or thinking_msg
         except Exception as e:
-            import traceback
             traceback.print_exc()
             try:
                 await ctx.send(f"❌ An error occurred: {type(e).__name__}: {str(e)}")
