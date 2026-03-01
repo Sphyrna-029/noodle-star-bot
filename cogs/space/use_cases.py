@@ -133,7 +133,7 @@ class SpaceUseCases:
                     remaining = MINING_BASE_COOLDOWN - time_since
                     return SpaceMineResult(
                         success=False,
-                        message=f"You're too tired to mine right now!\nCome back in **{format_time_remaining(remaining)}** to mine again!\n💡 *Use `!spacemine potato` to reduce cooldown or `!spacemine mushroom` to mine instantly!*",
+                        message=f"You're too tired to mine right now!\nCome back in **{format_time_remaining(remaining)}** to mine again!\n💡 *Use `!spacemine potato` to reduce cooldown or `!spacemine mushroom` (from farming harvests) to mine instantly!*",
                     )
 
         # Get active planet config

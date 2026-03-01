@@ -79,7 +79,7 @@ class FarmingUseCases:
         next_plot_num = total_plots + 1
         next_plot_cost = PLOT_COSTS.get(next_plot_num)
         can_buy_more = next_plot_num <= MAX_PLOTS
-        
+
         # Get user's star balance
         stars = self.repo.get_user_stars(user_id, username)
 
@@ -93,7 +93,7 @@ class FarmingUseCases:
 
     def buy_plot(self, user_id: int, username: str, plot_number: int = 0) -> BuyPlotResult:
         """Buy a new farm plot.
-        
+
         Args:
             user_id: The user's Discord ID
             username: The user's Discord username
@@ -103,7 +103,7 @@ class FarmingUseCases:
         self.repo.get_user(user_id, username)
 
         current_plots = self.repo.get_farm_plots(user_id)
-        
+
         # Determine which plot to buy
         if plot_number == 0:
             # Buy next available plot (old behavior for backward compatibility)
@@ -111,7 +111,7 @@ class FarmingUseCases:
         else:
             # Buy specific plot
             target_plot_num = plot_number
-            
+
             # Validate they're buying in order
             if target_plot_num != current_plots + 1:
                 if target_plot_num <= current_plots:
@@ -288,40 +288,42 @@ class FarmingUseCases:
         harvested = []
         total_stars = 0
         plots_to_clear = []
-        weather_blessed = []  # Track which crops had weather bonus
+        weather_blessed = []  # Kept for DTO compatibility; no star bonus is applied.
 
         for crop_data in ready_crops:
             crop_info = get_crop_by_name(crop_data.crop_type)
             if crop_info:
-                # Apply weather bonus if present
-                base_price = crop_info.sell_price
-                actual_price = int(base_price * crop_data.weather_bonus)
-                
+                # Harvesting now grants only golden mushrooms (no stars).
                 harvested.append(
-                    (crop_data.plot_number, crop_info.name, crop_info.emoji, actual_price)
+                    (crop_data.plot_number, crop_info.name, crop_info.emoji, 0)
                 )
-                total_stars += actual_price
                 plots_to_clear.append(crop_data.plot_number)
-                
-                # Track if this crop had a weather bonus
-                if crop_data.weather_bonus > 1.0:
-                    weather_blessed.append((crop_info.name, crop_info.emoji, base_price, actual_price))
+
+        # Every harvested crop grants one golden mushroom for instant mining.
+        mushrooms_earned = len(harvested)
 
         # Update database
         if plots_to_clear:
             self.repo.remove_crops(user_id, plots_to_clear)
 
-        # Add stars to user
-        balance = self.repo.get_user_stars(user_id, username)
-        new_balance = balance + total_stars
-        self.repo.update_user_stars(user_id, username, new_balance)
+        # No star payout from harvest; balance remains unchanged.
+        new_balance = self.repo.get_user_stars(user_id, username)
+
+        if mushrooms_earned > 0:
+            inventory = self.repo.get_user_inventory(user_id)
+            self.repo.update_user_inventory(
+                user_id,
+                "golden_mushroom",
+                inventory.get("golden_mushroom", 0) + mushrooms_earned,
+            )
 
         return HarvestResult(
             success=True,
-            message=f"Harvested {len(harvested)} crop(s) for **{total_stars}** stars!",
+            message=f"Harvested {len(harvested)} crop(s) and found **{mushrooms_earned}** golden mushroom(s)!",
             harvested=harvested,
             total_stars=total_stars,
             new_balance=new_balance,
+            mushrooms_earned=mushrooms_earned,
             weather_blessed=weather_blessed,
         )
 

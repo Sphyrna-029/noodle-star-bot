@@ -62,6 +62,7 @@ class HarvestResult:
     harvested: list[tuple[int, str, str, int]] = field(default_factory=list)  # (plot, name, emoji, stars)
     total_stars: int = 0
     new_balance: int = 0
+    mushrooms_earned: int = 0
     weather_blessed: list[tuple[str, str, int, int]] = field(default_factory=list)  # (name, emoji, base_price, actual_price) for bonus crops
 
 

@@ -45,25 +45,25 @@ class FarmingCog(commands.Cog):
         # Build the cute grid display - simple square grid (3 columns)
         grid_lines = []
         grid_lines.append("```")
-        
+
         # Pad plots list to always show owned plots in one grid
         plots_to_show = status.plots[:]
         plots_per_row = 3
-        
+
         # Calculate total rows needed
         num_rows = (len(plots_to_show) + plots_per_row - 1) // plots_per_row
-        
+
         for row in range(num_rows):
             start_idx = row * plots_per_row
             end_idx = min(start_idx + plots_per_row, len(plots_to_show))
             row_plots = plots_to_show[start_idx:end_idx]
-            
+
             # Top border
             if len(row_plots) == 1:
                 grid_lines.append("┌───┐")
             else:
                 grid_lines.append("┌" + "───┬" * (len(row_plots) - 1) + "───┐")
-            
+
             # Plot cells with emojis
             cells = []
             for plot in row_plots:
@@ -74,13 +74,13 @@ class FarmingCog(commands.Cog):
                 else:
                     cells.append(f"{plot.crop_emoji} ")
             grid_lines.append("│" + "│".join(cells) + "│")
-            
+
             # Bottom border
             if len(row_plots) == 1:
                 grid_lines.append("└───┘")
             else:
                 grid_lines.append("└" + "───┴" * (len(row_plots) - 1) + "───┘")
-            
+
             # Plot details below each row
             for plot in row_plots:
                 if plot.is_empty:
@@ -96,11 +96,11 @@ class FarmingCog(commands.Cog):
                     else:
                         time_str = f"{minutes}m"
                     grid_lines.append(f"Plot {plot.plot_number}: {plot.crop_name} - {time_str} remaining")
-            
+
             # Add spacing between rows if not the last row
             if row < num_rows - 1:
                 grid_lines.append("")
-        
+
         grid_lines.append("```")
 
         # Build legend for ready crops
@@ -121,7 +121,7 @@ class FarmingCog(commands.Cog):
             description="\n".join(grid_lines),
             color=discord.Color.green(),
         )
-        
+
         if legend:
             embed.add_field(name="Status", value=" • ".join(legend), inline=False)
 
@@ -141,13 +141,13 @@ class FarmingCog(commands.Cog):
         # If no plot number specified, show plot status
         if plot_number == 0:
             status = self.farming.get_farm_status(ctx.author.id, str(ctx.author))
-            
+
             embed = discord.Embed(
                 title="🏡 Farm Plot Status",
                 description="Use `!buyplot <number>` to purchase a specific plot.",
                 color=discord.Color.gold(),
             )
-            
+
             # Show all plots (owned and available)
             plot_lines = []
             for i in range(1, MAX_PLOTS + 1):
@@ -156,27 +156,27 @@ class FarmingCog(commands.Cog):
                 else:
                     cost = PLOT_COSTS.get(i, 0)
                     plot_lines.append(f"🔒 **Plot {i}**: Available for **{cost}⭐**")
-            
+
             embed.add_field(
                 name="Your Plots",
                 value="\n".join(plot_lines),
                 inline=False,
             )
-            
+
             embed.add_field(
                 name="Your Balance",
                 value=f"💰 **{status.stars}⭐**",
                 inline=False,
             )
-            
+
             if status.can_buy_more:
                 embed.set_footer(text=f"💡 Example: !buyplot {status.total_plots + 1}")
             else:
                 embed.set_footer(text="🌟 You own all plots!")
-            
+
             await ctx.send(embed=embed)
             return
-        
+
         # Actually buy the plot
         result = self.farming.buy_plot(ctx.author.id, str(ctx.author), plot_number)
 
@@ -256,28 +256,19 @@ class FarmingCog(commands.Cog):
 
         # Build harvest summary
         if len(result.harvested) == 1:
-            plot_num, name, emoji, stars = result.harvested[0]
-            
-            # Check if this crop had weather bonus
-            bonus_msg = ""
-            if result.weather_blessed:
-                bonus_msg = "\n✨ **Weather Bonus Applied!** +100% harvest value!"
-            
+            plot_num, name, emoji, _stars = result.harvested[0]
+
             await ctx.send(
                 f"🌾 {ctx.author.mention} harvested {emoji} **{name}** from Plot #{plot_num}!\n"
-                f"💰 Earned **{stars}** stars!{bonus_msg}\n"
+                f"🍄 Found **{result.mushrooms_earned}** Golden Mushroom!\n"
                 f"New balance: **{result.new_balance}** stars"
             )
         else:
             lines = [f"🌾 {ctx.author.mention} harvested **{len(result.harvested)}** crops!\n"]
-            for plot_num, name, emoji, stars in result.harvested:
-                lines.append(f"  • Plot #{plot_num}: {emoji} {name} (+{stars}⭐)")
-            
-            # Show weather bonus summary if any
-            if result.weather_blessed:
-                lines.append(f"\n✨ **Weather Bonus Applied!** ({len(result.weather_blessed)} crop(s) got +100% value!)")
-            
-            lines.append(f"\n💰 Total: **{result.total_stars}** stars!")
+            for plot_num, name, emoji, _stars in result.harvested:
+                lines.append(f"  • Plot #{plot_num}: {emoji} {name}")
+
+            lines.append(f"🍄 Found **{result.mushrooms_earned}** Golden Mushrooms!")
             lines.append(f"New balance: **{result.new_balance}** stars")
             await ctx.send("\n".join(lines))
 

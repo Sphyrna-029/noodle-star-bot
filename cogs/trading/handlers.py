@@ -134,7 +134,7 @@ class TradingCog(commands.Cog):
             value=(
                 "Stars, helmets, swords, potatoes, golden mushrooms, "
                 "gold pickaxes, and all bait types. "
-                "Use the same names as the `!store`."
+                "Use the same names as inventory items (`!inventory`)."
             ),
             inline=False,
         )

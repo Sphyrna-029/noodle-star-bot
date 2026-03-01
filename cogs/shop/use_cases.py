@@ -12,11 +12,14 @@ class ShopUseCases:
 
     def __init__(self, repository: UserRepository = None):
         self.repo = repository or UserRepository()
+        self._non_store_items = {"golden_mushroom"}
 
     def get_items(self) -> List[ShopItem]:
         """Get all items available in the shop."""
         items = []
         for key, data in SHOP_ITEMS.items():
+            if key in self._non_store_items:
+                continue
             items.append(
                 ShopItem(
                     key=key,
@@ -118,6 +121,15 @@ class ShopUseCases:
             return PurchaseResult(
                 success=False,
                 message="That item doesn't exist! Use `!store` to see available items.",
+            )
+
+        if item.key in self._non_store_items:
+            return PurchaseResult(
+                success=False,
+                message="Golden Mushrooms are not sold in the store. Harvest crops with `!harvest` to find them.",
+                item_name=item.display_name,
+                item_emoji=item.emoji,
+                quantity=quantity,
             )
 
         current_stars = self.repo.get_user_stars(user_id, username)

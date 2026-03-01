@@ -90,7 +90,7 @@ def _mining_embed() -> discord.Embed:
         value=(
             "`!mine` — Dig for minerals (30 min cooldown)\n"
             "`!mine potato` — Mine after only 5 min (costs 1 Raw Potato)\n"
-            "`!mine mushroom` — Mine right now, no waiting (costs 1 Golden Mushroom)\n"
+            "`!mine mushroom` — Mine right now, no waiting (uses 1 Golden Mushroom from farming harvests)\n"
             "`!minelevel` — See what mine levels you've unlocked\n"
             "`!minelevel 2` — Switch to a different mine level\n"
             "`!unlock 2` — Pay to unlock the next mine level"
@@ -267,6 +267,7 @@ def _farming_embed() -> discord.Embed:
         value=(
             "• You **always** profit — harvesting never costs you stars\n"
             "• No cooldowns — plant and harvest as fast as you want\n"
+            "• Every harvested crop also gives 1 🍄 Golden Mushroom for instant mining\n"
             "• Weather events can randomly **double** your harvest!\n"
             "• A plot must be empty to plant in it (harvest first)"
         ),
@@ -424,7 +425,7 @@ def _shop_embed() -> discord.Embed:
             "🪖 Helmet (50) — Blocks 1 collapse/flood disaster\n"
             "⚔️ Sword (75) — Blocks 1 goblin/troll disaster\n"
             "🥔 Raw Potato (2) — Mine after 5 min instead of 30\n"
-            "🍄 Golden Mushroom (25) — Mine instantly, skip cooldown\n"
+            "🍄 Golden Mushroom (farm harvest) — Mine instantly, skip cooldown\n"
             "💸 Bank Insurance (250) — Protects bank, 10 uses\n"
             "📷 Telescope (200) — View a starfield (permanent, fun item)\n"
             "🪱 Worm (33) / 🐟 Herring (79) / 🐋 Sturgeon (110) — Fishing bait"
