@@ -16,8 +16,11 @@ class NoodleHelpCommand(commands.HelpCommand):
         "Gambling",
         "Mining",
         "Fishing",
+        "Farming",
         "Shop",
+        "Trading",
         "Moderator",
+        "Dev",
         "Other",
     ]
 
@@ -53,6 +56,17 @@ class NoodleHelpCommand(commands.HelpCommand):
 
     def _sort_commands(self, cmds: Iterable[commands.Command]) -> List[commands.Command]:
         return sorted(cmds, key=lambda c: c.name)
+
+    def _find_cog_by_help_name(self, name: str) -> Optional[commands.Cog]:
+        if self.context is None:
+            return None
+        target = name.strip().lower()
+        for cog in self.context.bot.cogs.values():
+            cleaned = self._clean_cog_name(cog).lower()
+            qualified = getattr(cog, "qualified_name", "").lower()
+            if target in {cleaned, qualified}:
+                return cog
+        return None
 
     def _build_chunks(self, lines: List[str], *, max_len: int = 1024) -> List[str]:
         if not lines:
@@ -111,11 +125,9 @@ class NoodleHelpCommand(commands.HelpCommand):
     # --- Send helpers --------------------------------------------------------
 
     async def send_bot_help(self, mapping):
-        prefix = self._get_prefix()
-
         embed = discord.Embed(
             title="✨ Noodle Star Bot — Help",
-            description="Here are the available commands grouped by category.",
+            description="Available cogs:",
             color=discord.Color.blurple(),
         )
 
@@ -129,51 +141,32 @@ class NoodleHelpCommand(commands.HelpCommand):
             category = self._clean_cog_name(cog)
             category_map.setdefault(category, []).extend(filtered)
 
-        fallback_lines: List[str] = ["Noodle Star Bot Commands"]
+        fallback_lines: List[str] = ["Noodle Star Bot Cogs"]
 
         if not category_map:
-            embed.add_field(name="Commands", value="No commands are currently available.", inline=False)
+            embed.add_field(name="Cogs", value="No cogs are currently available.", inline=False)
             fallback_lines.append("No commands are currently available.")
         else:
-            for category in self._sort_categories(category_map.keys()):
-                commands_list = self._sort_commands(category_map[category])
-                lines = [self._format_command_line(cmd) for cmd in commands_list]
-                chunks = self._build_chunks(lines)
-
-                if not chunks:
-                    chunks = ["No commands."]
-
-                # Respect Discord embed field limit (25 fields total).
-                for index, chunk in enumerate(chunks):
-                    if len(embed.fields) >= 24:
-                        remaining = sum(len(self._sort_commands(v)) for v in category_map.values())
-                        embed.add_field(
-                            name="More Commands",
-                            value=(
-                                "There are additional commands not shown here due to Discord limits. "
-                                f"Use `{prefix}help <category>` for full details."
-                            ),
-                            inline=False,
-                        )
-                        break
-                    name = category if index == 0 else f"{category} (cont.)"
-                    embed.add_field(name=name, value=chunk, inline=False)
-
-                fallback_lines.append(f"\n[{category}]")
-                fallback_lines.extend(line.replace("`", "") for line in lines)
-
-        embed.set_footer(
-            text=(
-                f"Use {prefix}help <command> for details • "
-                f"Use {prefix}help <category> for a category"
+            categories = self._sort_categories(category_map.keys())
+            embed.add_field(
+                name="Cogs",
+                value="\n".join(f"`{category.lower()}`" for category in categories),
+                inline=False,
             )
-        )
-
-        fallback_lines.append(
-            f"\nUse {prefix}help <command> for details • Use {prefix}help <category> for a category"
-        )
+            fallback_lines.extend(category.lower() for category in categories)
 
         await self._safe_send_embed(embed, fallback_text=self._truncate("\n".join(fallback_lines)))
+
+    async def command_callback(self, ctx, /, *, command=None):
+        """Resolve cleaned cog names like `farming` before default lookup."""
+        if command is not None:
+            normalized = command.strip()
+            if " " not in normalized and ctx.bot.get_command(normalized) is None:
+                cog = self._find_cog_by_help_name(normalized)
+                if cog is not None:
+                    self.context = ctx
+                    return await self.send_cog_help(cog)
+        return await super().command_callback(ctx, command=command)
 
     async def send_command_help(self, command: commands.Command):
         embed = discord.Embed(
