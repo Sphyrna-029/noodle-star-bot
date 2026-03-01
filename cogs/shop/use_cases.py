@@ -157,6 +157,17 @@ class ShopUseCases:
                 quantity=quantity,
             )
 
+        # Check prerequisite for rocket ship
+        if item.key == "rocket_ship":
+            mine_level = inventory.get("mine_level", 1)
+            if mine_level < 5:
+                return PurchaseResult(
+                    success=False,
+                    message=f"You need mine level 5 to buy a {item.emoji} **{item.display_name}**! You're at level {mine_level}.",
+                    item_name=item.display_name,
+                    item_emoji=item.emoji,
+                )
+
         # Check if user already owns permanent item
         if not item.consumable and inventory[item.db_column] > 0:
             return PurchaseResult(
@@ -223,6 +234,9 @@ class ShopUseCases:
 
         if inventory.get("mithril_shield", 0) > 0:
             items.append(f"🛡️ **Mithril Shield** ({inventory['mithril_shield']} uses)")
+
+        if inventory.get("rocket_ship", 0) > 0:
+            items.append("🚀 **Rocket Ship** (Permanent)")
 
         # Fishing bait
         if inventory.get("bait_worm", 0) > 0:

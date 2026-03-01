@@ -24,6 +24,9 @@ class InventoryRepository(BaseRepository):
         "golden_axe",
         "mithril_shield",
         "bank_insurance",
+        "rocket_ship",
+        "space_planet_level",
+        "active_space_planet",
     }
 
     def _ensure_inventory_row(self, cursor, user_id: int) -> None:
@@ -33,8 +36,8 @@ class InventoryRepository(BaseRepository):
                 user_id, gold_pickaxe, helmet, sword, raw_potato, golden_mushroom,
                 bait_worm, bait_herring, bait_sturgeon, equipped_bait, telescope,
                 mine_level, active_mine_level, active_fish_level, golden_axe, mithril_shield,
-                bank_insurance
-            ) VALUES (?, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 1, 1, 1, 0, 0, 0)
+                bank_insurance, rocket_ship, space_planet_level, active_space_planet
+            ) VALUES (?, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0)
             ON CONFLICT(user_id) DO NOTHING
             """,
             (user_id,),
@@ -49,7 +52,8 @@ class InventoryRepository(BaseRepository):
                 SELECT gold_pickaxe, helmet, sword, raw_potato, golden_mushroom,
                        bait_worm, bait_herring, bait_sturgeon, telescope,
                        mine_level, active_mine_level, golden_axe, mithril_shield,
-                       bank_insurance
+                       bank_insurance, rocket_ship, space_planet_level,
+                       active_space_planet
                 FROM user_inventory WHERE user_id = ?
                 """,
                 (user_id,),
@@ -72,6 +76,9 @@ class InventoryRepository(BaseRepository):
                     "golden_axe": 0,
                     "mithril_shield": 0,
                     "bank_insurance": 0,
+                    "rocket_ship": 0,
+                    "space_planet_level": 0,
+                    "active_space_planet": 0,
                 }
 
             return {
@@ -89,6 +96,9 @@ class InventoryRepository(BaseRepository):
                 "golden_axe": row["golden_axe"] or 0,
                 "mithril_shield": row["mithril_shield"] or 0,
                 "bank_insurance": (row["bank_insurance"] if "bank_insurance" in row.keys() else 0) or 0,
+                "rocket_ship": row["rocket_ship"] or 0,
+                "space_planet_level": row["space_planet_level"] or 0,
+                "active_space_planet": row["active_space_planet"] or 0,
             }
 
     def update_user_inventory(self, user_id: int, item: str, amount: int) -> None:
@@ -127,7 +137,7 @@ class InventoryRepository(BaseRepository):
                     raw_potato = 0, golden_mushroom = 0, telescope = 0,
                     bait_worm = 0, bait_herring = 0, bait_sturgeon = 0,
                     equipped_bait = NULL, golden_axe = 0, mithril_shield = 0,
-                    bank_insurance = 0
+                    bank_insurance = 0, rocket_ship = 0
                 WHERE user_id = ?
                 """,
                 (user_id,),

@@ -95,6 +95,15 @@ SHOP_ITEMS: Final[dict[str, ShopItem]] = {
         description="Protects your bank from disasters for 10 mines/fishes at Level 4-5. Your wallet is still at risk!",
         aliases=("bank insurance", "insurance", "bank shield"),
     ),
+    "rocket_ship": ShopItem(
+        price=10000,
+        db_column="rocket_ship",
+        consumable=False,
+        emoji="🚀",
+        display_name="Rocket Ship",
+        description="Launch into space and mine on 5 new planets! Requires mine level 5. Use `!launch` after buying.",
+        aliases=("rocket ship", "rocket", "rocketship"),
+    ),
 }
 
 
