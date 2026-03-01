@@ -22,6 +22,10 @@ __all__ = [
     "CROPS",
     "PLOT_COSTS",
     "MAX_PLOTS",
+    "MAX_FARM_LEVEL",
+    "FARM_LEVEL_UPGRADE_COSTS",
+    "QUALITY_MULTIPLIERS",
+    "QUALITY_WEIGHTS_BY_LEVEL",
     "get_crop_by_name",
 ]
 
@@ -71,6 +75,14 @@ CROPS: Final[dict[str, Crop]] = {
         sell_price=960,
         growth_hours=16,
     ),
+    "mushroom": Crop(
+        name="Mushroom",
+        emoji="🍄",
+        seed_cost=300,
+        sell_price=0,
+        growth_hours=24,
+        golden_mushroom_yield=5,
+    ),
 }
 
 # ---------------------------------------------------------------------------
@@ -88,6 +100,35 @@ PLOT_COSTS: Final[dict[int, int]] = {
 }
 
 MAX_PLOTS: Final[int] = 6
+
+# ---------------------------------------------------------------------------
+# Farm Progression
+# ---------------------------------------------------------------------------
+# Costs are keyed by target level (e.g. upgrading 1->2 uses key 2).
+MAX_FARM_LEVEL: Final[int] = 5
+FARM_LEVEL_UPGRADE_COSTS: Final[dict[int, int]] = {
+    2: 1200,
+    3: 2800,
+    4: 5200,
+    5: 9000,
+}
+
+# Harvest quality bonuses.
+QUALITY_MULTIPLIERS: Final[dict[str, float]] = {
+    "bad": 0.8,
+    "normal": 1.0,
+    "great": 1.2,
+}
+
+# Weighted quality rolls by farm level.
+# (quality, weight)
+QUALITY_WEIGHTS_BY_LEVEL: Final[dict[int, tuple[tuple[str, int], ...]]] = {
+    1: (("bad", 20), ("normal", 60), ("great", 20)),
+    2: (("bad", 15), ("normal", 60), ("great", 25)),
+    3: (("bad", 10), ("normal", 60), ("great", 30)),
+    4: (("bad", 5), ("normal", 60), ("great", 35)),
+    5: (("bad", 0), ("normal", 60), ("great", 40)),
+}
 
 
 def get_crop_by_name(name: str) -> Crop | None:

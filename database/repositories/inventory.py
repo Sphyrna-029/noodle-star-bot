@@ -27,6 +27,7 @@ class InventoryRepository(BaseRepository):
         "rocket_ship",
         "space_planet_level",
         "active_space_planet",
+        "farm_level",
     }
 
     def _ensure_inventory_row(self, cursor, user_id: int) -> None:
@@ -36,8 +37,8 @@ class InventoryRepository(BaseRepository):
                 user_id, gold_pickaxe, helmet, sword, raw_potato, golden_mushroom,
                 bait_worm, bait_herring, bait_sturgeon, equipped_bait, telescope,
                 mine_level, active_mine_level, active_fish_level, golden_axe, mithril_shield,
-                bank_insurance, rocket_ship, space_planet_level, active_space_planet
-            ) VALUES (?, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0)
+                bank_insurance, rocket_ship, space_planet_level, active_space_planet, farm_level
+            ) VALUES (?, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1)
             ON CONFLICT(user_id) DO NOTHING
             """,
             (user_id,),
@@ -53,7 +54,7 @@ class InventoryRepository(BaseRepository):
                        bait_worm, bait_herring, bait_sturgeon, telescope,
                        mine_level, active_mine_level, golden_axe, mithril_shield,
                        bank_insurance, rocket_ship, space_planet_level,
-                       active_space_planet
+                       active_space_planet, farm_level
                 FROM user_inventory WHERE user_id = ?
                 """,
                 (user_id,),
@@ -79,6 +80,7 @@ class InventoryRepository(BaseRepository):
                     "rocket_ship": 0,
                     "space_planet_level": 0,
                     "active_space_planet": 0,
+                    "farm_level": 1,
                 }
 
             return {
@@ -99,13 +101,14 @@ class InventoryRepository(BaseRepository):
                 "rocket_ship": row["rocket_ship"] or 0,
                 "space_planet_level": row["space_planet_level"] or 0,
                 "active_space_planet": row["active_space_planet"] or 0,
+                "farm_level": row["farm_level"] or 1,
             }
 
     def update_user_inventory(self, user_id: int, item: str, amount: int) -> None:
         """Update a specific inventory item for a user."""
         if item not in self._INVENTORY_COLUMNS:
             raise ValueError(f"Unsupported inventory column: {item}")
-        
+
         with self.db.get_cursor() as cursor:
             self._ensure_inventory_row(cursor, user_id)
             cursor.execute(

@@ -3,7 +3,13 @@
 import discord
 from discord.ext import commands
 
-from cogs.farming.constants import MAX_PLOTS, PLOT_COSTS
+from cogs.farming.constants import (
+    FARM_LEVEL_UPGRADE_COSTS,
+    MAX_FARM_LEVEL,
+    MAX_PLOTS,
+    PLOT_COSTS,
+    get_crop_by_name,
+)
 from cogs.farming.use_cases import FarmingUseCases
 
 
@@ -125,13 +131,30 @@ class FarmingCog(commands.Cog):
         if legend:
             embed.add_field(name="Status", value=" • ".join(legend), inline=False)
 
+        next_level = status.farm_level + 1
+        if status.next_farm_level_cost is not None:
+            embed.add_field(
+                name="Farm Level",
+                value=(
+                    f"🌱 Level **{status.farm_level}**\n"
+                    f"⬆️ Upgrade to level **{next_level}** for **{status.next_farm_level_cost}⭐** with `!upgradefarm`"
+                ),
+                inline=False,
+            )
+        else:
+            embed.add_field(
+                name="Farm Level",
+                value=f"🌟 Level **{status.farm_level}** (MAX)",
+                inline=False,
+            )
+
         # Add footer with next plot info
         if status.can_buy_more and status.next_plot_cost:
             embed.set_footer(
-                text=f"💰 Next plot: {status.next_plot_cost}⭐ • !buyplot <number> to expand • !harvest to collect"
+                text=f"💰 Next plot: {status.next_plot_cost}⭐ • !buyplot <number> • !upgradefarm • !harvest"
             )
         elif not status.can_buy_more:
-            embed.set_footer(text=f"🌟 Maximum plots reached ({MAX_PLOTS}) • !harvest to collect")
+            embed.set_footer(text=f"🌟 Maximum plots reached ({MAX_PLOTS}) • !upgradefarm • !harvest")
 
         await ctx.send(embed=embed)
 
@@ -233,6 +256,61 @@ class FarmingCog(commands.Cog):
             f"⏰ Ready in **{time_str}**"
         )
 
+    @commands.command(name="farmlevel")
+    async def farmlevel(self, ctx):
+        """View your current farm level and next upgrade cost."""
+        level, next_cost, stars = self.farming.get_farm_level_info(ctx.author.id, str(ctx.author))
+
+        embed = discord.Embed(
+            title="🌱 Farm Level",
+            color=discord.Color.green(),
+            description=f"{ctx.author.mention}, your farm is currently **Level {level}**.",
+        )
+        if next_cost is None:
+            embed.add_field(name="Status", value=f"🌟 Max level reached (**{MAX_FARM_LEVEL}**).", inline=False)
+        else:
+            embed.add_field(
+                name="Next Upgrade",
+                value=(
+                    f"Level **{level + 1}** costs **{next_cost}⭐**.\n"
+                    f"Use `!upgradefarm` to upgrade."
+                ),
+                inline=False,
+            )
+        embed.add_field(name="Your Balance", value=f"💰 **{stars}⭐**", inline=False)
+        await ctx.send(embed=embed)
+
+    @commands.command(name="upgradefarm", aliases=["farmupgrade"])
+    async def upgradefarm(self, ctx):
+        """Upgrade your farm level to improve harvest quality odds."""
+        result = self.farming.upgrade_farm_level(ctx.author.id, str(ctx.author))
+        if not result.success:
+            await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
+            return
+
+        quality_preview = {
+            1: "Bad 20% • Normal 60% • Great 20%",
+            2: "Bad 15% • Normal 60% • Great 25%",
+            3: "Bad 10% • Normal 60% • Great 30%",
+            4: "Bad 5% • Normal 60% • Great 35%",
+            5: "Bad 0% • Normal 60% • Great 40%",
+        }[result.new_level]
+
+        next_cost = FARM_LEVEL_UPGRADE_COSTS.get(result.new_level + 1)
+        next_line = (
+            f"\n⬆️ Next upgrade: **{next_cost}⭐**"
+            if next_cost is not None else
+            "\n🌟 You reached max farm level."
+        )
+
+        await ctx.send(
+            f"✅ {ctx.author.mention}, {result.message}\n"
+            f"💸 Cost: **{result.cost}⭐**\n"
+            f"💰 New balance: **{result.new_balance}⭐**\n"
+            f"🎲 Quality odds: {quality_preview}"
+            f"{next_line}"
+        )
+
     @commands.command(name="harvest")
     async def harvest(self, ctx, plot: str = "all"):
         """Harvest ready crops. Usage: !harvest [plot_number|all]"""
@@ -256,19 +334,55 @@ class FarmingCog(commands.Cog):
 
         # Build harvest summary
         if len(result.harvested) == 1:
-            plot_num, name, emoji, _stars = result.harvested[0]
+            plot_num, name, emoji, stars = result.harvested[0]
+            crop = get_crop_by_name(name)
+            mushroom_yield = crop.golden_mushroom_yield if crop else 0
+            if mushroom_yield > 0:
+                await ctx.send(
+                    f"🌾 {ctx.author.mention} harvested {emoji} **{name}** from Plot #{plot_num}!\n"
+                    f"🍄 Found **{result.mushrooms_earned}** Golden Mushrooms!\n"
+                    f"New balance: **{result.new_balance}** stars"
+                )
+            else:
+                quality = next((q for p, q, _qm, _wm in result.quality_rolls if p == plot_num), "normal")
+                quality_label = {
+                    "bad": "🟤 Bad (-20%)",
+                    "normal": "🟢 Normal (0%)",
+                    "great": "🟡 Great (+20%)",
+                }.get(quality, "🟢 Normal (0%)")
+                weather_note = ""
+                if any(p == plot_num and wm != 1.0 for p, _q, _qm, wm in result.quality_rolls):
+                    weather_note = "\n🌤️ Event modifier applied."
 
-            await ctx.send(
-                f"🌾 {ctx.author.mention} harvested {emoji} **{name}** from Plot #{plot_num}!\n"
-                f"🍄 Found **{result.mushrooms_earned}** Golden Mushroom!\n"
-                f"New balance: **{result.new_balance}** stars"
-            )
+                await ctx.send(
+                    f"🌾 {ctx.author.mention} harvested {emoji} **{name}** from Plot #{plot_num}!\n"
+                    f"🎯 Quality: **{quality_label}**{weather_note}\n"
+                    f"💰 Earned **{stars}⭐**\n"
+                    f"New balance: **{result.new_balance}** stars"
+                )
         else:
             lines = [f"🌾 {ctx.author.mention} harvested **{len(result.harvested)}** crops!\n"]
-            for plot_num, name, emoji, _stars in result.harvested:
-                lines.append(f"  • Plot #{plot_num}: {emoji} {name}")
+            quality_by_plot = {
+                plot: quality
+                for plot, quality, _quality_mult, _weather_mult in result.quality_rolls
+            }
+            for plot_num, name, emoji, stars in result.harvested:
+                crop = get_crop_by_name(name)
+                mushroom_yield = crop.golden_mushroom_yield if crop else 0
+                if mushroom_yield > 0:
+                    lines.append(f"  • Plot #{plot_num}: {emoji} {name} (+{mushroom_yield}🍄)")
+                else:
+                    quality = quality_by_plot.get(plot_num, "normal")
+                    quality_tag = {
+                        "bad": "Bad",
+                        "normal": "Normal",
+                        "great": "Great",
+                    }.get(quality, "Normal")
+                    lines.append(f"  • Plot #{plot_num}: {emoji} {name} — {quality_tag} (+{stars}⭐)")
 
-            lines.append(f"🍄 Found **{result.mushrooms_earned}** Golden Mushrooms!")
+            lines.append(f"\n💰 Total: **{result.total_stars}⭐**")
+            if result.mushrooms_earned > 0:
+                lines.append(f"🍄 Found **{result.mushrooms_earned}** Golden Mushrooms!")
             lines.append(f"New balance: **{result.new_balance}** stars")
             await ctx.send("\n".join(lines))
 
@@ -284,18 +398,28 @@ class FarmingCog(commands.Cog):
         )
 
         for name, emoji, seed_cost, sell_price, profit, growth_hours in info.crops:
+            crop = get_crop_by_name(name)
             if growth_hours == 1:
                 time_str = "1 hour"
             else:
                 time_str = f"{growth_hours} hours"
 
-            embed.add_field(
-                name=f"{emoji} {name}",
-                value=(
+            if crop and crop.golden_mushroom_yield > 0:
+                value = (
+                    f"🌱 Cost: **{seed_cost}**\n"
+                    f"🍄 Yield: **{crop.golden_mushroom_yield} Golden Mushrooms**\n"
+                    f"⏰ Growth: **{time_str}**\n"
+                )
+            else:
+                value = (
                     f"🌱 Cost: **{seed_cost}**\n"
                     f"💰 Sell: **{sell_price}**\n"
                     f"⏰ Growth: **{time_str}**\n"
-                ),
+                )
+
+            embed.add_field(
+                name=f"{emoji} {name}",
+                value=value,
                 inline=True,
             )
 

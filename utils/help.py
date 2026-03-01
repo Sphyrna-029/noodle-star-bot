@@ -231,6 +231,8 @@ def _farming_embed() -> discord.Embed:
         name="All Farming Commands",
         value=(
             "`!farm` — See your farm (what's planted, growth timers)\n"
+            "`!farmlevel` — Check your farm level and next upgrade cost\n"
+            "`!upgradefarm` — Upgrade farm level (improves harvest quality odds)\n"
             "`!buyplot` — See all plots and prices\n"
             "`!buyplot 1` — Buy a specific plot\n"
             "`!plant wheat 1` — Plant a crop in a plot\n"
@@ -247,7 +249,8 @@ def _farming_embed() -> discord.Embed:
             "🥕 **Carrot** — Pay 30, get 90 back (2 hours) — *Check every few hours*\n"
             "🌽 **Corn** — Pay 60, get 200 back (4 hours) — *Check 2-3x a day*\n"
             "🍅 **Tomato** — Pay 120, get 440 back (8 hours) — *Plant before bed/work*\n"
-            "🍉 **Melon** — Pay 240, get 960 back (16 hours) — *Check once a day*\n\n"
+            "🍉 **Melon** — Pay 240, get 960 back (16 hours) — *Check once a day*\n"
+            "🍄 **Mushroom** — Pay 300, harvest in 24 hours for 5 Golden Mushrooms\n\n"
             "**Longer crops = more profit per hour.** "
             "Pick based on how often you check Discord!"
         ),
@@ -265,10 +268,10 @@ def _farming_embed() -> discord.Embed:
     embed.add_field(
         name="Good to Know",
         value=(
-            "• You **always** profit — harvesting never costs you stars\n"
+            "• Harvest value can swing up or down based on quality and hidden farm events\n"
             "• No cooldowns — plant and harvest as fast as you want\n"
-            "• Every harvested crop also gives 1 🍄 Golden Mushroom for instant mining\n"
-            "• Weather events can randomly **double** your harvest!\n"
+            "• 🍄 Mushroom crops are the source of Golden Mushrooms for instant mining\n"
+            "• Your farm can be affected by hidden daily events that buff or nerf harvest value\n"
             "• A plot must be empty to plant in it (harvest first)"
         ),
         inline=False,
