@@ -24,20 +24,24 @@ PERFECT_WEATHER_EVENT = {
     "multiplier": 2.0,
 }
 
+STARLIT_DEW_EVENT = {
+    "name": "Starlit Dew",
+    "emoji": "✨",
+    "description": "A shimmering dew nourishes the fields overnight.",
+    "multiplier": 1.5,
+}
+
+BLIGHT_WINDS_EVENT = {
+    "name": "Blight Winds",
+    "emoji": "🍂",
+    "description": "Dry, biting winds sap the vitality of young crops.",
+    "multiplier": 0.5,
+}
+
 WEATHER_EVENTS = [
     PERFECT_WEATHER_EVENT,
-    {
-        "name": "Starlit Dew",
-        "emoji": "✨",
-        "description": "A shimmering dew nourishes the fields overnight.",
-        "multiplier": 1.5,
-    },
-    {
-        "name": "Blight Winds",
-        "emoji": "🍂",
-        "description": "Dry, biting winds sap the vitality of young crops.",
-        "multiplier": 0.5,
-    },
+    STARLIT_DEW_EVENT,
+    BLIGHT_WINDS_EVENT,
 ]
 
 
