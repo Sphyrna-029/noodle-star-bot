@@ -155,6 +155,43 @@ class EconomyRepository(BaseRepository):
             row = cursor.fetchone()
             return row["lost"] if row else 0
 
+    def get_user_daily_star_activity(
+        self,
+        user_id: int,
+        start: datetime,
+        end: datetime,
+    ) -> list[tuple[str, int, int, int, int]]:
+        """
+        Get per-day star activity for a user.
+
+        Returns list of (day, earned, lost, net, volume) where:
+        - day is YYYY-MM-DD
+        - earned is sum of positive deltas
+        - lost is sum of absolute value of negative deltas
+        - net is sum of deltas
+        - volume is sum of absolute deltas
+        """
+        with self.db.get_cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    date(changed_at) AS day,
+                    COALESCE(SUM(CASE WHEN delta > 0 THEN delta ELSE 0 END), 0) AS earned,
+                    COALESCE(SUM(CASE WHEN delta < 0 THEN -delta ELSE 0 END), 0) AS lost,
+                    COALESCE(SUM(delta), 0) AS net,
+                    COALESCE(SUM(ABS(delta)), 0) AS volume
+                FROM star_ledger
+                WHERE user_id = ? AND changed_at >= ? AND changed_at < ?
+                GROUP BY date(changed_at)
+                ORDER BY day ASC
+                """,
+                (user_id, start.isoformat(), end.isoformat()),
+            )
+            return [
+                (row["day"], row["earned"], row["lost"], row["net"], row["volume"])
+                for row in cursor.fetchall()
+            ]
+
     def get_top_gainers_between(
         self,
         start: datetime,

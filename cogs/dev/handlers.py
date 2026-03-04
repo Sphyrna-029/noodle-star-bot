@@ -1,10 +1,13 @@
 """Developer-only commands."""
 
 import random
+from datetime import datetime, timedelta
 
+import discord
 from discord.ext import commands
 
 from config.bot import DEV_USER_IDS
+from cogs.economy.use_cases import EconomyUseCases
 from cogs.events.farming_weather import WEATHER_EVENT_CHANCE, FarmingWeatherCog
 
 
@@ -13,6 +16,7 @@ class DevCog(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        self.economy = EconomyUseCases()
 
     async def cog_check(self, ctx):
         """Restrict all dev commands to explicit developer IDs."""
@@ -21,7 +25,7 @@ class DevCog(commands.Cog):
     @commands.group(name="dev", hidden=True, invoke_without_command=True)
     async def dev_group(self, ctx):
         """Developer command group."""
-        await self._send_private(ctx, "🛠️ Dev commands: `weathertest`")
+        await self._send_private(ctx, "🛠️ Dev commands: `weathertest`, `staractivity`")
 
     @dev_group.command(name="weathertest", hidden=True)
     async def weather_test(self, ctx):
@@ -56,6 +60,49 @@ class DevCog(commands.Cog):
             ctx,
             "✅ Manual weather check finished. No bonuses/flags were consumed; midnight behavior remains unchanged.",
         )
+
+    @dev_group.command(name="staractivity", hidden=True)
+    async def star_activity(self, ctx, member: discord.Member, days: int = 7):
+        """Show per-day star ledger activity for a user."""
+        if member is None:
+            await self._send_private(ctx, "❌ You must mention a user.")
+            return
+
+        max_days = 30
+        if days < 1:
+            days = 1
+        if days > max_days:
+            days = max_days
+
+        end = datetime.now()
+        start = end - timedelta(days=days)
+
+        activity = self.economy.get_user_daily_star_activity(member.id, start, end)
+        if not activity:
+            await self._send_private(
+                ctx,
+                f"ℹ️ No star ledger activity for {member.mention} in the last {days} day(s).",
+            )
+            return
+
+        earned_total = sum(day[1] for day in activity)
+        lost_total = sum(day[2] for day in activity)
+        net_total = sum(day[3] for day in activity)
+        volume_total = sum(day[4] for day in activity)
+
+        lines = [
+            f"{day}: +{earned} / -{lost} (net {net:+}, vol {volume})"
+            for day, earned, lost, net, volume in activity
+        ]
+        header = (
+            f"📊 Star activity for {member.mention} "
+            f"(last {days} day(s), {start.date().isoformat()} → {end.date().isoformat()}):"
+        )
+        totals = (
+            f"Totals: +{earned_total} / -{lost_total} "
+            f"(net {net_total:+}, vol {volume_total})"
+        )
+        await self._send_private(ctx, "\n".join([header, totals, *lines]))
 
     async def _send_private(self, ctx, message: str):
         """Send dev command output privately to the caller via DM."""

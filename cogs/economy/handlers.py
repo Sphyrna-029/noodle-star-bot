@@ -140,21 +140,21 @@ class EconomyCog(commands.Cog):
 
         month_label = f"{year}-{month:02d}"
         embed = discord.Embed(
-            title=f"📈 Star Stats ({month_label})",
+            title=f"📈 ZGAF star stats for {month_label}",
             color=discord.Color.blurple(),
         )
         embed.add_field(
-            name="Total stars earned in ZGAF",
+            name="🌟 Stars earned:",
             value=f"**{earned}**",
             inline=False,
         )
         embed.add_field(
-            name="Total stars lost in ZGAF",
+            name="📉 Stars lost:",
             value=f"**{lost}**",
             inline=False,
         )
         embed.add_field(
-            name="Stars in circulation",
+            name="🔄 Stars in circulation:",
             value=f"**{total_in_circulation}**",
             inline=False,
         )

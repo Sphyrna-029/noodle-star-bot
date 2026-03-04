@@ -271,6 +271,15 @@ class EconomyUseCases:
         """Get stars lost for a specific month."""
         return self.repo.get_monthly_stars_lost(year, month)
 
+    def get_user_daily_star_activity(
+        self,
+        user_id: int,
+        start: datetime,
+        end: datetime,
+    ) -> list[tuple[str, int, int, int, int]]:
+        """Get per-day star activity for a user in a time range."""
+        return self.repo.get_user_daily_star_activity(user_id, start, end)
+
     def get_last_month_stars_earned(self) -> tuple[int, int, int]:
         """Get stars earned for the previous calendar month."""
         now = datetime.now()

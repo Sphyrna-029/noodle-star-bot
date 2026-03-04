@@ -488,7 +488,7 @@ class FishingUseCases:
                     if hazard.bank_loss_pct > 0:
                         current_bank = self.repo.get_user_bank(user_id)
                         potential_bank_loss = int(current_bank * hazard.bank_loss_pct)
-                        
+
                         # Check if user has bank insurance
                         inventory = self.repo.get_user_inventory(user_id)
                         bank_insurance_uses = inventory.get("bank_insurance", 0)
@@ -508,7 +508,7 @@ class FishingUseCases:
                     result.bank_lost = bank_lost
                     result.items_destroyed = True
                     result.new_balance = new_stars
-                    
+
                     # Update disaster message to indicate bank insurance usage
                     disaster_msg = hazard.unprotected_msg.format(
                         stars_lost=stars_lost, bank_lost=bank_lost
@@ -516,7 +516,7 @@ class FishingUseCases:
                     if bank_insurance_used:
                         remaining_insurance = bank_insurance_uses - 1
                         disaster_msg += f"\n\n🛡️ **Bank Insurance activated!** Your bank was protected from losing {potential_bank_loss} stars.\n*({remaining_insurance} uses remaining)*"
-                    
+
                     result.disaster_unprotected_msg = disaster_msg
 
             return result

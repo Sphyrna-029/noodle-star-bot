@@ -8,7 +8,6 @@ from cogs.space.constants import SPACE_ABDUCTION_BONUS
 from database.repository import UserRepository
 
 
-# 0.5% chance per command
 ABDUCTION_CHANCE = 0.0005 # ~%2 per day
 
 ABDUCTION_MESSAGES = [
