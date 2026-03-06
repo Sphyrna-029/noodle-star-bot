@@ -24,8 +24,8 @@ Protection:
     - Golden Axe: 50 uses, protects from sword-type disasters
 
 Rare Effect Items (dropped from fishing):
-    - Golden Axe: 1% on legendary catches, 50 uses
-    - Mithril Shield: 0.1% on any catch, 10 uses
+    - Golden Axe: 3% on rare/legendary catches, 50 uses
+    - Mithril Shield: 0.4% on any catch, 10 uses
     - Bucktail Jig: 0.3% on any catch, 20% legendary on next cast
     - Ray-Gun: 0.35% on any catch, 2 uses, alien abduction protection
     - Star Magnet: 1% on rare/legendary, 20 uses, +15% stars
@@ -606,15 +606,15 @@ class FishingUseCases:
             # Roll for item drops (after disaster resolution)
             # ---------------------------------------------------------------
 
-            # 1% golden axe on legendary catches
-            if catch["rarity"] == "legendary" and random.random() < 0.01:
+            # 3% golden axe on rare/legendary catches
+            if catch["rarity"] in ("rare", "legendary") and random.random() < 0.03:
                 self.repo.update_user_inventory(user_id, "golden_axe", 50)
                 result.found_items.append(
                     "**Golden Axe** found! Protects against sword-type hazards (50 uses)."
                 )
 
-            # 0.1% mithril shield on any catch
-            if random.random() < 0.001:
+            # 0.4% mithril shield on any catch
+            if random.random() < 0.004:
                 self.repo.update_user_inventory(user_id, "mithril_shield", 10)
                 result.found_items.append(
                     "**Mithril Shield** found! Protects against helmet-type hazards (10 uses)."

@@ -537,9 +537,9 @@ def _items_embed() -> discord.Embed:
         name="🪓 Multi-Use Protection (Rare Drops)",
         value=(
             "🪓 **Golden Axe** (50 uses) — Works like a sword but lasts 50 hits. "
-            "Never fails at any level. *1% drop on legendary fishing catches*\n"
+            "Never fails at any level. *3% drop on rare/legendary fishing catches*\n"
             "🛡️ **Mithril Shield** (10 uses) — Works like a helmet but lasts 10 hits. "
-            "Never fails at any level. *0.1% drop on any fishing catch*"
+            "Never fails at any level. *0.4% drop on any fishing catch*"
         ),
         inline=False,
     )
