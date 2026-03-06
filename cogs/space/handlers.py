@@ -5,7 +5,7 @@ import asyncio
 from discord.ext import commands
 
 from cogs.space.constants import SPACE_MINERAL_TABLES, SPACE_PLANETS
-from cogs.space.use_cases import SpaceUseCases
+from cogs.space.use_case import SpaceUseCases
 
 
 class SpaceCog(commands.Cog):

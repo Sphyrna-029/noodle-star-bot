@@ -49,7 +49,7 @@ from cogs.mining.constants import (
 from config.models import MineHazard
 from database.repository import UserRepository
 from utils.formatters import format_time_remaining
-from .dto import LevelInfo, MineResult, UnlockResult
+from ..dto import LevelInfo, MineResult, UnlockResult
 
 # Gold pickaxe shop price (for auto-sell at half)
 _GOLD_PICKAXE_PRICE = 500

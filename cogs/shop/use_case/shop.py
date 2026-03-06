@@ -4,7 +4,7 @@ from typing import Dict, List, Optional
 
 from cogs.shop.constants import SHOP_ITEMS, get_item_by_alias
 from database.repository import UserRepository
-from .dto import PurchaseResult, ShopItem
+from ..dto import PurchaseResult, ShopItem
 
 
 class ShopUseCases:

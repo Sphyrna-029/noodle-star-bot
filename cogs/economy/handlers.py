@@ -5,7 +5,7 @@ from datetime import datetime
 import discord
 from discord.ext import commands
 
-from cogs.economy.use_cases import EconomyUseCases
+from cogs.economy.use_case import EconomyUseCases
 
 
 class EconomyCog(commands.Cog):
@@ -70,7 +70,7 @@ class EconomyCog(commands.Cog):
             embed.add_field(
                 name="✅ Unlocked",
                 value="\n".join(
-                    f"{achievement.emoji} **{achievement.name}**"
+                    f"{achievement.emoji} {achievement.name} - {achievement.description}"
                     for achievement in unlocked
                 ),
                 inline=False,

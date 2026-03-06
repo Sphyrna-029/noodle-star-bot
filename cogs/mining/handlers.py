@@ -3,7 +3,7 @@
 from discord.ext import commands
 
 from cogs.mining.constants import MINE_LEVELS, MINERAL_TABLES
-from cogs.mining.use_cases import MiningUseCases
+from cogs.mining.use_case import MiningUseCases
 
 
 class MiningCog(commands.Cog):
