@@ -34,6 +34,7 @@ class EconomyUseCases:
         user = self.repo.get_user(user_id, username)
         inventory = self.repo.get_user_inventory(user_id)
         progress = self.repo.get_achievement_progress(user_id)
+        progress["gambling_stars_lost"] = self.get_user_gambling_stars_lost(user_id)
         unlocked_keys = set(self.repo.get_unlocked_achievements(user_id).keys())
         achievements: list[AchievementStatus] = []
         newly_unlocked: list[AchievementStatus] = []
@@ -344,6 +345,10 @@ class EconomyUseCases:
     def get_monthly_stars_lost(self, year: int, month: int) -> int:
         """Get stars lost for a specific month."""
         return self.repo.get_monthly_stars_lost(year, month)
+
+    def get_user_gambling_stars_lost(self, user_id: int) -> int:
+        """Get total stars a user has lost from gambling actions."""
+        return self.repo.get_user_stars_lost_by_source(user_id, "gambling")
 
     def get_user_daily_star_activity(
         self,

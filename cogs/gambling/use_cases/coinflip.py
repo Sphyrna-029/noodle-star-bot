@@ -81,7 +81,9 @@ class CoinflipUseCase(BaseGamblingUseCase):
         if result == choice:
             winnings = int(amount * COINFLIP_WIN_MULTIPLIER)
             new_balance = deducted_balance + winnings
-            self.repo.update_user_stars(user_id, username, new_balance)
+            self.repo.update_user_stars(
+                user_id, username, new_balance, reason="gambling:coinflip_win"
+            )
 
             return CoinflipResult(
                 success=True,
@@ -93,7 +95,9 @@ class CoinflipUseCase(BaseGamblingUseCase):
             )
         else:
             new_balance = deducted_balance
-            self.repo.update_user_stars(user_id, username, new_balance)
+            self.repo.update_user_stars(
+                user_id, username, new_balance, reason="gambling:coinflip_loss"
+            )
 
             return CoinflipResult(
                 success=True,

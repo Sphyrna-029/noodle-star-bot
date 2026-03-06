@@ -8,6 +8,7 @@ from discord.ext import commands
 from config.bot import COMMAND_PREFIX, DEV_USER_IDS
 from database.migrations import MigrationManager
 from utils.help import NoodleHelpCommand
+from utils.star_ledger_context import reset_context, set_context
 
 
 class NoodleStarBot(commands.Bot):
@@ -48,6 +49,26 @@ class NoodleStarBot(commands.Bot):
             "cogs.space.handlers",
             "cogs.treasure.handlers",
         ]
+
+        async def _set_star_ledger_context(ctx):
+            module = getattr(ctx.cog, "__module__", "") if ctx.cog else ""
+            parts = module.split(".")
+            source = parts[1] if len(parts) > 1 and parts[0] == "cogs" else "unknown"
+            reason = (
+                ctx.command.qualified_name
+                if getattr(ctx, "command", None) is not None
+                else "unknown"
+            )
+            ctx._star_ledger_tokens = set_context(source, reason)
+
+        async def _clear_star_ledger_context(ctx):
+            tokens = getattr(ctx, "_star_ledger_tokens", None)
+            if tokens is not None:
+                reset_context(tokens)
+                delattr(ctx, "_star_ledger_tokens")
+
+        self.before_invoke(_set_star_ledger_context)
+        self.after_invoke(_clear_star_ledger_context)
 
     async def setup_hook(self):
         """

@@ -5,6 +5,7 @@ from typing import Optional
 
 
 from database.repositories.base import BaseRepository
+from utils.star_ledger_context import get_context
 
 
 class EconomyRepository(BaseRepository):
@@ -51,13 +52,42 @@ class EconomyRepository(BaseRepository):
             row = cursor.fetchone()
             return row["total"] if row else 0
 
-    def update_user_stars(self, user_id: int, username: str, stars: int) -> None:
-        """Update user's wallet stars."""
+    def update_user_stars(
+        self, user_id: int, username: str, stars: int, reason: str | None = None
+    ) -> None:
+        """Update user's wallet stars and optionally annotate the ledger reason/source."""
         with self.db.get_cursor() as cursor:
+            cursor.execute("SELECT stars FROM noodle_stars WHERE user_id = ?", (user_id,))
+            row = cursor.fetchone()
+            old_stars = row["stars"] if row else None
             cursor.execute(
                 "UPDATE noodle_stars SET stars = ?, username = ? WHERE user_id = ?",
                 (stars, username, user_id),
             )
+            if old_stars is None or old_stars == stars:
+                return
+            source, context_reason = get_context()
+            if reason and ":" in reason:
+                source, reason = reason.split(":", 1)
+            reason = reason or context_reason
+            try:
+                cursor.execute(
+                    """
+                    UPDATE star_ledger
+                    SET source = ?, reason = ?
+                    WHERE id = (
+                        SELECT id
+                        FROM star_ledger
+                        WHERE user_id = ?
+                        ORDER BY id DESC
+                        LIMIT 1
+                    )
+                    """,
+                    (source or "unknown", reason or "unknown", user_id),
+                )
+            except Exception:
+                # Keep star updates resilient if ledger columns are not present yet.
+                pass
 
     def update_user_bank(self, user_id: int, username: str, bank: int) -> None:
         """Update user's bank balance."""
@@ -154,6 +184,23 @@ class EconomyRepository(BaseRepository):
             )
             row = cursor.fetchone()
             return row["lost"] if row else 0
+
+    def get_user_stars_lost_by_source(self, user_id: int, source: str) -> int:
+        """Get total stars lost by a user for a specific ledger source."""
+        with self.db.get_cursor() as cursor:
+            try:
+                cursor.execute(
+                    """
+                    SELECT COALESCE(SUM(CASE WHEN delta < 0 THEN -delta ELSE 0 END), 0) AS lost
+                    FROM star_ledger
+                    WHERE user_id = ? AND source = ?
+                    """,
+                    (user_id, source),
+                )
+                row = cursor.fetchone()
+                return row["lost"] if row else 0
+            except Exception:
+                return 0
 
     def get_user_daily_star_activity(
         self,

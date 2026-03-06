@@ -120,7 +120,12 @@ class BlackJackUseCase(BaseGamblingUseCase):
                 # Bet is never deducted for natural blackjack, so we add bet + (bet * 1.5)
                 profit = int(amount * BLACKJACK_PAYOUT)
                 new_balance = current_stars + profit
-                self.repo.update_user_stars(user_id, username, new_balance)
+                self.repo.update_user_stars(
+                    user_id,
+                    username,
+                    new_balance,
+                    reason="gambling:blackjack_natural",
+                )
                 self.repo.update_last_blackjack(user_id)
                 return BlackJackResult(
                     success=True,
@@ -139,7 +144,9 @@ class BlackJackUseCase(BaseGamblingUseCase):
 
         # Deduct bet amount
         new_balance = current_stars - amount
-        self.repo.update_user_stars(user_id, username, new_balance)
+        self.repo.update_user_stars(
+            user_id, username, new_balance, reason="gambling:blackjack_bet"
+        )
 
         return BlackJackResult(
             success=True,
@@ -213,7 +220,12 @@ class BlackJackUseCase(BaseGamblingUseCase):
             # Dealer busts - player wins (return bet + winnings)
             winnings = int(game_state.bet_amount * (1 + BLACKJACK_WIN_MULTIPLIER))
             new_balance = current_balance + winnings
-            self.repo.update_user_stars(game_state.user_id, game_state.username, new_balance)
+            self.repo.update_user_stars(
+                game_state.user_id,
+                game_state.username,
+                new_balance,
+                reason="gambling:blackjack_win",
+            )
             self.repo.update_last_blackjack(game_state.user_id)
             return BlackJackResult(
                 success=True,
@@ -232,7 +244,12 @@ class BlackJackUseCase(BaseGamblingUseCase):
             # Player wins (return bet + winnings)
             winnings = int(game_state.bet_amount * (1 + BLACKJACK_WIN_MULTIPLIER))
             new_balance = current_balance + winnings
-            self.repo.update_user_stars(game_state.user_id, game_state.username, new_balance)
+            self.repo.update_user_stars(
+                game_state.user_id,
+                game_state.username,
+                new_balance,
+                reason="gambling:blackjack_win",
+            )
             self.repo.update_last_blackjack(game_state.user_id)
             return BlackJackResult(
                 success=True,
@@ -266,7 +283,12 @@ class BlackJackUseCase(BaseGamblingUseCase):
         else:
             # Push - tie (return bet)
             new_balance = current_balance + game_state.bet_amount
-            self.repo.update_user_stars(game_state.user_id, game_state.username, new_balance)
+            self.repo.update_user_stars(
+                game_state.user_id,
+                game_state.username,
+                new_balance,
+                reason="gambling:blackjack_push",
+            )
             self.repo.update_last_blackjack(game_state.user_id)
             return BlackJackResult(
                 success=True,

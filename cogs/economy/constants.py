@@ -95,4 +95,12 @@ ACHIEVEMENT_DEFS = (
         "progress_key": "fish_catches",
         "target": 100,
     },
+    {
+        "key": "gambling_lost_1000",
+        "name": "House Favorite",
+        "emoji": "🎲",
+        "description": "Lose 1000 stars total from gambling.",
+        "progress_key": "gambling_stars_lost",
+        "target": 1000,
+    },
 )
