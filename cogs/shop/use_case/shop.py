@@ -194,8 +194,13 @@ class ShopUseCases:
         self.repo.update_user_stars(user_id, username, new_stars)
 
         # Add item to inventory
+        added_amount = quantity
+        if item.key == "bank_insurance":
+            # One purchase grants 10 protection uses.
+            added_amount = quantity * 10
+
         current_amount = inventory[item.db_column]
-        self.repo.update_user_inventory(user_id, item.db_column, current_amount + quantity)
+        self.repo.update_user_inventory(user_id, item.db_column, current_amount + added_amount)
 
         return PurchaseResult(
             success=True,
