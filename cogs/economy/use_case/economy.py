@@ -34,6 +34,7 @@ class EconomyUseCases:
         """Get user profile information, including simple achievements."""
         user = self.repo.get_user(user_id, username)
         inventory = self.repo.get_user_inventory(user_id)
+        farm_plots = self.repo.get_farm_plots(user_id)
         progress = self.repo.get_achievement_progress(user_id)
         progress["gambling_stars_lost"] = self.get_user_gambling_stars_lost(user_id)
         progress["gambling_stars_won"] = self.get_user_gambling_stars_won(user_id)
@@ -74,9 +75,9 @@ class EconomyUseCases:
             elif key == "space_ready":
                 condition_met = inventory.get("rocket_ship", 0) > 0
             elif key == "budding_farmer":
-                condition_met = inventory.get("farm_plots", 0) >= 1
+                condition_met = farm_plots >= 1
             elif key == "land_baron":
-                condition_met = inventory.get("farm_plots", 0) >= MAX_PLOTS
+                condition_met = farm_plots >= MAX_PLOTS
             elif key == "master_farmer":
                 condition_met = inventory.get("farm_level", 1) >= MAX_FARM_LEVEL
             elif progress_key and target is not None:
