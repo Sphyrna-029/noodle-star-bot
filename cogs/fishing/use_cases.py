@@ -448,6 +448,15 @@ class FishingUseCases:
             current_stars = self.repo.get_user_stars(user_id, username)
             new_stars = current_stars + reward
             self.repo.update_user_stars(user_id, username, new_stars)
+            fish_catches = self.repo.increment_achievement_progress(
+                user_id, "fish_catches", 1
+            )
+            unlocked_fish_10 = False
+            unlocked_fish_100 = False
+            if fish_catches >= 10:
+                unlocked_fish_10 = self.repo.unlock_achievement(user_id, "fish_10")
+            if fish_catches >= 100:
+                unlocked_fish_100 = self.repo.unlock_achievement(user_id, "fish_100")
 
             result = PullResult(
                 success=True,
@@ -460,6 +469,14 @@ class FishingUseCases:
                 level_name=level_config["name"],
                 level_emoji=level_config["emoji"],
             )
+            if unlocked_fish_10:
+                result.extra_messages.append(
+                    "🏆 **Achievement unlocked:** 🐟 **Lake Regular**"
+                )
+            if unlocked_fish_100:
+                result.extra_messages.append(
+                    "🏆 **Achievement unlocked:** 🐠 **Ocean Veteran**"
+                )
 
             # Roll for disaster (after catch, matching mining pattern)
             disaster_chance = level_config["disaster_chance"]

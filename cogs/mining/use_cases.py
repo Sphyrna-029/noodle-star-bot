@@ -234,8 +234,12 @@ class MiningUseCases:
         self.repo.update_user_stars(user_id, username, new_stars)
         self.repo.update_last_mine(user_id)
         mine_runs = self.repo.increment_achievement_progress(user_id, "mine_runs", 1)
+        unlocked_mine_100 = False
+        unlocked_mine_1000 = False
         if mine_runs >= 100:
-            self.repo.unlock_achievement(user_id, "mine_100")
+            unlocked_mine_100 = self.repo.unlock_achievement(user_id, "mine_100")
+        if mine_runs >= 1000:
+            unlocked_mine_1000 = self.repo.unlock_achievement(user_id, "mine_1000")
 
         result = MineResult(
             success=True,
@@ -247,6 +251,14 @@ class MiningUseCases:
             level_name=level_config["name"],
             level_emoji=level_config["emoji"],
         )
+        if unlocked_mine_100:
+            result.extra_messages.append(
+                "🏆 **Achievement unlocked:** 💎 **Centurion Miner**"
+            )
+        if unlocked_mine_1000:
+            result.extra_messages.append(
+                "🏆 **Achievement unlocked:** 👑 **Mining Legend**"
+            )
 
         # Check for disaster (chance varies by level, halved by lucky charm)
         disaster_chance = level_config["disaster_chance"]

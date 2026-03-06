@@ -39,6 +39,14 @@ class EconomyCog(commands.Cog):
         result = self.economy.get_profile(member.id, str(member))
         unlocked = [achievement for achievement in result.achievements if achievement.unlocked]
 
+        if result.newly_unlocked:
+            names = ", ".join(
+                f"{achievement.emoji} **{achievement.name}**"
+                for achievement in result.newly_unlocked
+            )
+            plural = "achievement" if len(result.newly_unlocked) == 1 else "achievements"
+            await ctx.send(f"🎉 {member.mention} unlocked {plural}: {names}")
+
         embed = discord.Embed(
             title=f"👤 {member.display_name}'s Profile",
             color=discord.Color.teal(),
