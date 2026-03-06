@@ -56,7 +56,7 @@ class ShopCog(commands.Cog):
         )
         if result.item_name == "Bank Insurance":
             message += (
-                "\nEach purchase grants **10 uses**. Use `!inventory` to track remaining uses. "
+                "\nUse `!inventory` to track remaining uses. "
                 "A use is consumed only when it blocks bank loss."
             )
         await ctx.send(message)
