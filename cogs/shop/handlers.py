@@ -3,7 +3,7 @@
 import discord
 from discord.ext import commands
 
-from cogs.shop.use_cases import ShopUseCases
+from cogs.shop.use_case import ShopUseCases
 
 
 class ShopCog(commands.Cog):

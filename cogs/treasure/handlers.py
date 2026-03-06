@@ -12,7 +12,7 @@ from cogs.treasure.constants import (
     TIMEOUT_MESSAGE,
     TREASURE_ANNOUNCEMENT_CHANNEL_ID,
 )
-from cogs.treasure.use_cases import TreasureUseCases
+from cogs.treasure.use_case import TreasureUseCases
 
 
 class TreasureCog(commands.Cog):

@@ -20,7 +20,7 @@ TRADE_COUNTDOWN_SECONDS = 10  # seconds after accept before execution
 # =============================================================================
 
 
-from .dto import TradeOffer, TradeResult, TradeSession, TradeState
+from ..dto import TradeOffer, TradeResult, TradeSession, TradeState
 
 
 # =============================================================================

@@ -7,7 +7,7 @@ import discord
 from discord.ext import commands
 
 from config.bot import DEV_USER_IDS
-from cogs.economy.use_cases import EconomyUseCases
+from cogs.economy.use_case import EconomyUseCases
 from cogs.events.farming_weather import WEATHER_EVENT_CHANCE, FarmingWeatherCog
 
 

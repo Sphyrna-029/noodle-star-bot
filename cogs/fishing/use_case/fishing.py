@@ -49,7 +49,7 @@ from config.models import MineHazard
 from database.repository import UserRepository
 
 
-from .dto import (
+from ..dto import (
     CastResult,
     EquipResult,
     FishLevelInfo,

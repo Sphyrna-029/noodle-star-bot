@@ -10,7 +10,7 @@ from cogs.farming.constants import (
     PLOT_COSTS,
     get_crop_by_name,
 )
-from cogs.farming.use_cases import FarmingUseCases
+from cogs.farming.use_case import FarmingUseCases
 
 
 class FarmingCog(commands.Cog):

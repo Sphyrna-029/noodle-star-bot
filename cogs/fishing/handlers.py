@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 
 from cogs.fishing.constants import FISH_LEVELS, FISHING_BAIT_TIERS, FISHING_COOLDOWN
-from cogs.fishing.use_cases import FishingUseCases
+from cogs.fishing.use_case import FishingUseCases
 from cogs.fishing.dto import FishingState
 
 

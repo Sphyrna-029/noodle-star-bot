@@ -30,7 +30,7 @@ from cogs.space.constants import SPACE_MINERAL_TABLES, SPACE_PLANETS
 from config.models import MineHazard
 from database.repository import UserRepository
 from utils.formatters import format_time_remaining
-from .dto import LaunchResult, PlanetInfo, PlanetUnlockResult, SpaceMineResult
+from ..dto import LaunchResult, PlanetInfo, PlanetUnlockResult, SpaceMineResult
 
 
 class SpaceUseCases:

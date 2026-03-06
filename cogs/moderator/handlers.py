@@ -3,7 +3,7 @@
 import discord
 from discord.ext import commands
 
-from cogs.economy.use_cases import EconomyUseCases
+from cogs.economy.use_case import EconomyUseCases
 from utils.checks import is_moderator
 
 

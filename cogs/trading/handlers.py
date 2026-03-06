@@ -3,7 +3,7 @@
 import discord
 from discord.ext import commands
 
-from cogs.trading.use_cases import TradeUseCases, TRADE_COUNTDOWN_SECONDS
+from cogs.trading.use_case import TradeUseCases, TRADE_COUNTDOWN_SECONDS
 from cogs.trading.dto import TradeState
 
 

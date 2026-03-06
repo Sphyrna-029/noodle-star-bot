@@ -15,12 +15,12 @@ from config.bot import COMMAND_PREFIX
 from cogs.fishing.constants import FISHING_BAIT_TIERS
 from cogs.shop.constants import SHOP_ITEMS
 from database.migrations import MigrationManager
-from cogs.economy.use_cases import EconomyUseCases
-from cogs.fishing.use_cases import FishingUseCases
+from cogs.economy.use_case import EconomyUseCases
+from cogs.fishing.use_case import FishingUseCases
 from cogs.fishing.dto import FishingState
-from cogs.gambling.use_cases import GambleUseCase, CoinflipUseCase, DuelUseCase
-from cogs.mining.use_cases import MiningUseCases
-from cogs.shop.use_cases import ShopUseCases
+from cogs.gambling.use_case import GambleUseCase, CoinflipUseCase, DuelUseCase
+from cogs.mining.use_case import MiningUseCases
+from cogs.shop.use_case import ShopUseCases
 
 # Set up paths - add parent directory so we can import bot modules
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
