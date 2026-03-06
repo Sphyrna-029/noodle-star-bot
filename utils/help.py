@@ -492,7 +492,7 @@ def _treasure_embed() -> discord.Embed:
         value=(
             "• While you hold the lock, others must wait\n"
             "• You have about **60 seconds** before lock ownership resets\n"
-            "• If no one opens the chest in time, it expires"
+            "• If no one opens the chest within **1 hour**, it expires"
         ),
         inline=False,
     )

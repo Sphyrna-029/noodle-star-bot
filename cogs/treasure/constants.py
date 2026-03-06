@@ -21,7 +21,7 @@ LOCK_ATTEMPTS: Final[int] = 5
 LOCK_OWNER_TIMEOUT: Final[timedelta] = timedelta(seconds=60)
 
 # Time a chest stays available before expiring (if enabled)
-CHEST_LIFETIME: Final[timedelta] = timedelta(minutes=10)
+CHEST_LIFETIME: Final[timedelta] = timedelta(hours=1)
 
 # Cooldown between chest spawns (if used)
 CHEST_SPAWN_COOLDOWN: Final[timedelta] = timedelta(minutes=5)

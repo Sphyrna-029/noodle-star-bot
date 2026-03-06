@@ -38,7 +38,6 @@ class EconomyCog(commands.Cog):
 
         result = self.economy.get_profile(member.id, str(member))
         unlocked = [achievement for achievement in result.achievements if achievement.unlocked]
-        locked = [achievement for achievement in result.achievements if not achievement.unlocked]
 
         embed = discord.Embed(
             title=f"👤 {member.display_name}'s Profile",
@@ -66,28 +65,6 @@ class EconomyCog(commands.Cog):
                     f"{achievement.emoji} **{achievement.name}**"
                     for achievement in unlocked
                 ),
-                inline=False,
-            )
-
-        if locked:
-            locked_lines = []
-            for achievement in locked:
-                progress_suffix = ""
-                if (
-                    achievement.progress_current is not None
-                    and achievement.progress_target is not None
-                ):
-                    progress_suffix = (
-                        f" ({achievement.progress_current}/{achievement.progress_target})"
-                    )
-                locked_lines.append(
-                    f"{achievement.emoji} **{achievement.name}** - "
-                    f"{achievement.description}{progress_suffix}"
-                )
-
-            embed.add_field(
-                name="🔒 To Unlock",
-                value="\n".join(locked_lines),
                 inline=False,
             )
 
