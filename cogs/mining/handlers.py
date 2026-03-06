@@ -51,7 +51,15 @@ class MiningCog(commands.Cog):
             else:
                 message += f"\n\n{result.disaster_header}\n{result.disaster_unprotected_msg}"
 
+        # Extra messages (e.g. heart of leviathan bank protection)
+        for extra in result.extra_messages:
+            message += f"\n{extra}"
+
         message += f"\nNew balance: **{result.new_balance}** stars!"
+
+        # Item drops
+        if result.found_items:
+            message += "\n\n**ITEM DROP!**\n" + "\n".join(result.found_items)
 
         await ctx.send(message)
 

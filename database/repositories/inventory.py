@@ -28,6 +28,14 @@ class InventoryRepository(BaseRepository):
         "space_planet_level",
         "active_space_planet",
         "farm_level",
+        "rune_fragment",
+        "fossilized_noodle",
+        "bucktail_jig",
+        "jig_active",
+        "ray_gun",
+        "star_magnet",
+        "lucky_charm",
+        "heart_of_leviathan",
     }
 
     def _ensure_inventory_row(self, cursor, user_id: int) -> None:
@@ -37,8 +45,10 @@ class InventoryRepository(BaseRepository):
                 user_id, gold_pickaxe, helmet, sword, raw_potato, golden_mushroom,
                 bait_worm, bait_herring, bait_sturgeon, equipped_bait, telescope,
                 mine_level, active_mine_level, active_fish_level, golden_axe, mithril_shield,
-                bank_insurance, rocket_ship, space_planet_level, active_space_planet, farm_level
-            ) VALUES (?, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1)
+                bank_insurance, rocket_ship, space_planet_level, active_space_planet, farm_level,
+                rune_fragment, fossilized_noodle, bucktail_jig, jig_active,
+                ray_gun, star_magnet, lucky_charm, heart_of_leviathan
+            ) VALUES (?, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0)
             ON CONFLICT(user_id) DO NOTHING
             """,
             (user_id,),
@@ -54,7 +64,9 @@ class InventoryRepository(BaseRepository):
                        bait_worm, bait_herring, bait_sturgeon, telescope,
                        mine_level, active_mine_level, golden_axe, mithril_shield,
                        bank_insurance, rocket_ship, space_planet_level,
-                       active_space_planet, farm_level
+                       active_space_planet, farm_level,
+                       rune_fragment, fossilized_noodle, bucktail_jig, jig_active,
+                       ray_gun, star_magnet, lucky_charm, heart_of_leviathan
                 FROM user_inventory WHERE user_id = ?
                 """,
                 (user_id,),
@@ -81,6 +93,14 @@ class InventoryRepository(BaseRepository):
                     "space_planet_level": 0,
                     "active_space_planet": 0,
                     "farm_level": 1,
+                    "rune_fragment": 0,
+                    "fossilized_noodle": 0,
+                    "bucktail_jig": 0,
+                    "jig_active": 0,
+                    "ray_gun": 0,
+                    "star_magnet": 0,
+                    "lucky_charm": 0,
+                    "heart_of_leviathan": 0,
                 }
 
             return {
@@ -102,6 +122,14 @@ class InventoryRepository(BaseRepository):
                 "space_planet_level": row["space_planet_level"] or 0,
                 "active_space_planet": row["active_space_planet"] or 0,
                 "farm_level": row["farm_level"] or 1,
+                "rune_fragment": row["rune_fragment"] or 0,
+                "fossilized_noodle": row["fossilized_noodle"] or 0,
+                "bucktail_jig": row["bucktail_jig"] or 0,
+                "jig_active": row["jig_active"] or 0,
+                "ray_gun": row["ray_gun"] or 0,
+                "star_magnet": row["star_magnet"] or 0,
+                "lucky_charm": row["lucky_charm"] or 0,
+                "heart_of_leviathan": row["heart_of_leviathan"] or 0,
             }
 
     def update_user_inventory(self, user_id: int, item: str, amount: int) -> None:
@@ -140,7 +168,11 @@ class InventoryRepository(BaseRepository):
                     raw_potato = 0, golden_mushroom = 0, telescope = 0,
                     bait_worm = 0, bait_herring = 0, bait_sturgeon = 0,
                     equipped_bait = NULL, golden_axe = 0, mithril_shield = 0,
-                    bank_insurance = 0, rocket_ship = 0
+                    bank_insurance = 0, rocket_ship = 0,
+                    rune_fragment = 0, fossilized_noodle = 0,
+                    bucktail_jig = 0, jig_active = 0,
+                    ray_gun = 0, star_magnet = 0,
+                    lucky_charm = 0, heart_of_leviathan = 0
                 WHERE user_id = ?
                 """,
                 (user_id,),

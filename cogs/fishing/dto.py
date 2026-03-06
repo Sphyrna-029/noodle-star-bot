@@ -4,7 +4,7 @@ import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Mapping, Optional
+from typing import List, Mapping, Optional
 
 
 class FishingState(Enum):
@@ -27,6 +27,7 @@ class FishingSession:
     bite_at: datetime
     expires_at: datetime
     active_level: int = 1
+    jig_active: bool = False
     task: Optional[asyncio.Task] = field(default=None, repr=False)
 
 
@@ -56,8 +57,8 @@ class PullResult:
     items_destroyed: bool = False
     level_name: str = ""
     level_emoji: str = ""
-    golden_axe_found: bool = False
-    mithril_shield_found: bool = False
+    found_items: List[str] = field(default_factory=list)
+    extra_messages: List[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)
