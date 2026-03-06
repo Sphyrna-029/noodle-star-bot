@@ -546,9 +546,9 @@ def _items_embed() -> discord.Embed:
     embed.add_field(
         name="✨ Rare Effect Items (Drops)",
         value=(
-            "🔮 **Rune Fragment** (from mining) — Reduces mining cooldown to 15 min "
+            "🔮 **Rune Fragment** (30 uses, from mining) — Reduces mining cooldown to 15 min "
             "(or 2m30s with a potato). *0.5% drop per mine*\n"
-            "🦴 **Fossilized Noodle** (from mining) — Reduces mining cooldown to just 1 min "
+            "🦴 **Fossilized Noodle** (30 uses, from mining) — Reduces mining cooldown to just 1 min "
             "(or 30s with a rune). *0.1% drop per mine*\n"
             "🎣 **Bucktail Jig** (from fishing) — Use `!use jig` to get 20% legendary "
             "catch chance on your next cast. *0.3% drop per catch*\n"

@@ -395,16 +395,16 @@ class MiningUseCases:
 
         # 0.5% rune fragment
         if random.random() < 0.005:
-            self.repo.update_user_inventory(user_id, "rune_fragment", 5)
+            self.repo.update_user_inventory(user_id, "rune_fragment", 30)
             result.found_items.append(
-                "**Rune Fragment** -- Reduces mining cooldowns for 5 uses!"
+                "**Rune Fragment** -- Reduces mining cooldowns for 30 uses!"
             )
 
         # 0.5% fossilized noodle
         if random.random() < 0.005:
-            self.repo.update_user_inventory(user_id, "fossilized_noodle", 5)
+            self.repo.update_user_inventory(user_id, "fossilized_noodle", 30)
             result.found_items.append(
-                "**Fossilized Noodle** -- Use `!mine noodle` for a 1 min cooldown! (5 uses)"
+                "**Fossilized Noodle** -- Use `!mine noodle` for a 1 min cooldown! (30 uses)"
             )
 
         # 0.2% golden pickaxe
