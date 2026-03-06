@@ -92,7 +92,7 @@ SHOP_ITEMS: Final[dict[str, ShopItem]] = {
         consumable=True,
         emoji="💸",
         display_name="Bank Insurance",
-        description="Protects your bank from disasters for 10 mines/fishes at Level 4-5. Your wallet is still at risk!",
+        description="Protects your bank from one disaster at Level 4-5. Single use. Your wallet is still at risk!",
         aliases=("bank insurance", "insurance", "bank shield"),
     ),
     "rocket_ship": ShopItem(
