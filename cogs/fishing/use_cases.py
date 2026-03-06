@@ -515,10 +515,7 @@ class FishingUseCases:
                     if not requires_special and has_helmet:
                         self.repo.update_user_inventory(user_id, "helmet", inv["helmet"] - 1)
                         if random.random() < fail_chance:
-                            protection_msg = (
-                                "Your helmet was crushed by the force of the deep — "
-                                "these waters are too treacherous for basic gear! *(-1 helmet)*"
-                            )
+                            protection_msg = level_config["helmet_fail_msg"]
                         else:
                             protected = True
                             protection_msg = hazard.protected_msg
@@ -534,10 +531,7 @@ class FishingUseCases:
                     if not requires_special and has_sword:
                         self.repo.update_user_inventory(user_id, "sword", inv["sword"] - 1)
                         if random.random() < fail_chance:
-                            protection_msg = (
-                                "Your sword splintered against the creature's hide — "
-                                "the beasts down here are too powerful for a shop blade! *(-1 sword)*"
-                            )
+                            protection_msg = level_config["sword_fail_msg"]
                         else:
                             protected = True
                             protection_msg = hazard.protected_msg

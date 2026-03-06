@@ -246,6 +246,12 @@ MINE_LEVELS: Final[dict[int, dict]] = {
         "cost": 0,
         "disaster_chance": 0.10,
         "protection_fail_chance": 0.0,
+        "helmet_fail_msg": (
+            "🪖💥 Your helmet took a knock but couldn't hold! *(-1 helmet)*"
+        ),
+        "sword_fail_msg": (
+            "⚔️💥 Your sword bent on impact — even surface threats can surprise you! *(-1 sword)*"
+        ),
         "hazards": (HAZARD_COLLAPSE, HAZARD_GOBLIN),
     },
     2: {
@@ -254,6 +260,14 @@ MINE_LEVELS: Final[dict[int, dict]] = {
         "cost": 1500,
         "disaster_chance": 0.12,
         "protection_fail_chance": 0.05,
+        "helmet_fail_msg": (
+            "🪖💥 Your helmet cracked against a stalactite as the cavern shook — "
+            "the echoes down here hit different! *(-1 helmet)*"
+        ),
+        "sword_fail_msg": (
+            "⚔️💥 Your sword bent against the creature's thick hide — "
+            "cavern beasts are tougher than they look! *(-1 sword)*"
+        ),
         "hazards": (HAZARD_COLLAPSE, HAZARD_GOBLIN, HAZARD_FLOOD),
     },
     3: {
@@ -262,6 +276,14 @@ MINE_LEVELS: Final[dict[int, dict]] = {
         "cost": 3000,
         "disaster_chance": 0.14,
         "protection_fail_chance": 0.10,
+        "helmet_fail_msg": (
+            "🪖💥 Your helmet crumpled like tin foil — "
+            "the pressure in the deep tunnels is absolutely crushing! *(-1 helmet)*"
+        ),
+        "sword_fail_msg": (
+            "⚔️💥 Your blade snapped clean in half — "
+            "the things lurking in the deep tunnels are no joke! *(-1 sword)*"
+        ),
         "hazards": (HAZARD_COLLAPSE, HAZARD_GOBLIN, HAZARD_FLOOD, HAZARD_CAVE_TROLL),
     },
     4: {
@@ -270,6 +292,14 @@ MINE_LEVELS: Final[dict[int, dict]] = {
         "cost": 4000,
         "disaster_chance": 0.16,
         "protection_fail_chance": 0.15,
+        "helmet_fail_msg": (
+            "🪖🔥 Your helmet melted from the sheer heat before it could protect you — "
+            "the Molten Core doesn't care about your gear! *(-1 helmet)*"
+        ),
+        "sword_fail_msg": (
+            "⚔️🔥 Your sword softened in the extreme heat and buckled on impact — "
+            "Molten Core enemies laugh at steel! *(-1 sword)*"
+        ),
         "hazards": (HAZARD_COLLAPSE, HAZARD_GOBLIN, HAZARD_FLOOD, HAZARD_CAVE_TROLL, HAZARD_LAVA_FLOW),
     },
     5: {
@@ -278,6 +308,14 @@ MINE_LEVELS: Final[dict[int, dict]] = {
         "cost": 5000,
         "disaster_chance": 0.20,
         "protection_fail_chance": 0.20,
+        "helmet_fail_msg": (
+            "🪖🌑 Your helmet dissolved into shadow the moment the attack hit — "
+            "nothing from the surface survives The Abyss! *(-1 helmet)*"
+        ),
+        "sword_fail_msg": (
+            "⚔️🌑 Your sword shattered into dust — "
+            "the darkness in The Abyss consumed it before you could even swing! *(-1 sword)*"
+        ),
         "hazards": (HAZARD_COLLAPSE, HAZARD_GOBLIN, HAZARD_FLOOD, HAZARD_CAVE_TROLL, HAZARD_LAVA_FLOW, HAZARD_SHADOW_WRAITH),
     },
 }

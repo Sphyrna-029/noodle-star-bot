@@ -188,10 +188,7 @@ class SpaceUseCases:
                 if has_helmet:
                     self.repo.update_user_inventory(user_id, "helmet", inventory["helmet"] - 1)
                     if random.random() < fail_chance:
-                        protection_msg = (
-                            "Your helmet buckled under the cosmic forces — "
-                            "Earth-grade gear can't handle what's out here! *(-1 helmet)*"
-                        )
+                        protection_msg = planet_config["helmet_fail_msg"]
                     else:
                         protected = True
                         protection_msg = hazard.protected_msg
@@ -207,10 +204,7 @@ class SpaceUseCases:
                 if has_sword:
                     self.repo.update_user_inventory(user_id, "sword", inventory["sword"] - 1)
                     if random.random() < fail_chance:
-                        protection_msg = (
-                            "Your sword glanced off the alien threat and snapped — "
-                            "you'll need something sturdier in deep space! *(-1 sword)*"
-                        )
+                        protection_msg = planet_config["sword_fail_msg"]
                     else:
                         protected = True
                         protection_msg = hazard.protected_msg

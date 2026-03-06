@@ -213,6 +213,14 @@ SPACE_PLANETS: Final[dict[int, dict]] = {
         "cost": 0,
         "disaster_chance": 0.12,
         "protection_fail_chance": 0.25,
+        "helmet_fail_msg": (
+            "🪖🌕 Your helmet's visor cracked from the lunar temperature swing — "
+            "Earth helmets weren't designed for space! *(-1 helmet)*"
+        ),
+        "sword_fail_msg": (
+            "⚔️🌕 Your sword floated away in the low gravity mid-swing — "
+            "fighting in space is harder than it looks! *(-1 sword)*"
+        ),
         "hazards": (HAZARD_METEOR_STRIKE, HAZARD_SPACE_PIRATE),
     },
     2: {
@@ -221,6 +229,14 @@ SPACE_PLANETS: Final[dict[int, dict]] = {
         "cost": 5000,
         "disaster_chance": 0.14,
         "protection_fail_chance": 0.30,
+        "helmet_fail_msg": (
+            "🪖🔴 Your helmet's seal broke in the Martian dust storm — "
+            "the red planet chews through cheap gear! *(-1 helmet)*"
+        ),
+        "sword_fail_msg": (
+            "⚔️🔴 Your sword was sandblasted to pieces by the Martian winds — "
+            "it's like swinging through a blender out here! *(-1 sword)*"
+        ),
         "hazards": (HAZARD_METEOR_STRIKE, HAZARD_SPACE_PIRATE),
     },
     3: {
@@ -229,6 +245,14 @@ SPACE_PLANETS: Final[dict[int, dict]] = {
         "cost": 10000,
         "disaster_chance": 0.16,
         "protection_fail_chance": 0.35,
+        "helmet_fail_msg": (
+            "🪖🪐 Your helmet was ripped apart by Saturn's gravitational tides — "
+            "the rings aren't just pretty, they're deadly! *(-1 helmet)*"
+        ),
+        "sword_fail_msg": (
+            "⚔️🪐 Your sword was wrenched from your grip by Saturn's magnetic field — "
+            "the planet itself fights back! *(-1 sword)*"
+        ),
         "hazards": (HAZARD_METEOR_STRIKE, HAZARD_SPACE_PIRATE, HAZARD_SOLAR_FLARE, HAZARD_BLACK_HOLE_RIFT),
     },
     4: {
@@ -237,6 +261,14 @@ SPACE_PLANETS: Final[dict[int, dict]] = {
         "cost": 15000,
         "disaster_chance": 0.18,
         "protection_fail_chance": 0.40,
+        "helmet_fail_msg": (
+            "🪖💠 Your helmet froze solid and shattered like glass — "
+            "Uranus is cold enough to kill your gear before it kills you! *(-1 helmet)*"
+        ),
+        "sword_fail_msg": (
+            "⚔️💠 Your sword became so brittle in the extreme cold that it snapped on contact — "
+            "Uranus doesn't play fair! *(-1 sword)*"
+        ),
         "hazards": (HAZARD_METEOR_STRIKE, HAZARD_SPACE_PIRATE, HAZARD_SOLAR_FLARE, HAZARD_BLACK_HOLE_RIFT),
     },
     5: {
@@ -245,6 +277,14 @@ SPACE_PLANETS: Final[dict[int, dict]] = {
         "cost": 20000,
         "disaster_chance": 0.22,
         "protection_fail_chance": 0.50,
+        "helmet_fail_msg": (
+            "🪖🥶 Your helmet disintegrated in the void — "
+            "at the edge of the solar system, matter itself gives up! *(-1 helmet)*"
+        ),
+        "sword_fail_msg": (
+            "⚔️🥶 Your sword phased right through the threat like it wasn't even there — "
+            "at the edge of reality, steel means nothing! *(-1 sword)*"
+        ),
         "hazards": (HAZARD_METEOR_STRIKE, HAZARD_SPACE_PIRATE, HAZARD_SOLAR_FLARE, HAZARD_BLACK_HOLE_RIFT, HAZARD_VOID_ENTITY),
     },
 }

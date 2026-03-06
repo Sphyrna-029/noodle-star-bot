@@ -297,10 +297,7 @@ class MiningUseCases:
                     self.repo.update_user_inventory(user_id, "helmet", inv["helmet"] - 1)
                     # Roll for failure — deeper levels can overwhelm basic gear
                     if random.random() < fail_chance:
-                        protection_msg = (
-                            "Your helmet caved in under the force — "
-                            "it wasn't built to handle threats this deep! *(-1 helmet)*"
-                        )
+                        protection_msg = level_config["helmet_fail_msg"]
                     else:
                         protected = True
                         protection_msg = hazard.protected_msg
@@ -319,10 +316,7 @@ class MiningUseCases:
                     self.repo.update_user_inventory(user_id, "sword", inv["sword"] - 1)
                     # Roll for failure
                     if random.random() < fail_chance:
-                        protection_msg = (
-                            "Your sword shattered against the threat — "
-                            "a shop blade is no match for dangers this deep! *(-1 sword)*"
-                        )
+                        protection_msg = level_config["sword_fail_msg"]
                     else:
                         protected = True
                         protection_msg = hazard.protected_msg

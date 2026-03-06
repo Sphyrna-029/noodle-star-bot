@@ -361,6 +361,12 @@ FISH_LEVELS: Final[dict[int, dict]] = {
         "emoji": "🎣",
         "disaster_chance": 0.0,
         "protection_fail_chance": 0.0,
+        "helmet_fail_msg": (
+            "🪖💧 Your helmet slipped off in the calm waters! *(-1 helmet)*"
+        ),
+        "sword_fail_msg": (
+            "⚔️💧 Your sword rusted in the pond water! *(-1 sword)*"
+        ),
         "hazards": (),
     },
     2: {
@@ -368,6 +374,14 @@ FISH_LEVELS: Final[dict[int, dict]] = {
         "emoji": "🏞️",
         "disaster_chance": 0.08,
         "protection_fail_chance": 0.05,
+        "helmet_fail_msg": (
+            "🪖🌊 Your helmet got swept right off your head by the rapids — "
+            "the current out here is no joke! *(-1 helmet)*"
+        ),
+        "sword_fail_msg": (
+            "⚔️🌊 Your sword was ripped from your hands by the raging current — "
+            "the river rapids show no mercy! *(-1 sword)*"
+        ),
         "hazards": (FISH_HAZARD_RIPTIDE, FISH_HAZARD_SHARK),
     },
     3: {
@@ -375,6 +389,14 @@ FISH_LEVELS: Final[dict[int, dict]] = {
         "emoji": "🪸",
         "disaster_chance": 0.10,
         "protection_fail_chance": 0.10,
+        "helmet_fail_msg": (
+            "🪖🪸 Your helmet cracked against the razor-sharp coral — "
+            "the reef fights back harder than expected! *(-1 helmet)*"
+        ),
+        "sword_fail_msg": (
+            "⚔️🪸 Your blade shattered against the creature's coral-encrusted armor — "
+            "reef monsters are built different! *(-1 sword)*"
+        ),
         "hazards": (FISH_HAZARD_RIPTIDE, FISH_HAZARD_SHARK, FISH_HAZARD_WHIRLPOOL),
     },
     4: {
@@ -382,6 +404,14 @@ FISH_LEVELS: Final[dict[int, dict]] = {
         "emoji": "🚢",
         "disaster_chance": 0.12,
         "protection_fail_chance": 0.15,
+        "helmet_fail_msg": (
+            "🪖💀 Your helmet imploded from the crushing pressure — "
+            "the shipwreck depths destroy everything that isn't nailed down! *(-1 helmet)*"
+        ),
+        "sword_fail_msg": (
+            "⚔️💀 Your sword rusted and crumbled in seconds — "
+            "the cursed waters of the shipwreck depths corrode everything they touch! *(-1 sword)*"
+        ),
         "hazards": (
             FISH_HAZARD_RIPTIDE,
             FISH_HAZARD_SHARK,
@@ -394,6 +424,14 @@ FISH_LEVELS: Final[dict[int, dict]] = {
         "emoji": "🌊",
         "disaster_chance": 0.14,
         "protection_fail_chance": 0.20,
+        "helmet_fail_msg": (
+            "🪖🌊 Your helmet was swallowed by the darkness of the trench — "
+            "even light doesn't survive down here! *(-1 helmet)*"
+        ),
+        "sword_fail_msg": (
+            "⚔️🌊 Your sword bent like a wet noodle against the abyssal beast — "
+            "nothing forged on land can scratch these creatures! *(-1 sword)*"
+        ),
         "hazards": (
             FISH_HAZARD_RIPTIDE,
             FISH_HAZARD_SHARK,
