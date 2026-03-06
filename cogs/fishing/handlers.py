@@ -117,7 +117,10 @@ class FishingCog(commands.Cog):
         result = self.fishing.pull_line(ctx.author.id, str(ctx.author))
 
         if not result.success:
-            await ctx.send(f"🎣 {ctx.author.mention}, {result.message}")
+            failure_message = f"🎣 {ctx.author.mention}, {result.message}"
+            if result.extra_messages:
+                failure_message += "\n" + "\n".join(result.extra_messages)
+            await ctx.send(failure_message)
             return
 
         # Format success message based on rarity

@@ -184,9 +184,17 @@ class DuelUseCase(BaseGamblingUseCase):
 
         # Update balances
         self.repo.update_user_stars(
-            challenger_id, challenger_name, new_challenger_stars
+            challenger_id,
+            challenger_name,
+            new_challenger_stars,
+            reason="gambling:duel_result",
         )
-        self.repo.update_user_stars(opponent_id, opponent_name, new_opponent_stars)
+        self.repo.update_user_stars(
+            opponent_id,
+            opponent_name,
+            new_opponent_stars,
+            reason="gambling:duel_result",
+        )
 
         return DuelResult(
             success=True,

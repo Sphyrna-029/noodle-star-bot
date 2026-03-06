@@ -79,7 +79,9 @@ class GambleUseCase(BaseGamblingUseCase):
         if roll == GAMBLE_WIN_TARGET:
             winnings = int(amount * multiplier)
             new_balance = deducted_balance + winnings
-            self.repo.update_user_stars(user_id, username, new_balance)
+            self.repo.update_user_stars(
+                user_id, username, new_balance, reason="gambling:gamble_win"
+            )
 
             return GambleResult(
                 success=True,
@@ -92,7 +94,9 @@ class GambleUseCase(BaseGamblingUseCase):
             )
         else:
             new_balance = deducted_balance
-            self.repo.update_user_stars(user_id, username, new_balance)
+            self.repo.update_user_stars(
+                user_id, username, new_balance, reason="gambling:gamble_loss"
+            )
 
             return GambleResult(
                 success=True,

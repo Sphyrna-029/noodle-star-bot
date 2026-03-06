@@ -415,11 +415,25 @@ class FishingUseCases:
             self._cleanup_session(user_id)
             # Apply a short penalty cooldown (half the normal cooldown)
             self.repo.update_last_fish(user_id)
-            return PullResult(
+            early_pulls = self.repo.increment_achievement_progress(
+                user_id, "fish_early_pulls", 1
+            )
+            unlocked_too_eager = False
+            if early_pulls >= 1:
+                unlocked_too_eager = self.repo.unlock_achievement(
+                    user_id, "fish_too_early"
+                )
+
+            result = PullResult(
                 success=False,
                 message="You pulled too early! The fish wasn't biting yet. "
                 "Your line snapped and you lost your bait.",
             )
+            if unlocked_too_eager:
+                result.extra_messages.append(
+                    "🏆 **Achievement unlocked:** 🎣 **Too Eager**"
+                )
+            return result
 
         # In the window - success!
         if session.state == FishingState.BITING:

@@ -8,6 +8,7 @@ from cogs.economy.constants import (
     BANKING_DEPOSIT_COOLDOWN_MINUTES,
     BANKING_WITHDRAW_COOLDOWN_MINUTES,
 )
+from cogs.farming.constants import MAX_FARM_LEVEL, MAX_PLOTS
 from database.repository import UserRepository
 from utils.formatters import format_time_remaining
 from ..dto import AchievementStatus, BalanceResult, EconomyStats, ProfileResult
@@ -34,6 +35,11 @@ class EconomyUseCases:
         user = self.repo.get_user(user_id, username)
         inventory = self.repo.get_user_inventory(user_id)
         progress = self.repo.get_achievement_progress(user_id)
+        progress["gambling_stars_lost"] = self.get_user_gambling_stars_lost(user_id)
+        progress["gambling_stars_won"] = self.get_user_gambling_stars_won(user_id)
+        progress["farming_harvest_stars_earned"] = self.get_user_farming_harvest_stars_earned(
+            user_id
+        )
         unlocked_keys = set(self.repo.get_unlocked_achievements(user_id).keys())
         achievements: list[AchievementStatus] = []
         newly_unlocked: list[AchievementStatus] = []
@@ -67,6 +73,12 @@ class EconomyUseCases:
                 )
             elif key == "space_ready":
                 condition_met = inventory.get("rocket_ship", 0) > 0
+            elif key == "budding_farmer":
+                condition_met = inventory.get("farm_plots", 0) >= 1
+            elif key == "land_baron":
+                condition_met = inventory.get("farm_plots", 0) >= MAX_PLOTS
+            elif key == "master_farmer":
+                condition_met = inventory.get("farm_level", 1) >= MAX_FARM_LEVEL
             elif progress_key and target is not None:
                 condition_met = progress.get(progress_key, 0) >= int(target)
 
@@ -344,6 +356,20 @@ class EconomyUseCases:
     def get_monthly_stars_lost(self, year: int, month: int) -> int:
         """Get stars lost for a specific month."""
         return self.repo.get_monthly_stars_lost(year, month)
+
+    def get_user_gambling_stars_lost(self, user_id: int) -> int:
+        """Get total stars a user has lost from gambling actions."""
+        return self.repo.get_user_stars_lost_by_source(user_id, "gambling")
+
+    def get_user_gambling_stars_won(self, user_id: int) -> int:
+        """Get total stars a user has won from gambling actions."""
+        return self.repo.get_user_stars_earned_by_source(user_id, "gambling")
+
+    def get_user_farming_harvest_stars_earned(self, user_id: int) -> int:
+        """Get total stars a user has earned from farming harvests."""
+        return self.repo.get_user_stars_earned_by_source_reason(
+            user_id, "farming", "harvest"
+        )
 
     def get_user_daily_star_activity(
         self,

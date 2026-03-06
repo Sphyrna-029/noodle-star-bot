@@ -80,14 +80,14 @@ class EconomyCog(commands.Cog):
 
     @commands.command(name="topstars")
     async def top_stars(self, ctx):
-        """Show top 10 users with the most noodle stars."""
-        results = self.economy.get_leaderboard(limit=10, ascending=False)
+        """Show top 5 users with the most noodle stars."""
+        results = self.economy.get_leaderboard(limit=5, ascending=False)
 
         if not results:
             await ctx.send("No noodle stars have been awarded yet!")
             return
 
-        embed = discord.Embed(title="🌟 Top 10 Good Noodles 🌟", color=discord.Color.gold())
+        embed = discord.Embed(title="🌟 Top 5 Good Noodles 🌟", color=discord.Color.gold())
 
         for i, (username, stars) in enumerate(results, 1):
             medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}."
@@ -104,7 +104,7 @@ class EconomyCog(commands.Cog):
             await ctx.send("No noodle stars have been awarded yet!")
             return
 
-        embed = discord.Embed(title="📉 Bottom 10 Noodles 📉", color=discord.Color.red())
+        embed = discord.Embed(title="📉 Bottom 5 Noodles 📉", color=discord.Color.red())
 
         for i, (username, stars) in enumerate(results, 1):
             embed.add_field(name=f"{i}. {username}", value=f"{stars} stars", inline=False)
