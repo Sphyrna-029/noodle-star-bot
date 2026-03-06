@@ -440,7 +440,7 @@ def _shop_embed() -> discord.Embed:
             "⚔️ Sword (75) — Blocks 1 goblin/troll disaster\n"
             "🥔 Raw Potato (2) — Mine after 5 min instead of 30\n"
             "🍄 Golden Mushroom (farm harvest) — Mine instantly, skip cooldown\n"
-            "💸 Bank Insurance (250) — Protects bank, 10 uses\n"
+            "💸 Bank Insurance (250) — Protects your bank from 1 disaster\n"
             "📷 Telescope (200) — View a starfield (permanent, fun item)\n"
             "🪱 Worm (33) / 🐟 Herring (79) / 🐋 Sturgeon (110) — Fishing bait"
         ),
