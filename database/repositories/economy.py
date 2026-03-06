@@ -202,6 +202,42 @@ class EconomyRepository(BaseRepository):
             except Exception:
                 return 0
 
+    def get_user_stars_earned_by_source(self, user_id: int, source: str) -> int:
+        """Get total stars earned by a user for a specific ledger source."""
+        with self.db.get_cursor() as cursor:
+            try:
+                cursor.execute(
+                    """
+                    SELECT COALESCE(SUM(CASE WHEN delta > 0 THEN delta ELSE 0 END), 0) AS earned
+                    FROM star_ledger
+                    WHERE user_id = ? AND source = ?
+                    """,
+                    (user_id, source),
+                )
+                row = cursor.fetchone()
+                return row["earned"] if row else 0
+            except Exception:
+                return 0
+
+    def get_user_stars_earned_by_source_reason(
+        self, user_id: int, source: str, reason: str
+    ) -> int:
+        """Get total stars earned by a user for a specific ledger source and reason."""
+        with self.db.get_cursor() as cursor:
+            try:
+                cursor.execute(
+                    """
+                    SELECT COALESCE(SUM(CASE WHEN delta > 0 THEN delta ELSE 0 END), 0) AS earned
+                    FROM star_ledger
+                    WHERE user_id = ? AND source = ? AND reason = ?
+                    """,
+                    (user_id, source, reason),
+                )
+                row = cursor.fetchone()
+                return row["earned"] if row else 0
+            except Exception:
+                return 0
+
     def get_user_daily_star_activity(
         self,
         user_id: int,

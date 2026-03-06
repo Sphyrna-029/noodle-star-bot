@@ -270,6 +270,11 @@ class ShopUseCases:
         if inventory.get("heart_of_leviathan", 0) > 0:
             items.append(f"💜 **Heart of Leviathan** ({inventory['heart_of_leviathan']} uses)")
 
+        if inventory.get("bank_insurance", 0) > 0:
+            items.append(
+                f"💸 **Bank Insurance** ({inventory['bank_insurance']} uses remaining)"
+            )
+
         if inventory.get("rocket_ship", 0) > 0:
             items.append("🚀 **Rocket Ship** (Permanent)")
 

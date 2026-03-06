@@ -38,10 +38,18 @@ BLIGHT_WINDS_EVENT = {
     "multiplier": 0.5,
 }
 
+LOCUSTS_EVENT = {
+    "name": "Locusts",
+    "emoji": "🦗",
+    "description": "A ravenous swarm tears through the fields, ruining every growing crop.",
+    "effect": "destroy",
+}
+
 WEATHER_EVENTS = [
     PERFECT_WEATHER_EVENT,
     STARLIT_DEW_EVENT,
     BLIGHT_WINDS_EVENT,
+    LOCUSTS_EVENT,
 ]
 
 
@@ -98,19 +106,29 @@ class FarmingWeatherCog(commands.Cog):
                     print("No weather event today.")
                     return
                 selected_event = random.choice(rolled_events)
-                print(
-                    f"Weather event triggered: {selected_event['name']} {selected_event['emoji']} "
-                    f"(x{selected_event['multiplier']})"
-                )
+                multiplier = selected_event.get("multiplier")
+                if multiplier is not None:
+                    print(
+                        f"Weather event triggered: {selected_event['name']} {selected_event['emoji']} "
+                        f"(x{multiplier})"
+                    )
+                else:
+                    print(f"Weather event triggered: {selected_event['name']} {selected_event['emoji']}")
 
-            # Apply weather bonus to all users with active farms
+            # Apply weather effect to all users with active farms
             blessed_users = []
+            is_destroy_event = selected_event.get("effect") == "destroy"
             for user_id in users_with_crops:
                 if dry_run:
                     affected_count = self._count_user_bonus_eligible_crops(user_id)
                 else:
-                    affected_count = self._apply_weather_bonus(user_id, selected_event["multiplier"])
+                    if is_destroy_event:
+                        affected_count = self._destroy_user_growing_crops(user_id)
+                    else:
+                        affected_count = self._apply_weather_bonus(user_id, selected_event["multiplier"])
                 if affected_count > 0:
+                    if not dry_run:
+                        self._grant_weather_achievements(user_id, selected_event)
                     blessed_users.append((user_id, affected_count))
 
             # Mark first-timers as having received their bonus
@@ -118,7 +136,7 @@ class FarmingWeatherCog(commands.Cog):
                 for user_id in first_timers:
                     self._mark_first_weather_bonus_used(user_id)
 
-            print(f"Applied weather bonus to {len(blessed_users)} users.")
+            print(f"Applied weather effect to {len(blessed_users)} users.")
 
             # Post announcement in a channel (find the first text channel we can post to)
             if blessed_users:
@@ -206,6 +224,47 @@ class FarmingWeatherCog(commands.Cog):
             )
             return cursor.rowcount
 
+    def _grant_weather_achievements(self, user_id: int, weather_event: dict):
+        """Increment weather-related achievement progress for one affected user."""
+        if weather_event is PERFECT_WEATHER_EVENT:
+            perfect_events = self.repo.increment_achievement_progress(
+                user_id, "weather_perfect_events", 1
+            )
+            if perfect_events >= 1:
+                self.repo.unlock_achievement(user_id, "sun_blessed")
+            return
+
+        if weather_event.get("effect") == "destroy":
+            bad_events = self.repo.increment_achievement_progress(
+                user_id, "weather_bad_events", 1
+            )
+            if bad_events >= 1:
+                self.repo.unlock_achievement(user_id, "storm_touched")
+            return
+
+        if float(weather_event.get("multiplier", 1.0)) < 1.0:
+            bad_events = self.repo.increment_achievement_progress(
+                user_id, "weather_bad_events", 1
+            )
+            if bad_events >= 1:
+                self.repo.unlock_achievement(user_id, "storm_touched")
+
+    def _destroy_user_growing_crops(self, user_id: int) -> int:
+        """Destroy all crops that are still growing for a user.
+
+        Returns the number of crops destroyed.
+        """
+        with self.repo.db.get_cursor() as cursor:
+            cursor.execute(
+                """
+                DELETE FROM planted_crops
+                WHERE user_id = ?
+                  AND ready_at > ?
+                """,
+                (user_id, datetime.now().isoformat()),
+            )
+            return cursor.rowcount
+
     def _count_bonus_eligible_crops(self, user_ids: list[int]) -> int:
         """Count crops that could receive a new weather bonus right now."""
         if not user_ids:
@@ -261,15 +320,22 @@ class FarmingWeatherCog(commands.Cog):
             if len(blessed_users) > 50:
                 mentions.append(f"...and {len(blessed_users) - 50} more!")
 
-            multiplier = weather_event["multiplier"]
-            if multiplier >= 1.0:
-                effect_text = f"**{int((multiplier - 1) * 100)}% harvest bonus**"
-                outcome_text = "worth more when you harvest them"
-                color = discord.Color.green()
+            if weather_event.get("effect") == "destroy":
+                effect_text = "**total crop loss**"
+                outcome_text = "completely ruined and have been destroyed"
+                color = discord.Color.dark_red()
+                event_verb = "suffer"
             else:
-                effect_text = f"**{int((1 - multiplier) * 100)}% harvest penalty**"
-                outcome_text = "worth less when you harvest them"
-                color = discord.Color.red()
+                multiplier = weather_event["multiplier"]
+                if multiplier >= 1.0:
+                    effect_text = f"**{int((multiplier - 1) * 100)}% harvest bonus**"
+                    outcome_text = "worth more when you harvest them"
+                    color = discord.Color.green()
+                else:
+                    effect_text = f"**{int((1 - multiplier) * 100)}% harvest penalty**"
+                    outcome_text = "worth less when you harvest them"
+                    color = discord.Color.red()
+                event_verb = "receive"
 
             embed = discord.Embed(
                 title=f"{weather_event['emoji']} {weather_event['name']} {weather_event['emoji']}",
@@ -277,7 +343,7 @@ class FarmingWeatherCog(commands.Cog):
                     f"{weather_event['description']}\n\n"
                     f"🌟 **{len(blessed_users)} farmer{'s' if len(blessed_users) != 1 else ''}** "
                     f"with **{total_crops} growing crop{'s' if total_crops != 1 else ''}** "
-                    f"will receive a {effect_text}!\n\n"
+                    f"will {event_verb} {effect_text}!\n\n"
                     f"💚 Those crops will be {outcome_text}."
                 ),
                 color=color,
@@ -289,7 +355,12 @@ class FarmingWeatherCog(commands.Cog):
                 inline=False,
             )
 
-            embed.set_footer(text=f"Use {COMMAND_PREFIX}harvest to collect your bonus crops!")
+            if weather_event.get("effect") == "destroy":
+                embed.set_footer(
+                    text=f"Replant with {COMMAND_PREFIX}plant <crop> <plot_number> to recover your farm."
+                )
+            else:
+                embed.set_footer(text=f"Use {COMMAND_PREFIX}harvest to collect your bonus crops!")
 
             await channel.send(embed=embed)
             print(f"Posted weather announcement in {channel.name} ({channel.guild.name})")
@@ -311,15 +382,22 @@ class FarmingWeatherCog(commands.Cog):
         try:
             total_crops = sum(crop_count for _, crop_count in blessed_users)
 
-            multiplier = weather_event["multiplier"]
-            if multiplier >= 1.0:
-                effect_text = f"**{int((multiplier - 1) * 100)}% harvest bonus**"
-                outcome_text = "worth more when you harvest them"
-                color = discord.Color.green()
+            if weather_event.get("effect") == "destroy":
+                effect_text = "**total crop loss**"
+                outcome_text = "completely ruined and have been destroyed"
+                color = discord.Color.dark_red()
+                event_verb = "suffer"
             else:
-                effect_text = f"**{int((1 - multiplier) * 100)}% harvest penalty**"
-                outcome_text = "worth less when you harvest them"
-                color = discord.Color.red()
+                multiplier = weather_event["multiplier"]
+                if multiplier >= 1.0:
+                    effect_text = f"**{int((multiplier - 1) * 100)}% harvest bonus**"
+                    outcome_text = "worth more when you harvest them"
+                    color = discord.Color.green()
+                else:
+                    effect_text = f"**{int((1 - multiplier) * 100)}% harvest penalty**"
+                    outcome_text = "worth less when you harvest them"
+                    color = discord.Color.red()
+                event_verb = "receive"
 
             embed = discord.Embed(
                 title=f"{weather_event['emoji']} {weather_event['name']} {weather_event['emoji']}",
@@ -327,7 +405,7 @@ class FarmingWeatherCog(commands.Cog):
                     f"{weather_event['description']}\n\n"
                     f"🌟 **{len(blessed_users)} farmer{'s' if len(blessed_users) != 1 else ''}** "
                     f"with **{total_crops} growing crop{'s' if total_crops != 1 else ''}** "
-                    f"will receive a {effect_text}!\n\n"
+                    f"will {event_verb} {effect_text}!\n\n"
                     f"💚 Those crops will be {outcome_text}."
                 ),
                 color=color,
@@ -338,7 +416,12 @@ class FarmingWeatherCog(commands.Cog):
                 mentions.append(f"...and {len(blessed_users) - 50} more!")
 
             embed.add_field(name="Affected Farmers", value=" ".join(mentions), inline=False)
-            embed.set_footer(text=f"Use {COMMAND_PREFIX}harvest to collect your bonus crops!")
+            if weather_event.get("effect") == "destroy":
+                embed.set_footer(
+                    text=f"Replant with {COMMAND_PREFIX}plant <crop> <plot_number> to recover your farm."
+                )
+            else:
+                embed.set_footer(text=f"Use {COMMAND_PREFIX}harvest to collect your bonus crops!")
 
             await user.send(embed=embed)
         except Exception as e:

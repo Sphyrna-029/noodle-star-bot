@@ -48,12 +48,18 @@ class ShopCog(commands.Cog):
         purchased_item = (
             result.item_name if result.quantity == 1 else f"{result.item_name} x{result.quantity}"
         )
-        await ctx.send(
+        message = (
             f"✅ {ctx.author.mention} purchased {result.item_emoji} "
             f"**{purchased_item}** "
             f"for **{result.price}** stars!\n"
             f"New balance: **{result.new_balance}** stars"
         )
+        if result.item_name == "Bank Insurance":
+            message += (
+                "\nUse `!inventory` to track remaining Bank Insurance uses. "
+                "A use is consumed only when it blocks bank loss."
+            )
+        await ctx.send(message)
 
     @commands.command(name="inventory")
     async def inventory(self, ctx, member: discord.Member = None):
