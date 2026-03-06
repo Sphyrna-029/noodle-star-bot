@@ -277,9 +277,9 @@ class FishingCog(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(name="fishlevel")
-    async def fishlevel(self, ctx, level: int):
+    async def fishlevel(self, ctx, level: int = 0):
         """View or switch your fishing level. Usage: !fishlevel [number]"""
-        if level is not None:
+        if level != 0:
             # Switch active level
             success, msg = self.fishing.set_active_fish_level(ctx.author.id, level)
             if success:

@@ -62,6 +62,11 @@ def _main_embed() -> discord.Embed:
         value="Buy items, trade with other players",
         inline=True,
     )
+    embed.add_field(
+        name="🧰 Treasure Hunt",
+        value="Lock-pick chests for star rewards",
+        inline=True,
+    )
     embed.set_footer(text="Buttons expire after 3 minutes. Type !help anytime to reopen.")
     return embed
 
@@ -452,6 +457,55 @@ def _shop_embed() -> discord.Embed:
     return embed
 
 
+def _treasure_embed() -> discord.Embed:
+    embed = discord.Embed(
+        title="🧰 Treasure Hunt — How It Works",
+        description=(
+            "Treasure Hunt is a lock-picking event. "
+            "A chest appears, one player claims the lock, and tries to crack the combo."
+        ),
+        color=discord.Color.teal(),
+    )
+    embed.add_field(
+        name="Core Commands",
+        value=(
+            "`!chest status` — Check if a chest is active\n"
+            "`!pick start` — Claim the lock and begin\n"
+            "`!pick 1 3 2` — Submit a 3-number guess\n"
+            "`!pick status` — Check chest lock status"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="How Lock-Picking Works",
+        value=(
+            "• The code has **3 pins** and each pin is **1-4**\n"
+            "• You get **5 attempts** per lock session\n"
+            "• Feedback shows exact matches and misplaced matches\n"
+            "• If you solve it, you win a random star reward"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Important Rules",
+        value=(
+            "• While you hold the lock, others must wait\n"
+            "• You have about **60 seconds** before lock ownership resets\n"
+            "• If no one opens the chest in time, it expires"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Moderator Commands",
+        value=(
+            "`!chest spawn` — Force-spawn a chest\n"
+            "`!chest end` — Remove the active chest"
+        ),
+        inline=False,
+    )
+    return embed
+
+
 # ---------------------------------------------------------------------------
 # Interactive help views with navigation buttons
 # ---------------------------------------------------------------------------
@@ -505,6 +559,11 @@ class HelpView(discord.ui.View):
     async def shop_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = SubHelpView(self.author_id)
         await interaction.response.edit_message(embed=_shop_embed(), view=view)
+
+    @discord.ui.button(label="Treasure Hunt", style=discord.ButtonStyle.secondary, emoji="🧰", row=2)
+    async def treasure_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = SubHelpView(self.author_id)
+        await interaction.response.edit_message(embed=_treasure_embed(), view=view)
 
 
 class SubHelpView(discord.ui.View):
@@ -562,6 +621,11 @@ class SubHelpView(discord.ui.View):
         view = SubHelpView(self.author_id)
         await interaction.response.edit_message(embed=_shop_embed(), view=view)
 
+    @discord.ui.button(label="Treasure Hunt", style=discord.ButtonStyle.secondary, emoji="🧰", row=3)
+    async def treasure_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = SubHelpView(self.author_id)
+        await interaction.response.edit_message(embed=_treasure_embed(), view=view)
+
 
 # ---------------------------------------------------------------------------
 # Custom HelpCommand — interactive menu + text fallbacks
@@ -581,6 +645,7 @@ class NoodleHelpCommand(commands.HelpCommand):
         "Mining",
         "Fishing",
         "Farming",
+        "Treasure",
         "Shop",
         "Trading",
         "Moderator",
