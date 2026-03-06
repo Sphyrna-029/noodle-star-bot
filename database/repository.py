@@ -1,6 +1,7 @@
 """Composed user repository interface."""
 
 from database.repositories import (
+    AchievementsRepository,
     EconomyRepository,
     FarmingRepository,
     FishingRepository,
@@ -12,6 +13,7 @@ from database.repositories import (
 
 
 class UserRepository(
+    AchievementsRepository,
     UserCoreRepository,
     EconomyRepository,
     InventoryRepository,

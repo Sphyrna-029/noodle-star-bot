@@ -9,11 +9,58 @@ from cogs.economy.constants import (
 )
 from database.repository import UserRepository
 from utils.formatters import format_time_remaining
-from .dto import BalanceResult, EconomyStats
+from .dto import AchievementStatus, BalanceResult, EconomyStats, ProfileResult
 
 
 class EconomyUseCases:
     """Handles all economy-related business logic."""
+
+    _ACHIEVEMENT_DEFS = (
+        {
+            "key": "first_star",
+            "name": "First Star",
+            "emoji": "⭐",
+            "description": "Own at least 1 total star.",
+        },
+        {
+            "key": "small_saver",
+            "name": "Small Saver",
+            "emoji": "🏦",
+            "description": "Keep at least 100 stars in the bank.",
+        },
+        {
+            "key": "miner_upgrade",
+            "name": "Miner Upgrade",
+            "emoji": "⛏️",
+            "description": "Reach mine level 5.",
+        },
+        {
+            "key": "prepared_miner",
+            "name": "Prepared Miner",
+            "emoji": "🛡️",
+            "description": "Own both a helmet and a sword.",
+        },
+        {
+            "key": "tool_owner",
+            "name": "Tool Owner",
+            "emoji": "✨",
+            "description": "Own either a Gold Pickaxe or Telescope.",
+        },
+        {
+            "key": "space_ready",
+            "name": "Space Ready",
+            "emoji": "🚀",
+            "description": "Own a Rocket Ship.",
+        },
+        {
+            "key": "mine_100",
+            "name": "Centurion Miner",
+            "emoji": "💎",
+            "description": "Mine 100 times total.",
+            "progress_key": "mine_runs",
+            "target": 100,
+        },
+    )
 
     def __init__(self, repository: UserRepository = None):
         self.repo = repository or UserRepository()
@@ -26,6 +73,70 @@ class EconomyUseCases:
             message="Balance retrieved",
             wallet=user.stars,
             bank=user.bank,
+        )
+
+    def get_profile(self, user_id: int, username: str) -> ProfileResult:
+        """Get user profile information, including simple achievements."""
+        user = self.repo.get_user(user_id, username)
+        inventory = self.repo.get_user_inventory(user_id)
+        progress = self.repo.get_achievement_progress(user_id)
+        unlocked_keys = set(self.repo.get_unlocked_achievements(user_id).keys())
+        achievements: list[AchievementStatus] = []
+
+        for definition in self._ACHIEVEMENT_DEFS:
+            key = definition["key"]
+            progress_key = definition.get("progress_key")
+            target = definition.get("target")
+
+            # Evaluate unlock condition
+            condition_met = False
+            if key == "first_star":
+                condition_met = user.total_stars >= 1
+            elif key == "small_saver":
+                condition_met = user.bank >= 100
+            elif key == "miner_upgrade":
+                condition_met = inventory.get("mine_level", 1) >= 5
+            elif key == "prepared_miner":
+                condition_met = (
+                    inventory.get("helmet", 0) > 0
+                    and inventory.get("sword", 0) > 0
+                )
+            elif key == "tool_owner":
+                condition_met = (
+                    inventory.get("gold_pickaxe", 0) > 0
+                    or inventory.get("telescope", 0) > 0
+                )
+            elif key == "space_ready":
+                condition_met = inventory.get("rocket_ship", 0) > 0
+            elif progress_key and target is not None:
+                condition_met = progress.get(progress_key, 0) >= int(target)
+
+            is_unlocked = key in unlocked_keys
+            if not is_unlocked and condition_met:
+                self.repo.unlock_achievement(user_id, key)
+                unlocked_keys.add(key)
+                is_unlocked = True
+
+            achievements.append(
+                AchievementStatus(
+                    key=key,
+                    name=definition["name"],
+                    emoji=definition["emoji"],
+                    description=definition["description"],
+                    unlocked=is_unlocked,
+                    progress_current=progress.get(progress_key, 0)
+                    if progress_key
+                    else None,
+                    progress_target=int(target) if target is not None else None,
+                )
+            )
+
+        return ProfileResult(
+            success=True,
+            message="Profile retrieved",
+            wallet=user.stars,
+            bank=user.bank,
+            achievements=achievements,
         )
 
     def add_stars(self, user_id: int, username: str, amount: int) -> BalanceResult:

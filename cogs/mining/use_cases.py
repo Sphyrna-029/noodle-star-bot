@@ -233,6 +233,9 @@ class MiningUseCases:
         # Update stars and last mine time
         self.repo.update_user_stars(user_id, username, new_stars)
         self.repo.update_last_mine(user_id)
+        mine_runs = self.repo.increment_achievement_progress(user_id, "mine_runs", 1)
+        if mine_runs >= 100:
+            self.repo.unlock_achievement(user_id, "mine_100")
 
         result = MineResult(
             success=True,

@@ -30,6 +30,69 @@ class EconomyCog(commands.Cog):
             f"📊 Total: **{result.total}** stars"
         )
 
+    @commands.command(name="profile", aliases=["achievements", "ach"])
+    async def profile(self, ctx, member: discord.Member = None):
+        """View your profile with simple achievement progress."""
+        if member is None:
+            member = ctx.author
+
+        result = self.economy.get_profile(member.id, str(member))
+        unlocked = [achievement for achievement in result.achievements if achievement.unlocked]
+        locked = [achievement for achievement in result.achievements if not achievement.unlocked]
+
+        embed = discord.Embed(
+            title=f"👤 {member.display_name}'s Profile",
+            color=discord.Color.teal(),
+        )
+        embed.add_field(
+            name="💰 Balance",
+            value=(
+                f"Wallet: **{result.wallet}**\n"
+                f"Bank: **{result.bank}**\n"
+                f"Total: **{result.total}**"
+            ),
+            inline=False,
+        )
+        embed.add_field(
+            name="🏆 Achievements",
+            value=f"Unlocked: **{result.unlocked_achievements}/{result.total_achievements}**",
+            inline=False,
+        )
+
+        if unlocked:
+            embed.add_field(
+                name="✅ Unlocked",
+                value="\n".join(
+                    f"{achievement.emoji} **{achievement.name}**"
+                    for achievement in unlocked
+                ),
+                inline=False,
+            )
+
+        if locked:
+            locked_lines = []
+            for achievement in locked:
+                progress_suffix = ""
+                if (
+                    achievement.progress_current is not None
+                    and achievement.progress_target is not None
+                ):
+                    progress_suffix = (
+                        f" ({achievement.progress_current}/{achievement.progress_target})"
+                    )
+                locked_lines.append(
+                    f"{achievement.emoji} **{achievement.name}** - "
+                    f"{achievement.description}{progress_suffix}"
+                )
+
+            embed.add_field(
+                name="🔒 To Unlock",
+                value="\n".join(locked_lines),
+                inline=False,
+            )
+
+        await ctx.send(embed=embed)
+
     @commands.command(name="topstars")
     async def top_stars(self, ctx):
         """Show top 10 users with the most noodle stars."""
@@ -66,7 +129,7 @@ class EconomyCog(commands.Cog):
     @commands.command(name="deposit")
     async def deposit(self, ctx, amount: str = ''):
         """Deposit noodle stars into your bank for safekeeping."""
-        if amount is '':
+        if amount == '':
             await ctx.send(
                 f"❌ {ctx.author.mention}, please specify an amount to deposit! "
                 f"Usage: `!deposit <amount>` or `!deposit all`"
@@ -89,7 +152,7 @@ class EconomyCog(commands.Cog):
     @commands.command(name="withdraw")
     async def withdraw(self, ctx, amount: str = ''):
         """Withdraw noodle stars from your bank."""
-        if amount is '':
+        if amount == '':
             await ctx.send(
                 f"❌ {ctx.author.mention}, please specify an amount to withdraw! "
                 f"Usage: `!withdraw <amount>` or `!withdraw all`"

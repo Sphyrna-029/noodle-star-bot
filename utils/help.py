@@ -298,6 +298,7 @@ def _economy_embed() -> discord.Embed:
         value=(
             "`!stars` — See your wallet + bank balance\n"
             "`!stars @someone` — Check another player's balance\n"
+            "`!profile` / `!achievements` — View your user profile + achievements\n"
             "`!topstars` — See the top 10 richest players\n"
             "`!bottomstars` — See the bottom 5 players\n"
             "`!starstats` — See monthly economy statistics"
