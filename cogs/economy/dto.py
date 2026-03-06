@@ -47,6 +47,7 @@ class ProfileResult:
     wallet: int = 0
     bank: int = 0
     achievements: list[AchievementStatus] = field(default_factory=list)
+    newly_unlocked: list[AchievementStatus] = field(default_factory=list)
 
     @property
     def total(self) -> int:

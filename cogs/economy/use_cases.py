@@ -60,6 +60,30 @@ class EconomyUseCases:
             "progress_key": "mine_runs",
             "target": 100,
         },
+        {
+            "key": "mine_1000",
+            "name": "Mining Legend",
+            "emoji": "👑",
+            "description": "Mine 1000 times total.",
+            "progress_key": "mine_runs",
+            "target": 1000,
+        },
+        {
+            "key": "fish_10",
+            "name": "Lake Regular",
+            "emoji": "🐟",
+            "description": "Catch 10 fish total.",
+            "progress_key": "fish_catches",
+            "target": 10,
+        },
+        {
+            "key": "fish_100",
+            "name": "Ocean Veteran",
+            "emoji": "🐠",
+            "description": "Catch 100 fish total.",
+            "progress_key": "fish_catches",
+            "target": 100,
+        },
     )
 
     def __init__(self, repository: UserRepository = None):
@@ -82,6 +106,7 @@ class EconomyUseCases:
         progress = self.repo.get_achievement_progress(user_id)
         unlocked_keys = set(self.repo.get_unlocked_achievements(user_id).keys())
         achievements: list[AchievementStatus] = []
+        newly_unlocked: list[AchievementStatus] = []
 
         for definition in self._ACHIEVEMENT_DEFS:
             key = definition["key"]
@@ -112,24 +137,27 @@ class EconomyUseCases:
                 condition_met = progress.get(progress_key, 0) >= int(target)
 
             is_unlocked = key in unlocked_keys
+            unlocked_now = False
             if not is_unlocked and condition_met:
-                self.repo.unlock_achievement(user_id, key)
-                unlocked_keys.add(key)
-                is_unlocked = True
+                unlocked_now = self.repo.unlock_achievement(user_id, key)
+                if unlocked_now:
+                    unlocked_keys.add(key)
+                    is_unlocked = True
 
-            achievements.append(
-                AchievementStatus(
-                    key=key,
-                    name=definition["name"],
-                    emoji=definition["emoji"],
-                    description=definition["description"],
-                    unlocked=is_unlocked,
-                    progress_current=progress.get(progress_key, 0)
-                    if progress_key
-                    else None,
-                    progress_target=int(target) if target is not None else None,
-                )
+            achievement_status = AchievementStatus(
+                key=key,
+                name=definition["name"],
+                emoji=definition["emoji"],
+                description=definition["description"],
+                unlocked=is_unlocked,
+                progress_current=progress.get(progress_key, 0)
+                if progress_key
+                else None,
+                progress_target=int(target) if target is not None else None,
             )
+            achievements.append(achievement_status)
+            if unlocked_now:
+                newly_unlocked.append(achievement_status)
 
         return ProfileResult(
             success=True,
@@ -137,6 +165,7 @@ class EconomyUseCases:
             wallet=user.stars,
             bank=user.bank,
             achievements=achievements,
+            newly_unlocked=newly_unlocked,
         )
 
     def add_stars(self, user_id: int, username: str, amount: int) -> BalanceResult:
