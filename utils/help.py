@@ -67,6 +67,11 @@ def _main_embed() -> discord.Embed:
         value="Lock-pick chests for star rewards",
         inline=True,
     )
+    embed.add_field(
+        name="🎒 Items",
+        value="Rare items, effects & how to get them",
+        inline=True,
+    )
     embed.set_footer(text="Buttons expire after 3 minutes. Type !help anytime to reopen.")
     return embed
 
@@ -507,6 +512,77 @@ def _treasure_embed() -> discord.Embed:
     return embed
 
 
+def _items_embed() -> discord.Embed:
+    embed = discord.Embed(
+        title="🎒 Items — Rare Effects & How to Get Them",
+        description=(
+            "Beyond the basic shop gear, rare items can drop from mining and fishing. "
+            "These powerful effects can turn the tide in your favor!"
+        ),
+        color=discord.Color.dark_purple(),
+    )
+    embed.add_field(
+        name="🛡️ Protection Items (from Shop)",
+        value=(
+            "🪖 **Helmet** (50 stars) — Blocks 1 collapse/flood/meteor disaster. "
+            "Consumed on use. Can fail at higher levels!\n"
+            "⚔️ **Sword** (75 stars) — Blocks 1 goblin/troll/pirate disaster. "
+            "Consumed on use. Can fail at higher levels!\n"
+            "💸 **Bank Insurance** (250 stars, 10 uses) — Protects your bank from "
+            "Lv4-5 disasters that drain banked stars"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="🪓 Multi-Use Protection (Rare Drops)",
+        value=(
+            "🪓 **Golden Axe** (50 uses) — Works like a sword but lasts 50 hits. "
+            "Never fails at any level. *1% drop on legendary fishing catches*\n"
+            "🛡️ **Mithril Shield** (10 uses) — Works like a helmet but lasts 10 hits. "
+            "Never fails at any level. *0.1% drop on any fishing catch*"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="✨ Rare Effect Items (Drops)",
+        value=(
+            "🔮 **Rune Fragment** (from mining) — Reduces mining cooldown to 15 min "
+            "(or 2m30s with a potato). *0.5% drop per mine*\n"
+            "🦴 **Fossilized Noodle** (from mining) — Reduces mining cooldown to just 1 min "
+            "(or 30s with a rune). *0.1% drop per mine*\n"
+            "🎣 **Bucktail Jig** (from fishing) — Use `!use jig` to get 20% legendary "
+            "catch chance on your next cast. *0.3% drop per catch*\n"
+            "🔫 **Ray-Gun** (2 uses, from fishing) — Protects your items from alien "
+            "abductions. *0.35% drop per catch*"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="⭐ Passive Boosts (Drops)",
+        value=(
+            "🧲 **Star Magnet** (20 uses, from fishing) — +15% stars on every mine "
+            "and fishing catch. *1% drop on rare/legendary catches*\n"
+            "🍀 **Lucky Charm** (50 uses, from fishing) — Cuts disaster chance in half. "
+            "*0.05% drop on any catch*\n"
+            "💜 **Heart of Leviathan** (1 use, from fishing) — Fully protects your bank "
+            "from one disaster. *25% drop when catching Leviathan Scale*"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="📋 Quick Reference",
+        value=(
+            "• Rare items **survive disasters** — they aren't destroyed when you lose items\n"
+            "• Check your items with `!inventory`\n"
+            "• Passive items (Star Magnet, Lucky Charm) activate automatically\n"
+            "• Helmets & swords have a **higher failure chance** on harder levels\n"
+            "• Golden Axe & Mithril Shield **never fail**, making them extremely valuable"
+        ),
+        inline=False,
+    )
+    return embed
+
+
 # ---------------------------------------------------------------------------
 # Interactive help views with navigation buttons
 # ---------------------------------------------------------------------------
@@ -565,6 +641,11 @@ class HelpView(discord.ui.View):
     async def treasure_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = SubHelpView(self.author_id)
         await interaction.response.edit_message(embed=_treasure_embed(), view=view)
+
+    @discord.ui.button(label="Items", style=discord.ButtonStyle.secondary, emoji="🎒", row=2)
+    async def items_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = SubHelpView(self.author_id)
+        await interaction.response.edit_message(embed=_items_embed(), view=view)
 
 
 class SubHelpView(discord.ui.View):
@@ -626,6 +707,11 @@ class SubHelpView(discord.ui.View):
     async def treasure_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = SubHelpView(self.author_id)
         await interaction.response.edit_message(embed=_treasure_embed(), view=view)
+
+    @discord.ui.button(label="Items", style=discord.ButtonStyle.secondary, emoji="🎒", row=3)
+    async def items_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = SubHelpView(self.author_id)
+        await interaction.response.edit_message(embed=_items_embed(), view=view)
 
 
 # ---------------------------------------------------------------------------
