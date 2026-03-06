@@ -147,26 +147,18 @@ class FishingCog(commands.Cog):
                 f"Balance: **{result.new_balance}** stars"
             )
 
-        # Rare item drops
-        if result.golden_axe_found:
+        # Item drops
+        if result.found_items:
             embed.add_field(
-                name="🪓 **GOLDEN AXE FOUND!** 🪓",
-                value=(
-                    "A legendary **Golden Axe** tumbled out of your catch!\n"
-                    "It has **50 uses** and protects against sword-type hazards."
-                ),
+                name="**ITEM DROP!**",
+                value="\n".join(result.found_items),
                 inline=False,
             )
 
-        if result.mithril_shield_found:
-            embed.add_field(
-                name="🛡️ **MITHRIL SHIELD FOUND!** 🛡️",
-                value=(
-                    "A gleaming **Mithril Shield** washed up with your catch!\n"
-                    "It has **10 uses** and protects against helmet-type hazards."
-                ),
-                inline=False,
-            )
+        # Extra messages (e.g. heart of leviathan bank protection)
+        if result.extra_messages:
+            for msg in result.extra_messages:
+                embed.add_field(name="\u200b", value=msg, inline=False)
 
         # Show fishing level in footer
         if result.level_name:
@@ -335,11 +327,11 @@ class FishingCog(commands.Cog):
 
     @commands.command(name="use")
     async def use_item(self, ctx, item_type: str = '', item_name: str = ''):
-        """Equip bait for fishing. Usage: !use bait <worm|herring|sturgeon>"""
+        """Use an item. Usage: !use bait <type> | !use jig"""
         if item_type is None:
             await ctx.send(
                 f"❌ {ctx.author.mention}, please specify what to use!\n"
-                f"Example: `!use bait worm`"
+                f"Examples: `!use bait worm`, `!use jig`"
             )
             return
 
@@ -372,10 +364,17 @@ class FishingCog(commands.Cog):
 
             await ctx.send(f"✅ {ctx.author.mention}, {result.message}")
 
+        elif item_type == "jig":
+            success, msg = self.fishing.activate_jig(ctx.author.id, str(ctx.author))
+            if success:
+                await ctx.send(f"✅ {ctx.author.mention}, {msg}")
+            else:
+                await ctx.send(f"❌ {ctx.author.mention}, {msg}")
+
         else:
             await ctx.send(
                 f"❌ {ctx.author.mention}, unknown item type `{item_type}`!\n"
-                f"Available: `bait`"
+                f"Available: `bait`, `jig`"
             )
 
     @commands.command(name="equip")

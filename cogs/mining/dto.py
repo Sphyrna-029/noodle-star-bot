@@ -25,6 +25,7 @@ class MineResult:
     extra_messages: List[str] = field(default_factory=list)
     level_name: str = ""
     level_emoji: str = ""
+    found_items: List[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)
