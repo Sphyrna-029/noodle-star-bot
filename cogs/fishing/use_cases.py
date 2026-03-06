@@ -503,6 +503,7 @@ class FishingUseCases:
                 has_sword = inv["sword"] > 0
                 golden_axe_uses = inv["golden_axe"]
                 mithril_shield_uses = inv["mithril_shield"]
+                fail_chance = level_config["protection_fail_chance"]
 
                 # Siren and Leviathan require special items only
                 requires_special = hazard.name in ("siren", "leviathan")
@@ -512,9 +513,15 @@ class FishingUseCases:
 
                 if hazard.protection_item == "helmet":
                     if not requires_special and has_helmet:
-                        protected = True
-                        protection_msg = hazard.protected_msg
-                        self.repo.update_user_inventory(user_id, "helmet", 0)
+                        self.repo.update_user_inventory(user_id, "helmet", inv["helmet"] - 1)
+                        if random.random() < fail_chance:
+                            protection_msg = (
+                                "Your helmet was crushed by the force of the deep — "
+                                "these waters are too treacherous for basic gear! *(-1 helmet)*"
+                            )
+                        else:
+                            protected = True
+                            protection_msg = hazard.protected_msg
                     elif mithril_shield_uses > 0:
                         protected = True
                         remaining = mithril_shield_uses - 1
@@ -525,9 +532,15 @@ class FishingUseCases:
                         )
                 elif hazard.protection_item == "sword":
                     if not requires_special and has_sword:
-                        protected = True
-                        protection_msg = hazard.protected_msg
-                        self.repo.update_user_inventory(user_id, "sword", 0)
+                        self.repo.update_user_inventory(user_id, "sword", inv["sword"] - 1)
+                        if random.random() < fail_chance:
+                            protection_msg = (
+                                "Your sword splintered against the creature's hide — "
+                                "the beasts down here are too powerful for a shop blade! *(-1 sword)*"
+                            )
+                        else:
+                            protected = True
+                            protection_msg = hazard.protected_msg
                     elif golden_axe_uses > 0:
                         protected = True
                         remaining = golden_axe_uses - 1
@@ -550,6 +563,8 @@ class FishingUseCases:
                     bank_lost = 0
                     bank_insurance_used = False
                     if hazard.bank_loss_pct > 0:
+                        # Re-read inventory since helmet/sword may have been consumed
+                        inv = self.repo.get_user_inventory(user_id)
                         heart_uses = inv["heart_of_leviathan"]
                         if heart_uses > 0:
                             self.repo.update_user_inventory(user_id, "heart_of_leviathan", heart_uses - 1)
@@ -577,7 +592,10 @@ class FishingUseCases:
                     result.items_destroyed = True
                     result.new_balance = new_stars
 
-                    disaster_msg = hazard.unprotected_msg.format(
+                    disaster_msg = ""
+                    if protection_msg:
+                        disaster_msg += protection_msg + "\n\n"
+                    disaster_msg += hazard.unprotected_msg.format(
                         stars_lost=stars_lost, bank_lost=bank_lost
                     )
                     if bank_insurance_used:

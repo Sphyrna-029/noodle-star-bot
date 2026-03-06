@@ -71,6 +71,10 @@ class SpaceCog(commands.Cog):
             else:
                 message += f"\n\n{result.disaster_header}\n{result.disaster_unprotected_msg}"
 
+        # Extra messages (e.g. heart of leviathan bank protection)
+        for extra in result.extra_messages:
+            message += f"\n{extra}"
+
         message += f"\nNew balance: **{result.new_balance}** stars!"
 
         await ctx.send(message)

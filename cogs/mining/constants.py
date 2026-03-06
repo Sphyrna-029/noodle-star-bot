@@ -245,6 +245,7 @@ MINE_LEVELS: Final[dict[int, dict]] = {
         "emoji": "⛏️",
         "cost": 0,
         "disaster_chance": 0.10,
+        "protection_fail_chance": 0.0,
         "hazards": (HAZARD_COLLAPSE, HAZARD_GOBLIN),
     },
     2: {
@@ -252,6 +253,7 @@ MINE_LEVELS: Final[dict[int, dict]] = {
         "emoji": "🕳️",
         "cost": 1500,
         "disaster_chance": 0.12,
+        "protection_fail_chance": 0.05,
         "hazards": (HAZARD_COLLAPSE, HAZARD_GOBLIN, HAZARD_FLOOD),
     },
     3: {
@@ -259,6 +261,7 @@ MINE_LEVELS: Final[dict[int, dict]] = {
         "emoji": "🪨",
         "cost": 3000,
         "disaster_chance": 0.14,
+        "protection_fail_chance": 0.10,
         "hazards": (HAZARD_COLLAPSE, HAZARD_GOBLIN, HAZARD_FLOOD, HAZARD_CAVE_TROLL),
     },
     4: {
@@ -266,6 +269,7 @@ MINE_LEVELS: Final[dict[int, dict]] = {
         "emoji": "🌋",
         "cost": 4000,
         "disaster_chance": 0.16,
+        "protection_fail_chance": 0.15,
         "hazards": (HAZARD_COLLAPSE, HAZARD_GOBLIN, HAZARD_FLOOD, HAZARD_CAVE_TROLL, HAZARD_LAVA_FLOW),
     },
     5: {
@@ -273,6 +277,7 @@ MINE_LEVELS: Final[dict[int, dict]] = {
         "emoji": "🌑",
         "cost": 5000,
         "disaster_chance": 0.20,
+        "protection_fail_chance": 0.20,
         "hazards": (HAZARD_COLLAPSE, HAZARD_GOBLIN, HAZARD_FLOOD, HAZARD_CAVE_TROLL, HAZARD_LAVA_FLOW, HAZARD_SHADOW_WRAITH),
     },
 }

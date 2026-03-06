@@ -212,6 +212,7 @@ SPACE_PLANETS: Final[dict[int, dict]] = {
         "emoji": "🌕",
         "cost": 0,
         "disaster_chance": 0.12,
+        "protection_fail_chance": 0.25,
         "hazards": (HAZARD_METEOR_STRIKE, HAZARD_SPACE_PIRATE),
     },
     2: {
@@ -219,6 +220,7 @@ SPACE_PLANETS: Final[dict[int, dict]] = {
         "emoji": "🔴",
         "cost": 5000,
         "disaster_chance": 0.14,
+        "protection_fail_chance": 0.30,
         "hazards": (HAZARD_METEOR_STRIKE, HAZARD_SPACE_PIRATE),
     },
     3: {
@@ -226,6 +228,7 @@ SPACE_PLANETS: Final[dict[int, dict]] = {
         "emoji": "🪐",
         "cost": 10000,
         "disaster_chance": 0.16,
+        "protection_fail_chance": 0.35,
         "hazards": (HAZARD_METEOR_STRIKE, HAZARD_SPACE_PIRATE, HAZARD_SOLAR_FLARE, HAZARD_BLACK_HOLE_RIFT),
     },
     4: {
@@ -233,6 +236,7 @@ SPACE_PLANETS: Final[dict[int, dict]] = {
         "emoji": "💠",
         "cost": 15000,
         "disaster_chance": 0.18,
+        "protection_fail_chance": 0.40,
         "hazards": (HAZARD_METEOR_STRIKE, HAZARD_SPACE_PIRATE, HAZARD_SOLAR_FLARE, HAZARD_BLACK_HOLE_RIFT),
     },
     5: {
@@ -240,6 +244,7 @@ SPACE_PLANETS: Final[dict[int, dict]] = {
         "emoji": "🥶",
         "cost": 20000,
         "disaster_chance": 0.22,
+        "protection_fail_chance": 0.50,
         "hazards": (HAZARD_METEOR_STRIKE, HAZARD_SPACE_PIRATE, HAZARD_SOLAR_FLARE, HAZARD_BLACK_HOLE_RIFT, HAZARD_VOID_ENTITY),
     },
 }

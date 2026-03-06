@@ -179,34 +179,47 @@ class SpaceUseCases:
 
             golden_axe_uses = inventory["golden_axe"]
             mithril_shield_uses = inventory["mithril_shield"]
+            fail_chance = planet_config["protection_fail_chance"]
 
             protected = False
             protection_msg = ""
 
             if hazard.protection_item == "helmet":
                 if has_helmet:
-                    protected = True
-                    protection_msg = hazard.protected_msg
-                    self.repo.update_user_inventory(user_id, "helmet", 0)
+                    self.repo.update_user_inventory(user_id, "helmet", inventory["helmet"] - 1)
+                    if random.random() < fail_chance:
+                        protection_msg = (
+                            "Your helmet buckled under the cosmic forces — "
+                            "Earth-grade gear can't handle what's out here! *(-1 helmet)*"
+                        )
+                    else:
+                        protected = True
+                        protection_msg = hazard.protected_msg
                 elif mithril_shield_uses > 0:
                     protected = True
                     remaining = mithril_shield_uses - 1
                     self.repo.update_user_inventory(user_id, "mithril_shield", remaining)
                     protection_msg = (
-                        f"🛡️ Your mithril shield absorbed the blow!\n"
+                        f"Your mithril shield absorbed the blow!\n"
                         f"*Your shield took a dent.* ({remaining} uses remaining)"
                     )
             elif hazard.protection_item == "sword":
                 if has_sword:
-                    protected = True
-                    protection_msg = hazard.protected_msg
-                    self.repo.update_user_inventory(user_id, "sword", 0)
+                    self.repo.update_user_inventory(user_id, "sword", inventory["sword"] - 1)
+                    if random.random() < fail_chance:
+                        protection_msg = (
+                            "Your sword glanced off the alien threat and snapped — "
+                            "you'll need something sturdier in deep space! *(-1 sword)*"
+                        )
+                    else:
+                        protected = True
+                        protection_msg = hazard.protected_msg
                 elif golden_axe_uses > 0:
                     protected = True
                     remaining = golden_axe_uses - 1
                     self.repo.update_user_inventory(user_id, "golden_axe", remaining)
                     protection_msg = (
-                        f"🪓 Your golden axe fended off the attack!\n"
+                        f"Your golden axe fended off the attack!\n"
                         f"*Your golden axe took a hit.* ({remaining} uses remaining)"
                     )
 
@@ -223,19 +236,27 @@ class SpaceUseCases:
                 bank_lost = 0
                 bank_insurance_used = False
                 if hazard.bank_loss_pct > 0:
-                    current_bank = self.repo.get_user_bank(user_id)
-                    potential_bank_loss = int(current_bank * hazard.bank_loss_pct)
-
+                    # Re-read inventory since helmet/sword may have been consumed
                     inventory = self.repo.get_user_inventory(user_id)
-                    bank_insurance_uses = inventory.get("bank_insurance", 0)
-                    if bank_insurance_uses > 0 and potential_bank_loss > 0:
-                        bank_insurance_used = True
-                        self.repo.update_user_inventory(user_id, "bank_insurance", bank_insurance_uses - 1)
-                        bank_lost = 0
+                    heart_uses = inventory.get("heart_of_leviathan", 0)
+                    if heart_uses > 0:
+                        self.repo.update_user_inventory(user_id, "heart_of_leviathan", heart_uses - 1)
+                        result.extra_messages.append(
+                            "Your **Heart of Leviathan** shielded your bank! *It crumbles to dust.*"
+                        )
                     else:
-                        bank_lost = potential_bank_loss
-                        if bank_lost > 0:
-                            self.repo.update_user_bank(user_id, username, current_bank - bank_lost)
+                        current_bank = self.repo.get_user_bank(user_id)
+                        potential_bank_loss = int(current_bank * hazard.bank_loss_pct)
+
+                        bank_insurance_uses = inventory.get("bank_insurance", 0)
+                        if bank_insurance_uses > 0 and potential_bank_loss > 0:
+                            bank_insurance_used = True
+                            self.repo.update_user_inventory(user_id, "bank_insurance", bank_insurance_uses - 1)
+                            bank_lost = 0
+                        else:
+                            bank_lost = potential_bank_loss
+                            if bank_lost > 0:
+                                self.repo.update_user_bank(user_id, username, current_bank - bank_lost)
 
                 self.repo.clear_user_inventory(user_id)
                 result.stars_lost = stars_lost
@@ -243,12 +264,15 @@ class SpaceUseCases:
                 result.items_destroyed = True
                 result.new_balance = new_stars
 
-                disaster_msg = hazard.unprotected_msg.format(
+                disaster_msg = ""
+                if protection_msg:
+                    disaster_msg += protection_msg + "\n\n"
+                disaster_msg += hazard.unprotected_msg.format(
                     stars_lost=stars_lost, bank_lost=bank_lost
                 )
                 if bank_insurance_used:
                     remaining_insurance = bank_insurance_uses - 1
-                    disaster_msg += f"\n\n🛡️ **Bank Insurance activated!** Your bank was protected from losing {potential_bank_loss} stars.\n*({remaining_insurance} uses remaining)*"
+                    disaster_msg += f"\n\n**Bank Insurance activated!** Your bank was protected from losing {potential_bank_loss} stars.\n*({remaining_insurance} uses remaining)*"
 
                 result.disaster_unprotected_msg = disaster_msg
 

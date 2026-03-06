@@ -283,6 +283,7 @@ class MiningUseCases:
             mithril_shield_uses = inv["mithril_shield"]
             has_helmet = inv["helmet"] > 0
             has_sword = inv["sword"] > 0
+            fail_chance = level_config["protection_fail_chance"]
 
             # Siren and Leviathan require special items only
             requires_special = hazard.name in ("siren", "leviathan")
@@ -292,10 +293,19 @@ class MiningUseCases:
 
             if hazard.protection_item == "helmet":
                 if not requires_special and has_helmet:
-                    protected = True
-                    protection_msg = hazard.protected_msg
-                    self.repo.update_user_inventory(user_id, "helmet", 0)
+                    # Consume one helmet
+                    self.repo.update_user_inventory(user_id, "helmet", inv["helmet"] - 1)
+                    # Roll for failure — deeper levels can overwhelm basic gear
+                    if random.random() < fail_chance:
+                        protection_msg = (
+                            "Your helmet caved in under the force — "
+                            "it wasn't built to handle threats this deep! *(-1 helmet)*"
+                        )
+                    else:
+                        protected = True
+                        protection_msg = hazard.protected_msg
                 elif mithril_shield_uses > 0:
+                    # Mithril shield never fails — it's premium protection
                     protected = True
                     remaining = mithril_shield_uses - 1
                     self.repo.update_user_inventory(user_id, "mithril_shield", remaining)
@@ -305,10 +315,19 @@ class MiningUseCases:
                     )
             elif hazard.protection_item == "sword":
                 if not requires_special and has_sword:
-                    protected = True
-                    protection_msg = hazard.protected_msg
-                    self.repo.update_user_inventory(user_id, "sword", 0)
+                    # Consume one sword
+                    self.repo.update_user_inventory(user_id, "sword", inv["sword"] - 1)
+                    # Roll for failure
+                    if random.random() < fail_chance:
+                        protection_msg = (
+                            "Your sword shattered against the threat — "
+                            "a shop blade is no match for dangers this deep! *(-1 sword)*"
+                        )
+                    else:
+                        protected = True
+                        protection_msg = hazard.protected_msg
                 elif golden_axe_uses > 0:
+                    # Golden axe never fails — it's premium protection
                     protected = True
                     remaining = golden_axe_uses - 1
                     self.repo.update_user_inventory(user_id, "golden_axe", remaining)
@@ -330,6 +349,8 @@ class MiningUseCases:
                 bank_lost = 0
                 bank_insurance_used = False
                 if hazard.bank_loss_pct > 0:
+                    # Re-read inventory since helmet/sword may have been consumed
+                    inv = self.repo.get_user_inventory(user_id)
                     heart_uses = inv["heart_of_leviathan"]
                     if heart_uses > 0:
                         self.repo.update_user_inventory(user_id, "heart_of_leviathan", heart_uses - 1)
@@ -357,7 +378,11 @@ class MiningUseCases:
                 result.items_destroyed = True
                 result.new_balance = new_stars
 
-                disaster_msg = hazard.unprotected_msg.format(
+                # Build disaster message, prepending protection-failed text if applicable
+                disaster_msg = ""
+                if protection_msg:
+                    disaster_msg += protection_msg + "\n\n"
+                disaster_msg += hazard.unprotected_msg.format(
                     stars_lost=stars_lost, bank_lost=bank_lost
                 )
                 if bank_insurance_used:
