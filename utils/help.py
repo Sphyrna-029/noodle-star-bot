@@ -503,14 +503,7 @@ def _treasure_embed() -> discord.Embed:
         ),
         inline=False,
     )
-    embed.add_field(
-        name="Moderator Commands",
-        value=(
-            "`!chest spawn` — Force-spawn a chest\n"
-            "`!chest end` — Remove the active chest"
-        ),
-        inline=False,
-    )
+
     return embed
 
 

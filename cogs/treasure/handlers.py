@@ -5,6 +5,7 @@ from __future__ import annotations
 import random
 from datetime import datetime, timedelta
 
+import discord
 from discord.ext import commands, tasks
 
 from cogs.treasure.constants import (
@@ -23,6 +24,7 @@ class TreasureCog(commands.Cog):
         self.treasure = TreasureUseCases()
         self.treasure.set_event_callback(self._on_chest_event)
         self._next_spawn_at: datetime | None = None
+        self._daily_spawn_times: list[datetime] = []
         self._schedule_next_spawn()
         self.auto_spawn_check.start()
 
@@ -31,23 +33,92 @@ class TreasureCog(commands.Cog):
         self.auto_spawn_check.cancel()
 
     def _schedule_next_spawn(self) -> None:
-        """Pick a random time for the next daily auto-spawn."""
+        """Pick random times for the next two daily auto-spawns."""
         now = datetime.now()
-        target = datetime(
-            year=now.year,
-            month=now.month,
-            day=now.day,
-            hour=random.randint(0, 23),
-            minute=random.randint(0, 59),
-            second=random.randint(0, 59),
+
+        if not self._daily_spawn_times or all(
+            target <= now for target in self._daily_spawn_times
+        ):
+            target_day = now.date()
+            self._daily_spawn_times = self._generate_daily_spawn_times(target_day)
+            if all(target <= now for target in self._daily_spawn_times):
+                target_day = (now + timedelta(days=1)).date()
+                self._daily_spawn_times = self._generate_daily_spawn_times(target_day)
+
+        self._next_spawn_at = next(
+            (target for target in self._daily_spawn_times if target > now),
+            None,
         )
-        if target <= now:
-            target += timedelta(days=1)
-        self._next_spawn_at = target
+
+    def _generate_daily_spawn_times(self, target_day) -> list[datetime]:
+        times = [
+            datetime(
+                year=target_day.year,
+                month=target_day.month,
+                day=target_day.day,
+                hour=random.randint(0, 23),
+                minute=random.randint(0, 59),
+                second=random.randint(0, 59),
+            ),
+            datetime(
+                year=target_day.year,
+                month=target_day.month,
+                day=target_day.day,
+                hour=random.randint(0, 23),
+                minute=random.randint(0, 59),
+                second=random.randint(0, 59),
+            ),
+        ]
+        return sorted(times)
+
+    def _advance_spawn_schedule(self) -> None:
+        now = datetime.now()
+        self._daily_spawn_times = [
+            target for target in self._daily_spawn_times if target > now
+        ]
+        self._schedule_next_spawn()
+
+    def _build_alert_embed(
+        self,
+        title: str,
+        description: str,
+        *,
+        color: discord.Color,
+        emoji: str,
+    ) -> discord.Embed:
+        return discord.Embed(
+            title=f"{emoji} {title}",
+            description=description,
+            color=color,
+        )
+
+    def _build_chest_alert_embed(self) -> discord.Embed:
+        return self._build_alert_embed(
+            title="Treasure Chest Alert!",
+            description=(
+                "A **locked treasure chest** appears!\n"
+                "Use `!pick start` to claim the lock and begin."
+            ),
+            color=discord.Color.gold(),
+            emoji="🧰",
+        )
+
+    def _build_chest_usage_embed(self) -> discord.Embed:
+        return self._build_alert_embed(
+            title="Chest Commands",
+            description=(
+                "🧭 **Usage**\n"
+                "`!chest spawn` (mod)\n"
+                "`!chest status`\n"
+                "`!chest end` (mod)"
+            ),
+            color=discord.Color.blurple(),
+            emoji="🧰",
+        )
 
     @tasks.loop(minutes=1)
     async def auto_spawn_check(self) -> None:
-        """Auto-spawn one chest per day at a random time."""
+        """Auto-spawn two chests per day at random times."""
         if TREASURE_ANNOUNCEMENT_CHANNEL_ID == 0:
             return
 
@@ -69,9 +140,9 @@ class TreasureCog(commands.Cog):
         if channel is not None:
             result = self.treasure.spawn_chest(channel.id)
             if result.success:
-                await channel.send(result.message)
+                await channel.send(embed=self._build_chest_alert_embed())
 
-        self._schedule_next_spawn()
+        self._advance_spawn_schedule()
 
     async def _on_chest_event(self, event: str, chest) -> None:
         """Callback for chest events: expired, owner_timeout, opened."""
@@ -83,9 +154,23 @@ class TreasureCog(commands.Cog):
                 return
 
         if event == "owner_timeout":
-            await channel.send(TIMEOUT_MESSAGE)
+            await channel.send(
+                embed=self._build_alert_embed(
+                    title="Lock Reset!",
+                    description=TIMEOUT_MESSAGE,
+                    color=discord.Color.orange(),
+                    emoji="⌛",
+                )
+            )
         elif event == "expired":
-            await channel.send(EXPIRED_MESSAGE)
+            await channel.send(
+                embed=self._build_alert_embed(
+                    title="Chest Vanished",
+                    description=EXPIRED_MESSAGE,
+                    color=discord.Color.dark_gray(),
+                    emoji="🕳️",
+                )
+            )
         # "opened" is already announced in the pick result message.
 
     # ------------------------------------------------------------------ #
@@ -107,7 +192,7 @@ class TreasureCog(commands.Cog):
                 await ctx.send(f"❌ {result.message}")
                 return
 
-            await ctx.send(result.message)
+            await ctx.send(embed=self._build_chest_alert_embed())
             return
 
         if action in ("end", "stop"):
@@ -128,9 +213,7 @@ class TreasureCog(commands.Cog):
             await ctx.send(result.message)
             return
 
-        await ctx.send(
-            "Usage: `!chest spawn` (mod) | `!chest status` | `!chest end` (mod)"
-        )
+        await ctx.send(embed=self._build_chest_usage_embed())
 
     # ------------------------------------------------------------------ #
     # Lock-picking
