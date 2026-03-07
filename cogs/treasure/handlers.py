@@ -116,6 +116,21 @@ class TreasureCog(commands.Cog):
             emoji="🧰",
         )
 
+    def _build_pick_embed(
+        self,
+        title: str,
+        description: str,
+        *,
+        color: discord.Color,
+        emoji: str,
+    ) -> discord.Embed:
+        return self._build_alert_embed(
+            title=title,
+            description=description,
+            color=color,
+            emoji=emoji,
+        )
+
     @tasks.loop(minutes=1)
     async def auto_spawn_check(self) -> None:
         """Auto-spawn two chests per day at random times."""
@@ -225,15 +240,36 @@ class TreasureCog(commands.Cog):
         if not args or args[0].lower() == "start":
             result = self.treasure.start_pick(ctx.author.id, ctx.channel.id)
             if not result.success:
-                await ctx.send(f"❌ {result.message}")
+                await ctx.send(
+                    embed=self._build_pick_embed(
+                        title="Can't Start Picking",
+                        description=result.message,
+                        color=discord.Color.red(),
+                        emoji="⛔",
+                    )
+                )
                 return
 
-            await ctx.send(result.message)
+            await ctx.send(
+                embed=self._build_pick_embed(
+                    title="Lock Claimed!",
+                    description=result.message,
+                    color=discord.Color.gold(),
+                    emoji="🔐",
+                )
+            )
             return
 
         if args[0].lower() in ("status", "info"):
             result = self.treasure.status()
-            await ctx.send(result.message)
+            await ctx.send(
+                embed=self._build_pick_embed(
+                    title="Chest Status",
+                    description=result.message,
+                    color=discord.Color.blurple(),
+                    emoji="🧰",
+                )
+            )
             return
 
         # Interpret args as a guess
@@ -241,7 +277,12 @@ class TreasureCog(commands.Cog):
             guess = [int(x) for x in args]
         except ValueError:
             await ctx.send(
-                "❌ Invalid guess. Use numbers like: `!pick 1 3 2`."
+                embed=self._build_pick_embed(
+                    title="Invalid Guess",
+                    description="Use numbers like: `!pick 1 3 2`.",
+                    color=discord.Color.red(),
+                    emoji="❌",
+                )
             )
             return
 
@@ -253,10 +294,24 @@ class TreasureCog(commands.Cog):
         )
 
         if not result.success:
-            await ctx.send(f"❌ {result.message}")
+            await ctx.send(
+                embed=self._build_pick_embed(
+                    title="Pick Failed",
+                    description=result.message,
+                    color=discord.Color.red(),
+                    emoji="❌",
+                )
+            )
             return
 
-        await ctx.send(result.message)
+        await ctx.send(
+            embed=self._build_pick_embed(
+                title="Pick Result",
+                description=result.message,
+                color=discord.Color.green(),
+                emoji="🔓",
+            )
+        )
 
 
 async def setup(bot):

@@ -18,7 +18,7 @@ LOCK_PIN_MAX: Final[int] = 4
 LOCK_ATTEMPTS: Final[int] = 5
 
 # Time a single user can hold the lock before it resets
-LOCK_OWNER_TIMEOUT: Final[timedelta] = timedelta(seconds=60)
+LOCK_OWNER_TIMEOUT: Final[timedelta] = timedelta(seconds=120)
 
 # Time a chest stays available before expiring (if enabled)
 CHEST_LIFETIME: Final[timedelta] = timedelta(hours=1)
