@@ -558,8 +558,8 @@ def _items_embed() -> discord.Embed:
             "(or 30s with a rune). *0.1% drop per mine*\n"
             "🎣 **Bucktail Jig** (from fishing) — Use `!use jig` to get 20% legendary "
             "catch chance on your next cast. *0.3% drop per catch*\n"
-            "🔫 **Ray-Gun** (2 uses, from fishing) — Protects your items from alien "
-            "abductions. *0.35% drop per catch*"
+            "🔫 **Ray-Gun** (3 uses, 5,000 stars or fishing drop) — Protects your items from alien "
+            "abductions. *Also 0.35% drop per catch*"
         ),
         inline=False,
     )

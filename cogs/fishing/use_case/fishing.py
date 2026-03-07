@@ -644,9 +644,9 @@ class FishingUseCases:
 
             # 0.35% ray-gun on any catch
             if random.random() < 0.0035:
-                self.repo.update_user_inventory(user_id, "ray_gun", 2)
+                self.repo.update_user_inventory(user_id, "ray_gun", 3)
                 result.found_items.append(
-                    "**Ray-Gun** found! Protects your items from alien abduction (2 uses)."
+                    "**Ray-Gun** found! Protects your items from alien abduction (3 uses)."
                 )
 
             # 1% star magnet on rare or legendary catches

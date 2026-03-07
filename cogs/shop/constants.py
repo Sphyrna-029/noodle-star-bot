@@ -95,6 +95,15 @@ SHOP_ITEMS: Final[dict[str, ShopItem]] = {
         description="Protects your bank from one disaster at Level 4-5. Single use. Your wallet is still at risk!",
         aliases=("bank insurance", "insurance", "bank shield"),
     ),
+    "ray_gun": ShopItem(
+        price=5000,
+        db_column="ray_gun",
+        consumable=True,
+        emoji="🔫",
+        display_name="Ray-Gun",
+        description="Protects your items from alien abduction! 3 uses. Your stars are still at risk.",
+        aliases=("ray gun", "ray-gun", "raygun"),
+    ),
     "rocket_ship": ShopItem(
         price=10000,
         db_column="rocket_ship",

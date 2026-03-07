@@ -195,7 +195,9 @@ class ShopUseCases:
 
         # Add item to inventory
         current_amount = inventory[item.db_column]
-        self.repo.update_user_inventory(user_id, item.db_column, current_amount + quantity)
+        # Ray-gun grants 3 uses per purchase
+        add_amount = quantity * 3 if item.key == "ray_gun" else quantity
+        self.repo.update_user_inventory(user_id, item.db_column, current_amount + add_amount)
 
         return PurchaseResult(
             success=True,
