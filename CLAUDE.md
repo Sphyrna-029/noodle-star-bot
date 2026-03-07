@@ -81,6 +81,13 @@ SQLite with manual migration system. New columns require:
 2. Column added to `_INVENTORY_COLUMNS` in `database/repositories/inventory.py`
 3. Column in `_ensure_inventory_row` INSERT and `get_user_inventory` SELECT
 
+### Help Menu
+
+- **Always update the help menu** (`utils/help.py`) when adding or changing player-facing features.
+- Use an existing category embed if the change fits (Mining, Fishing, Items, Shop, etc.).
+- Add a new button/category only when the feature doesn't belong in any existing section.
+- Both `HelpView` (main menu) and `SubHelpView` (sub-pages) need the button added.
+
 ### Conventions
 
 - Shop items defined in `cogs/shop/constants.py` as `ShopItem` dataclasses with aliases
