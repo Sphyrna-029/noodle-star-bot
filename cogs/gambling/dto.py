@@ -45,6 +45,11 @@ class DuelResult:
     stamina_cost: int = 0
     challenger_stamina_before: int = 0
     challenger_stamina_after: int = 0
+    unlocked_achievement_keys: list[str] = None
+
+    def __post_init__(self):
+        if self.unlocked_achievement_keys is None:
+            self.unlocked_achievement_keys = []
 
 
 @dataclass(slots=True)
@@ -78,10 +83,13 @@ class RoulettePvpResult:
     challenger_bank: int = 0
     opponent_wallet: int = 0
     opponent_bank: int = 0
+    unlocked_achievements: list[tuple[int, str]] = None
 
     def __post_init__(self):
         if self.trigger_log is None:
             self.trigger_log = []
+        if self.unlocked_achievements is None:
+            self.unlocked_achievements = []
 
 
 @dataclass(slots=True)

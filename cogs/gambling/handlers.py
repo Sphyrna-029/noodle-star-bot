@@ -7,6 +7,7 @@ from datetime import datetime
 import discord
 from discord.ext import commands
 
+from cogs.economy.constants import ACHIEVEMENT_DEFS
 from cogs.gambling.use_cases import (
     GambleUseCase,
     CoinflipUseCase,
@@ -220,6 +221,25 @@ class GamblingCog(commands.Cog):
         self.duel_use_case = DuelUseCase()
         self.blackjack_use_case = BlackJackUseCase()
         self.roulette_use_case = RouletteUseCase()
+        self._achievement_defs = {
+            definition["key"]: definition for definition in ACHIEVEMENT_DEFS
+        }
+
+    def _format_achievement_unlock_lines(
+        self,
+        unlocked: list[tuple[int, str]],
+        mentions: dict[int, str],
+    ) -> list[str]:
+        lines: list[str] = []
+        for user_id, achievement_key in unlocked:
+            definition = self._achievement_defs.get(achievement_key)
+            if definition is None:
+                continue
+            user_mention = mentions.get(user_id, f"<@{user_id}>")
+            lines.append(
+                f"🎉 {user_mention} unlocked {definition['emoji']} **{definition['name']}**!"
+            )
+        return lines
 
     @commands.command(name="gamble")
     async def gamble(self, ctx, amount: int = None):
@@ -342,6 +362,16 @@ class GamblingCog(commands.Cog):
             f"{ctx.author.mention}'s balance: **{result.challenger_new_balance}** stars\n"
             f"{opponent.mention}'s balance: **{result.opponent_new_balance}** stars"
         )
+        if result.unlocked_achievement_keys:
+            lines = self._format_achievement_unlock_lines(
+                [(result.winner_id, key) for key in result.unlocked_achievement_keys],
+                {
+                    ctx.author.id: ctx.author.mention,
+                    opponent.id: opponent.mention,
+                },
+            )
+            if lines:
+                await ctx.send("\n".join(lines))
 
     @commands.command(name="blackjack", aliases=["bj"])
     async def blackjack(self, ctx, amount: int = None):
@@ -536,6 +566,17 @@ class GamblingCog(commands.Cog):
                 + f"Challenger balance: Wallet **{result.challenger_wallet}** | Bank **{result.challenger_bank}**\n"
                 + f"Opponent balance: Wallet **{result.opponent_wallet}** | Bank **{result.opponent_bank}**"
             )
+            if result.unlocked_achievements:
+                lines = self._format_achievement_unlock_lines(
+                    result.unlocked_achievements,
+                    {
+                        ctx.author.id: ctx.author.mention,
+                        result.winner_id: winner_name,
+                        result.loser_id: loser_name,
+                    },
+                )
+                if lines:
+                    await ctx.send("\n".join(lines))
             return
 
         if action in {"cancel", "decline"}:

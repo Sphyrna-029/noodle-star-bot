@@ -293,6 +293,25 @@ class RouletteUseCase(BaseGamblingUseCase):
                     message="Could not settle roulette game (balance changed mid-game).",
                 )
 
+            roulette_wins = self.repo.increment_achievement_progress(
+                winner_id, "roulette_wins", 1
+            )
+            roulette_deaths = self.repo.increment_achievement_progress(
+                loser_id, "roulette_deaths", 1
+            )
+            unlocked_achievements: list[tuple[int, str]] = []
+            if roulette_wins >= 1 and self.repo.unlock_achievement(
+                winner_id, "roulette_survivor"
+            ):
+                unlocked_achievements.append((winner_id, "roulette_survivor"))
+            if roulette_wins >= 10 and self.repo.unlock_achievement(
+                winner_id, "roulette_legend"
+            ):
+                unlocked_achievements.append((winner_id, "roulette_legend"))
+            if roulette_deaths >= 1 and self.repo.unlock_achievement(
+                loser_id, "roulette_fall_guy"
+            ):
+                unlocked_achievements.append((loser_id, "roulette_fall_guy"))
             self._clear_active_game(game)
             return RoulettePvpResult(
                 success=True,
@@ -309,6 +328,7 @@ class RouletteUseCase(BaseGamblingUseCase):
                 challenger_bank=settle_result["challenger_bank"],
                 opponent_wallet=settle_result["opponent_wallet"],
                 opponent_bank=settle_result["opponent_bank"],
+                unlocked_achievements=unlocked_achievements,
             )
 
         next_turn = game.opponent_id if user_id == game.challenger_id else game.challenger_id
