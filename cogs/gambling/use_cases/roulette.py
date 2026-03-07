@@ -20,6 +20,7 @@ class _ActivePvpGame:
     opponent_id: int
     opponent_name: str
     amount: int
+    pot_amount: int
     channel_id: int
     bullet_chamber: int
     current_turn_user_id: int
@@ -87,16 +88,32 @@ class RouletteUseCase(BaseGamblingUseCase):
         loser_id = expected_turn_user_id
         winner_id = game.opponent_id if loser_id == game.challenger_id else game.challenger_id
 
-        settle_result = self.repo.settle_roulette_pvp_bet(
+        settle_result = self.repo.payout_roulette_pvp_winner(
             challenger_id=game.challenger_id,
             challenger_name=game.challenger_name,
             opponent_id=game.opponent_id,
             opponent_name=game.opponent_name,
-            amount=game.amount,
             winner_id=winner_id,
+            pot_amount=game.pot_amount,
         )
         if settle_result is None:
             self._clear_active_game(game)
+            if self._event_callback:
+                try:
+                    await self._event_callback(
+                        "timeout_error",
+                        game.channel_id,
+                        RoulettePvpResult(
+                            success=False,
+                            message="Timeout occurred but payout failed.",
+                            game_over=True,
+                            loser_id=loser_id,
+                            winner_id=winner_id,
+                            amount=game.amount,
+                        ),
+                    )
+                except Exception:
+                    pass
             return
 
         result = RoulettePvpResult(
@@ -309,11 +326,25 @@ class RouletteUseCase(BaseGamblingUseCase):
             opponent_id=opponent_id,
             opponent_name=opponent_name,
             amount=amount,
+            pot_amount=amount * 2,
             channel_id=invite["channel_id"],
             bullet_chamber=random.randint(1, ROULETTE_CHAMBERS),
             current_turn_user_id=challenger_id,
             turn_deadline=datetime.now() + timedelta(seconds=RUSSIAN_TURN_TIMEOUT_SECONDS),
         )
+        lock_result = self.repo.lock_roulette_pvp_bet(
+            challenger_id=challenger_id,
+            challenger_name=challenger_name,
+            opponent_id=opponent_id,
+            opponent_name=opponent_name,
+            amount=amount,
+        )
+        if lock_result is None:
+            self.repo.delete_roulette_invite(invite["id"])
+            return RoulettePvpResult(
+                success=False,
+                message="Could not lock both stakes. Invite cancelled.",
+            )
         self._set_active_game(game)
         self._schedule_turn_timeout(game)
         self.repo.delete_roulette_invite(invite["id"])
@@ -367,13 +398,13 @@ class RouletteUseCase(BaseGamblingUseCase):
             loser_id = user_id
             winner_id = game.opponent_id if user_id == game.challenger_id else game.challenger_id
 
-            settle_result = self.repo.settle_roulette_pvp_bet(
+            settle_result = self.repo.payout_roulette_pvp_winner(
                 challenger_id=game.challenger_id,
                 challenger_name=game.challenger_name,
                 opponent_id=game.opponent_id,
                 opponent_name=game.opponent_name,
-                amount=game.amount,
                 winner_id=winner_id,
+                pot_amount=game.pot_amount,
             )
             if settle_result is None:
                 self._clear_active_game(game)

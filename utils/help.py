@@ -12,10 +12,6 @@ from typing import Iterable, List, Optional
 import discord
 from discord.ext import commands
 
-from cogs.gambling.constants import (
-    RUSSIAN_TURN_TIMEOUT_SECONDS,
-)
-
 # ---------------------------------------------------------------------------
 # Embed builders — one per category, written for non-tech-savvy users
 # ---------------------------------------------------------------------------
@@ -372,7 +368,7 @@ def _gambling_embed() -> discord.Embed:
             "Costs stamina.\n\n"
             "**🔫 Russian Roulette** — `!russian @player 100` (or `!rr`)\n"
             "PvP only: challenge another player, they accept, then each turn pick a chamber with "
-            f"`!russian fire <1-6>`. You have **{RUSSIAN_TURN_TIMEOUT_SECONDS}** seconds per turn or you forfeit.\n\n"
+            "`!russian fire <1-6>`. You have **1 hour** per turn or you forfeit.\n\n"
             "**🎲 Gamble** — `!gamble 50`\n"
             "Roll a d7, win only on 7 (14% chance). Can pay up to 20x. "
             "**Very risky!**"
