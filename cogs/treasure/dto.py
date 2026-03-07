@@ -27,6 +27,9 @@ class TreasureChest:
     state: ChestState
     reward: int
     spawned_at: datetime
+    pin_count: int = 3
+    item_drop_chance: float = 0.0
+    rare_item_drop_chance: float = 0.0
     expires_at: Optional[datetime] = None
     owner_id: Optional[int] = None
     combo: tuple[int, ...] = field(default_factory=tuple)
@@ -65,6 +68,7 @@ class PickResult:
     attempts_left: int = 0
     reward: int = 0
     new_balance: int = 0
+    found_items: list[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)

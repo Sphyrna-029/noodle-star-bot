@@ -8,6 +8,8 @@ from datetime import datetime, timedelta
 from typing import Callable, Optional
 
 from cogs.treasure.constants import (
+    CHEST_ITEM_DROP_CHANCE,
+    CHEST_ITEM_TIER_CHANCE,
     CHEST_ANNOUNCEMENT,
     CHEST_LIFETIME,
     FAIL_MESSAGE,
@@ -15,8 +17,10 @@ from cogs.treasure.constants import (
     LOCK_INSTRUCTIONS,
     LOCK_OWNER_TIMEOUT,
     LOCK_PIN_COUNT,
+    LOCK_PIN_COUNT_ITEM_CHEST,
     LOCK_PIN_MAX,
     LOCK_PIN_MIN,
+    CHEST_RARE_ITEM_DROP_CHANCE,
     SUCCESS_MESSAGE,
     TIMEOUT_MESSAGE,
     TREASURE_REWARD_MAX,
@@ -42,6 +46,24 @@ class TreasureUseCases:
         self._expire_task: Optional[asyncio.Task] = None
         self._owner_task: Optional[asyncio.Task] = None
         self._event_callback: Optional[Callable] = None
+        self._common_drop_table = (
+            ("helmet", "🪖", "Mining Helmet", 1),
+            ("sword", "⚔️", "Sword", 1),
+            ("raw_potato", "🥔", "Raw Potato", 3),
+            ("bait_worm", "🪱", "Worm Bait", 3),
+            ("bait_herring", "🐟", "Herring Bait", 2),
+            ("bait_sturgeon", "🐋", "Sturgeon Bait", 1),
+            ("bank_insurance", "💸", "Bank Insurance", 1),
+        )
+        self._rare_drop_table = (
+            ("golden_axe", "🪓", "Golden Axe", 25),
+            ("mithril_shield", "🛡️", "Mithril Shield", 5),
+            ("rune_fragment", "🪨", "Rune Fragment", 10),
+            ("fossilized_noodle", "🍜", "Fossilized Noodle", 10),
+            ("star_magnet", "🧲", "Star Magnet", 10),
+            ("lucky_charm", "🍀", "Lucky Charm", 20),
+            ("heart_of_leviathan", "💜", "Heart of Leviathan", 1),
+        )
 
     # --------------------------------------------------------------------- #
     # Public API
@@ -61,6 +83,7 @@ class TreasureUseCases:
 
         now = datetime.now()
         reward = random.randint(TREASURE_REWARD_MIN, TREASURE_REWARD_MAX)
+        item_tier = random.random() < CHEST_ITEM_TIER_CHANCE
         expires_at = now + CHEST_LIFETIME if CHEST_LIFETIME else None
 
         self._chest = TreasureChest(
@@ -68,6 +91,9 @@ class TreasureUseCases:
             state=ChestState.AVAILABLE,
             reward=reward,
             spawned_at=now,
+            pin_count=LOCK_PIN_COUNT_ITEM_CHEST if item_tier else LOCK_PIN_COUNT,
+            item_drop_chance=CHEST_ITEM_DROP_CHANCE if item_tier else 0.0,
+            rare_item_drop_chance=CHEST_RARE_ITEM_DROP_CHANCE if item_tier else 0.0,
             expires_at=expires_at,
         )
 
@@ -89,10 +115,11 @@ class TreasureUseCases:
             return StartPickResult(
                 True,
                 LOCK_INSTRUCTIONS.format(
-                    pins=LOCK_PIN_COUNT,
+                    pins=chest.pin_count,
                     min_pin=LOCK_PIN_MIN,
                     max_pin=LOCK_PIN_MAX,
                     attempts=chest.attempts_left,
+                    example_guess=self._build_guess_example(chest.pin_count),
                 ),
                 chest,
             )
@@ -109,7 +136,7 @@ class TreasureUseCases:
 
         chest.state = ChestState.LOCKED
         chest.owner_id = user_id
-        chest.combo = self._generate_combo()
+        chest.combo = self._generate_combo(chest.pin_count)
         chest.attempts_left = LOCK_ATTEMPTS
         chest.owner_expires_at = datetime.now() + LOCK_OWNER_TIMEOUT
 
@@ -119,10 +146,11 @@ class TreasureUseCases:
         return StartPickResult(
             True,
             LOCK_INSTRUCTIONS.format(
-                pins=LOCK_PIN_COUNT,
+                pins=chest.pin_count,
                 min_pin=LOCK_PIN_MIN,
                 max_pin=LOCK_PIN_MAX,
                 attempts=LOCK_ATTEMPTS,
+                example_guess=self._build_guess_example(chest.pin_count),
             ),
             chest,
         )
@@ -152,10 +180,10 @@ class TreasureUseCases:
             self._reset_lock(reason="timeout")
             return PickResult(False, TIMEOUT_MESSAGE)
 
-        if len(guess) != LOCK_PIN_COUNT:
+        if len(guess) != chest.pin_count:
             return PickResult(
                 False,
-                f"Enter **{LOCK_PIN_COUNT}** numbers between {LOCK_PIN_MIN}-{LOCK_PIN_MAX}.",
+                f"Enter **{chest.pin_count}** numbers between {LOCK_PIN_MIN}-{LOCK_PIN_MAX}.",
                 attempts_left=chest.attempts_left,
             )
 
@@ -170,14 +198,21 @@ class TreasureUseCases:
         exact, misplaced = self._compute_feedback(chest.combo, guess)
         chest.attempts_left -= 1
 
-        if exact == LOCK_PIN_COUNT:
+        if exact == chest.pin_count:
             reward = chest.reward
             current = self.repo.get_user_stars(user_id, username)
             new_balance = current + reward
             self.repo.update_user_stars(user_id, username, new_balance)
             self.repo.update_username(user_id, username)
 
+            found_items: list[str] = []
+            item_drop = self._roll_item_drop(user_id, chest)
+            if item_drop is not None:
+                found_items.append(item_drop)
+
             message = SUCCESS_MESSAGE.format(mention=f"<@{user_id}>", reward=reward)
+            if found_items:
+                message += "\n\n🎒 **Item drop:** " + "\n".join(found_items)
             self._mark_opened()
 
             return PickResult(
@@ -189,6 +224,7 @@ class TreasureUseCases:
                 attempts_left=chest.attempts_left,
                 reward=reward,
                 new_balance=new_balance,
+                found_items=found_items,
             )
 
         if chest.attempts_left <= 0:
@@ -245,10 +281,32 @@ class TreasureUseCases:
     # Internal helpers
     # --------------------------------------------------------------------- #
 
-    def _generate_combo(self) -> tuple[int, ...]:
+    def _generate_combo(self, pin_count: int) -> tuple[int, ...]:
         return tuple(
-            random.randint(LOCK_PIN_MIN, LOCK_PIN_MAX) for _ in range(LOCK_PIN_COUNT)
+            random.randint(LOCK_PIN_MIN, LOCK_PIN_MAX) for _ in range(pin_count)
         )
+
+    @staticmethod
+    def _build_guess_example(pin_count: int) -> str:
+        sample = " ".join(str(random.randint(LOCK_PIN_MIN, LOCK_PIN_MAX)) for _ in range(pin_count))
+        return f"!pick {sample}"
+
+    def _roll_item_drop(self, user_id: int, chest: TreasureChest) -> str | None:
+        if chest.item_drop_chance <= 0:
+            return None
+        if random.random() >= chest.item_drop_chance:
+            return None
+
+        use_rare_pool = random.random() < chest.rare_item_drop_chance
+        table = self._rare_drop_table if use_rare_pool else self._common_drop_table
+        item_key, emoji, item_name, amount = random.choice(table)
+
+        inventory = self.repo.get_user_inventory(user_id)
+        current = inventory.get(item_key, 0)
+        self.repo.update_user_inventory(user_id, item_key, current + amount)
+
+        rarity_prefix = "RARE " if use_rare_pool else ""
+        return f"{emoji} **{rarity_prefix}{item_name}** (x{amount})"
 
     @staticmethod
     def _compute_feedback(combo: tuple[int, ...], guess: list[int]) -> tuple[int, int]:

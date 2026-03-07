@@ -12,10 +12,6 @@ from typing import Iterable, List, Optional
 import discord
 from discord.ext import commands
 
-from cogs.gambling.constants import (
-    RUSSIAN_TURN_TIMEOUT_SECONDS,
-)
-
 # ---------------------------------------------------------------------------
 # Embed builders — one per category, written for non-tech-savvy users
 # ---------------------------------------------------------------------------
@@ -377,7 +373,7 @@ def _gambling_embed() -> discord.Embed:
             "Costs stamina.\n\n"
             "**🔫 Russian Roulette** — `!russian @player 100` (or `!rr`)\n"
             "PvP only: challenge another player, they accept, then each turn pick a chamber with "
-            f"`!russian fire <1-6>`. You have **{RUSSIAN_TURN_TIMEOUT_SECONDS}** seconds per turn or you forfeit.\n\n"
+            "`!russian fire <1-6>`. You have **1 hour** per turn or you forfeit.\n\n"
             "**🎲 Gamble** — `!gamble 50`\n"
             "Roll a d7, win only on 7 (14% chance). Can pay up to 20x. "
             "**Very risky!**"
@@ -488,7 +484,7 @@ def _treasure_embed() -> discord.Embed:
         value=(
             "`!chest status` — Check if a chest is active\n"
             "`!pick start` — Claim the lock and begin\n"
-            "`!pick 1 3 2` — Submit a 3-number guess\n"
+            "`!pick 1 3 2` / `!pick 1 3 2 4` — Submit a guess\n"
             "`!pick status` — Check chest lock status"
         ),
         inline=False,
@@ -496,7 +492,8 @@ def _treasure_embed() -> discord.Embed:
     embed.add_field(
         name="How Lock-Picking Works",
         value=(
-            "• The code has **3 pins** and each pin is **1-4**\n"
+            "• Standard chests use **3 pins** (1-4 each)\n"
+            "• Item-capable chests use **4 pins** and can drop extra loot\n"
             "• You get **5 attempts** per lock session\n"
             "• Feedback shows exact matches and misplaced matches\n"
             "• If you solve it, you win a random star reward"
@@ -512,11 +509,77 @@ def _treasure_embed() -> discord.Embed:
         ),
         inline=False,
     )
+
+    return embed
+
+
+def _space_embed() -> discord.Embed:
+    embed = discord.Embed(
+        title="🚀 Space Mining — How It Works",
+        description=(
+            "Space mining is the endgame! After reaching mine level 5, "
+            "buy a Rocket Ship and blast off to mine on 5 planets with "
+            "bigger rewards and deadlier hazards."
+        ),
+        color=discord.Color.dark_blue(),
+    )
     embed.add_field(
-        name="Moderator Commands",
+        name="Getting Started (step by step)",
         value=(
-            "`!chest spawn` — Force-spawn a chest\n"
-            "`!chest end` — Remove the active chest"
+            "**Step 1:** Reach mine level 5 (`!unlock 5`)\n"
+            "**Step 2:** Buy a Rocket Ship from `!store` (10,000 stars)\n"
+            "**Step 3:** Type `!launch` to blast off into space\n"
+            "**Step 4:** Type `!spacemine` to mine on the Moon\n"
+            "**Step 5:** Earn stars and unlock more planets with `!unlockplanet`"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="All Space Commands",
+        value=(
+            "`!launch` — Blast off into space (one-time, requires Rocket Ship + mine Lv5)\n"
+            "`!spacemine` — Mine on your active planet (shares mining cooldown)\n"
+            "`!spacemine potato` — Mine with reduced cooldown (uses 1 Raw Potato)\n"
+            "`!spacemine mushroom` — Mine instantly (uses 1 Golden Mushroom)\n"
+            "`!planets` — View all planets and your active planet\n"
+            "`!planets 3` — Switch to a different planet\n"
+            "`!unlockplanet 2` — Pay to unlock the next planet"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="The 5 Planets",
+        value=(
+            "🌕 **Planet 1 — The Moon** — Free! 12% disaster chance\n"
+            "🔴 **Planet 2 — Mars** — 5,000 stars, 14% disaster\n"
+            "🪐 **Planet 3 — Saturn** — 10,000 stars, 16% disaster, **bank risk!**\n"
+            "💠 **Planet 4 — Uranus** — 15,000 stars, 18% disaster, **bank risk!**\n"
+            "🥶 **Planet 5 — Pluto** — 20,000 stars, 22% disaster, **bank risk!**\n\n"
+            "Planets must be unlocked in order (1 → 2 → 3 → 4 → 5)."
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Space Hazards",
+        value=(
+            "☄️ **Meteor Strike** — Blocked by Helmet (50% wallet loss)\n"
+            "🏴‍☠️ **Space Pirate** — Blocked by Sword (75% wallet loss)\n"
+            "☀️ **Solar Flare** (P3+) — Blocked by Helmet (85% wallet + 10% bank)\n"
+            "🕳️ **Black Hole Rift** (P3+) — Blocked by Sword (85% wallet + 15% bank)\n"
+            "👁️ **Void Entity** (P5 only) — Blocked by Sword (90% wallet + 30% bank)\n\n"
+            "**Helmets and swords have a HIGH failure chance in space!**\n"
+            "Golden Axe and Mithril Shield never fail — they're essential here."
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Pro Tips",
+        value=(
+            "• `!deposit all` before space mining — the hazards are brutal\n"
+            "• Buy Bank Insurance for planets 3+ to protect your bank\n"
+            "• Space mining shares the same cooldown as regular mining\n"
+            "• Higher planets = better ores but much more dangerous\n"
+            "• Protection failure chance goes up to 50% on Pluto!"
         ),
         inline=False,
     )

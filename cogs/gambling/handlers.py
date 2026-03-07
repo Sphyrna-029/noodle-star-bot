@@ -8,7 +8,6 @@ import discord
 from discord.ext import commands
 
 from cogs.economy.constants import ACHIEVEMENT_DEFS
-from cogs.gambling.constants import RUSSIAN_TURN_TIMEOUT_SECONDS
 from cogs.gambling.use_cases import (
     GambleUseCase,
     CoinflipUseCase,
@@ -229,9 +228,6 @@ class GamblingCog(commands.Cog):
 
     async def _on_roulette_event(self, event: str, channel_id: int, result) -> None:
         """Handle async roulette events (e.g. timeout loss announcements)."""
-        if event != "timeout_loss":
-            return
-
         channel = self.bot.get_channel(channel_id)
         if channel is None:
             try:
@@ -239,13 +235,19 @@ class GamblingCog(commands.Cog):
             except Exception:
                 return
 
-        await channel.send(
-            "⏱️ **Cowardice!**\n"
-            f"<@{result.loser_id}> took more than **{RUSSIAN_TURN_TIMEOUT_SECONDS} seconds** on their turn and forfeits.\n"
-            f"🏆 <@{result.winner_id}> wins **{result.amount}** stars.\n"
-            f"Challenger balance: Wallet **{result.challenger_wallet}** | Bank **{result.challenger_bank}**\n"
-            f"Opponent balance: Wallet **{result.opponent_wallet}** | Bank **{result.opponent_bank}**"
-        )
+        if event == "timeout_loss":
+            await channel.send(
+                "⏱️ **Cowardice!**\n"
+                f"<@{result.loser_id}> took more than **1 hour** on their turn and forfeits.\n"
+                f"🏆 <@{result.winner_id}> wins **{result.amount}** stars.\n"
+                f"Challenger balance: Wallet **{result.challenger_wallet}** | Bank **{result.challenger_bank}**\n"
+                f"Opponent balance: Wallet **{result.opponent_wallet}** | Bank **{result.opponent_bank}**"
+            )
+        elif event == "timeout_error":
+            await channel.send(
+                "⚠️ Russian roulette timed out, but payout failed.\n"
+                f"Loser: <@{result.loser_id}> | Winner: <@{result.winner_id}>."
+            )
 
     def _format_achievement_unlock_lines(
         self,
@@ -498,7 +500,7 @@ class GamblingCog(commands.Cog):
                 "🎯 **Russian Roulette**\n"
                 "`!russian @user <amount>` — Send PvP invite (6h expiry)\n"
                 "`!russian accept [@user]` — Accept pending PvP invite\n"
-                f"`!russian fire <1-6>` — Pick a chamber on your turn ({RUSSIAN_TURN_TIMEOUT_SECONDS}s limit)\n"
+                "`!russian fire <1-6>` — Pick a chamber on your turn (1 hour limit)\n"
                 "`!russian cancel [@user]` — Cancel pending PvP invite\n"
                 "`!rr ...` works as shorthand."
             )
@@ -521,7 +523,7 @@ class GamblingCog(commands.Cog):
                 "🔫 **PvP Russian Roulette started!**\n"
                 f"Bet: **{result.amount}** stars each.\n"
                 f"First turn: <@{result.next_turn_user_id}>.\n"
-                f"Choose a chamber with `!russian fire <1-6>` within **{RUSSIAN_TURN_TIMEOUT_SECONDS} seconds** or forfeit."
+                "Choose a chamber with `!russian fire <1-6>` within **1 hour** or forfeit."
             )
             return
 
@@ -548,7 +550,7 @@ class GamblingCog(commands.Cog):
                 await ctx.send(
                     f"*click* {ctx.author.mention} fired chamber **{result.selected_chamber}** safely.\n"
                     f"Next turn: <@{result.next_turn_user_id}>.\n"
-                    f"Use `!russian fire <1-6>` within **{RUSSIAN_TURN_TIMEOUT_SECONDS} seconds**."
+                    "Use `!russian fire <1-6>` within **1 hour**."
                 )
                 return
 
