@@ -446,6 +446,7 @@ class GamblingCog(commands.Cog):
                 "🎯 **Russian Roulette**\n"
                 "`!russian @user <amount>` — Send PvP invite (6h expiry)\n"
                 "`!russian accept [@user]` — Accept pending PvP invite\n"
+                "`!russian fire <1-6>` — Pick a chamber on your turn\n"
                 "`!russian cancel [@user]` — Cancel pending PvP invite\n"
                 "`!rr ...` works as shorthand."
             )
@@ -464,23 +465,62 @@ class GamblingCog(commands.Cog):
                 await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
                 return
 
+            await ctx.send(
+                "🔫 **PvP Russian Roulette started!**\n"
+                f"Bet: **{result.amount}** stars each.\n"
+                f"First turn: <@{result.next_turn_user_id}>.\n"
+                "Choose a chamber with `!russian fire <1-6>`."
+            )
+            return
+
+        if action in {"fire", "f"}:
+            if len(parts) < 2:
+                await ctx.send(f"❌ {ctx.author.mention}, usage: `!russian fire <1-6>`")
+                return
+            try:
+                chamber_choice = int(parts[1])
+            except ValueError:
+                await ctx.send(f"❌ {ctx.author.mention}, usage: `!russian fire <1-6>`")
+                return
+
+            result = self.roulette_use_case.fire_pvp_turn(
+                user_id=ctx.author.id,
+                username=str(ctx.author),
+                chamber_choice=chamber_choice,
+            )
+            if not result.success:
+                await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
+                return
+
+            if not result.game_over:
+                await ctx.send(
+                    f"*click* {ctx.author.mention} fired chamber **{result.selected_chamber}** safely.\n"
+                    f"Next turn: <@{result.next_turn_user_id}>.\n"
+                    "Use `!russian fire <1-6>`."
+                )
+                return
+
             guild = ctx.guild
             players = {}
-            if challenger_id is not None:
-                players[challenger_id] = guild.get_member(challenger_id) if guild else None
+            for shooter_id, _chosen, _fired in result.trigger_log:
+                players[shooter_id] = guild.get_member(shooter_id) if guild else None
             if result.winner_id is not None:
                 players[result.winner_id] = guild.get_member(result.winner_id) if guild else None
             if result.loser_id is not None:
                 players[result.loser_id] = guild.get_member(result.loser_id) if guild else None
 
             pull_lines = []
-            for idx, shooter_id in enumerate(result.trigger_log, start=1):
+            for idx, (shooter_id, chosen_chamber, fired) in enumerate(result.trigger_log, start=1):
                 shooter = players.get(shooter_id)
                 shooter_name = shooter.mention if shooter else f"<@{shooter_id}>"
-                if idx == result.bullet_chamber:
-                    pull_lines.append(f"**{idx}.** {shooter_name} pulls... **BANG** 💥")
+                if fired:
+                    pull_lines.append(
+                        f"**{idx}.** {shooter_name} chose chamber **{chosen_chamber}**... **BANG** 💥"
+                    )
                 else:
-                    pull_lines.append(f"**{idx}.** {shooter_name} pulls... *click*")
+                    pull_lines.append(
+                        f"**{idx}.** {shooter_name} chose chamber **{chosen_chamber}**... *click*"
+                    )
 
             winner = players.get(result.winner_id)
             loser = players.get(result.loser_id)
@@ -551,7 +591,7 @@ class GamblingCog(commands.Cog):
             await ctx.send(
                 f"🔫 {opponent.mention}, {ctx.author.mention} challenged you to PvP Russian Roulette "
                 f"for **{result.amount}** stars each.\n"
-                f"Accept with `!russian accept {ctx.author.mention}`{expires_text}."
+                f"Accept with `!russian accept`{expires_text}."
             )
             return
 
