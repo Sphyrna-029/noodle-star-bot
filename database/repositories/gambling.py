@@ -372,3 +372,206 @@ class GamblingRepository(BaseRepository):
                 "opponent_wallet": opponent_wallet,
                 "opponent_bank": opponent_bank,
             }
+
+    def lock_roulette_pvp_bet(
+        self,
+        challenger_id: int,
+        challenger_name: str,
+        opponent_id: int,
+        opponent_name: str,
+        amount: int,
+    ) -> Optional[dict]:
+        """Lock both players' stakes from wallet+bank at game start."""
+        with self.db.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT user_id, stars, bank
+                FROM noodle_stars
+                WHERE user_id IN (?, ?)
+                """,
+                (challenger_id, opponent_id),
+            )
+            rows = cursor.fetchall()
+            if len(rows) != 2:
+                return None
+
+            by_id = {row["user_id"]: row for row in rows}
+            challenger = by_id.get(challenger_id)
+            opponent = by_id.get(opponent_id)
+            if challenger is None or opponent is None:
+                return None
+
+            challenger_wallet_before = challenger["stars"] or 0
+            challenger_bank_before = challenger["bank"] or 0
+            opponent_wallet_before = opponent["stars"] or 0
+            opponent_bank_before = opponent["bank"] or 0
+
+            if challenger_wallet_before + challenger_bank_before < amount:
+                return None
+            if opponent_wallet_before + opponent_bank_before < amount:
+                return None
+
+            challenger_wallet_take = min(challenger_wallet_before, amount)
+            challenger_bank_take = amount - challenger_wallet_take
+            challenger_wallet = challenger_wallet_before - challenger_wallet_take
+            challenger_bank = challenger_bank_before - challenger_bank_take
+
+            opponent_wallet_take = min(opponent_wallet_before, amount)
+            opponent_bank_take = amount - opponent_wallet_take
+            opponent_wallet = opponent_wallet_before - opponent_wallet_take
+            opponent_bank = opponent_bank_before - opponent_bank_take
+
+            cursor.execute(
+                """
+                UPDATE noodle_stars
+                SET stars = ?, bank = ?, username = ?
+                WHERE user_id = ?
+                """,
+                (challenger_wallet, challenger_bank, challenger_name, challenger_id),
+            )
+            cursor.execute(
+                """
+                UPDATE noodle_stars
+                SET stars = ?, bank = ?, username = ?
+                WHERE user_id = ?
+                """,
+                (opponent_wallet, opponent_bank, opponent_name, opponent_id),
+            )
+
+            # Annotate stake lock wallet deltas.
+            try:
+                if challenger_wallet != challenger_wallet_before:
+                    cursor.execute(
+                        """
+                        UPDATE star_ledger
+                        SET source = ?, reason = ?
+                        WHERE id = (
+                            SELECT id FROM star_ledger
+                            WHERE user_id = ?
+                            ORDER BY id DESC
+                            LIMIT 1
+                        )
+                        """,
+                        ("gambling", "russian_pvp_lock", challenger_id),
+                    )
+                if opponent_wallet != opponent_wallet_before:
+                    cursor.execute(
+                        """
+                        UPDATE star_ledger
+                        SET source = ?, reason = ?
+                        WHERE id = (
+                            SELECT id FROM star_ledger
+                            WHERE user_id = ?
+                            ORDER BY id DESC
+                            LIMIT 1
+                        )
+                        """,
+                        ("gambling", "russian_pvp_lock", opponent_id),
+                    )
+            except Exception:
+                pass
+
+            return {
+                "challenger_wallet": challenger_wallet,
+                "challenger_bank": challenger_bank,
+                "opponent_wallet": opponent_wallet,
+                "opponent_bank": opponent_bank,
+            }
+
+    def payout_roulette_pvp_winner(
+        self,
+        challenger_id: int,
+        challenger_name: str,
+        opponent_id: int,
+        opponent_name: str,
+        winner_id: int,
+        pot_amount: int,
+    ) -> Optional[dict]:
+        """Pay the locked pot to the winner and return both balances."""
+        with self.db.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT user_id, stars, bank
+                FROM noodle_stars
+                WHERE user_id IN (?, ?)
+                """,
+                (challenger_id, opponent_id),
+            )
+            rows = cursor.fetchall()
+            if len(rows) != 2:
+                return None
+
+            by_id = {row["user_id"]: row for row in rows}
+            challenger = by_id.get(challenger_id)
+            opponent = by_id.get(opponent_id)
+            if challenger is None or opponent is None:
+                return None
+
+            challenger_wallet = challenger["stars"] or 0
+            challenger_bank = challenger["bank"] or 0
+            opponent_wallet = opponent["stars"] or 0
+            opponent_bank = opponent["bank"] or 0
+
+            if winner_id == challenger_id:
+                challenger_wallet_before = challenger_wallet
+                challenger_wallet += pot_amount
+                cursor.execute(
+                    """
+                    UPDATE noodle_stars
+                    SET stars = ?, username = ?
+                    WHERE user_id = ?
+                    """,
+                    (challenger_wallet, challenger_name, challenger_id),
+                )
+                cursor.execute(
+                    "UPDATE noodle_stars SET username = ? WHERE user_id = ?",
+                    (opponent_name, opponent_id),
+                )
+                winner_wallet_changed = challenger_wallet != challenger_wallet_before
+                winner_user_id = challenger_id
+            elif winner_id == opponent_id:
+                opponent_wallet_before = opponent_wallet
+                opponent_wallet += pot_amount
+                cursor.execute(
+                    """
+                    UPDATE noodle_stars
+                    SET stars = ?, username = ?
+                    WHERE user_id = ?
+                    """,
+                    (opponent_wallet, opponent_name, opponent_id),
+                )
+                cursor.execute(
+                    "UPDATE noodle_stars SET username = ? WHERE user_id = ?",
+                    (challenger_name, challenger_id),
+                )
+                winner_wallet_changed = opponent_wallet != opponent_wallet_before
+                winner_user_id = opponent_id
+            else:
+                return None
+
+            try:
+                if winner_wallet_changed:
+                    cursor.execute(
+                        """
+                        UPDATE star_ledger
+                        SET source = ?, reason = ?
+                        WHERE id = (
+                            SELECT id FROM star_ledger
+                            WHERE user_id = ?
+                            ORDER BY id DESC
+                            LIMIT 1
+                        )
+                        """,
+                        ("gambling", "russian_pvp_result", winner_user_id),
+                    )
+            except Exception:
+                pass
+
+            return {
+                "challenger_wallet": challenger_wallet,
+                "challenger_bank": challenger_bank,
+                "opponent_wallet": opponent_wallet,
+                "opponent_bank": opponent_bank,
+            }
