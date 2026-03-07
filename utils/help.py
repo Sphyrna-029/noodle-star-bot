@@ -479,7 +479,7 @@ def _treasure_embed() -> discord.Embed:
         value=(
             "`!chest status` — Check if a chest is active\n"
             "`!pick start` — Claim the lock and begin\n"
-            "`!pick 1 3 2` — Submit a 3-number guess\n"
+            "`!pick 1 3 2` / `!pick 1 3 2 4` — Submit a guess\n"
             "`!pick status` — Check chest lock status"
         ),
         inline=False,
@@ -487,7 +487,8 @@ def _treasure_embed() -> discord.Embed:
     embed.add_field(
         name="How Lock-Picking Works",
         value=(
-            "• The code has **3 pins** and each pin is **1-4**\n"
+            "• Standard chests use **3 pins** (1-4 each)\n"
+            "• Item-capable chests use **4 pins** and can drop extra loot\n"
             "• You get **5 attempts** per lock session\n"
             "• Feedback shows exact matches and misplaced matches\n"
             "• If you solve it, you win a random star reward"
@@ -503,14 +504,7 @@ def _treasure_embed() -> discord.Embed:
         ),
         inline=False,
     )
-    embed.add_field(
-        name="Moderator Commands",
-        value=(
-            "`!chest spawn` — Force-spawn a chest\n"
-            "`!chest end` — Remove the active chest"
-        ),
-        inline=False,
-    )
+
     return embed
 
 

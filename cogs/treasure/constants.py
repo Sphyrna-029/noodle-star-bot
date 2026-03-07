@@ -7,8 +7,11 @@ from typing import Final
 # Core gameplay tuning
 # =============================================================================
 
-# Number of pins in the lock (length of the combo)
+# Number of pins in the standard lock (length of the combo)
 LOCK_PIN_COUNT: Final[int] = 3
+
+# Number of pins for harder, item-capable chests
+LOCK_PIN_COUNT_ITEM_CHEST: Final[int] = 4
 
 # Range for each pin value (inclusive)
 LOCK_PIN_MIN: Final[int] = 1
@@ -18,7 +21,7 @@ LOCK_PIN_MAX: Final[int] = 4
 LOCK_ATTEMPTS: Final[int] = 5
 
 # Time a single user can hold the lock before it resets
-LOCK_OWNER_TIMEOUT: Final[timedelta] = timedelta(seconds=60)
+LOCK_OWNER_TIMEOUT: Final[timedelta] = timedelta(seconds=120)
 
 # Time a chest stays available before expiring (if enabled)
 CHEST_LIFETIME: Final[timedelta] = timedelta(hours=1)
@@ -34,6 +37,15 @@ CHEST_SPAWN_COOLDOWN: Final[timedelta] = timedelta(minutes=5)
 TREASURE_REWARD_MIN: Final[int] = 75
 TREASURE_REWARD_MAX: Final[int] = 200
 
+# Chance a spawned chest is item-capable (harder lock, item roll enabled)
+CHEST_ITEM_TIER_CHANCE: Final[float] = 0.35
+
+# If item-capable, chance an item actually drops when opened
+CHEST_ITEM_DROP_CHANCE: Final[float] = 0.60
+
+# If an item drops, chance it is from the rare item pool
+CHEST_RARE_ITEM_DROP_CHANCE: Final[float] = 0.20
+
 # Channel ID for treasure chest announcements (set per server)
 TREASURE_ANNOUNCEMENT_CHANNEL_ID: Final[int] = 1464375861800210688
 
@@ -47,7 +59,7 @@ CHEST_ANNOUNCEMENT: Final[str] = (
 
 LOCK_INSTRUCTIONS: Final[str] = (
     "🔐 Lock has **{pins} pins**. Each pin is a number **{min_pin}-{max_pin}**. "
-    "You have **{attempts} tries**. Make a guess like: `!pick 1 3 2`."
+    "You have **{attempts} tries**. Make a guess like: `{example_guess}`."
 )
 
 SUCCESS_MESSAGE: Final[str] = (
