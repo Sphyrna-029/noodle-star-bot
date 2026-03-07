@@ -236,7 +236,7 @@ class TreasureCog(commands.Cog):
 
     @commands.command(name="pick")
     async def pick(self, ctx, *args: str):
-        """Lock-pick a treasure chest. Usage: !pick start | !pick 1 3 2"""
+        """Lock-pick a treasure chest. Usage: !pick start | !pick <3 or 4 numbers>"""
         if not args or args[0].lower() == "start":
             result = self.treasure.start_pick(ctx.author.id, ctx.channel.id)
             if not result.success:
@@ -279,7 +279,7 @@ class TreasureCog(commands.Cog):
             await ctx.send(
                 embed=self._build_pick_embed(
                     title="Invalid Guess",
-                    description="Use numbers like: `!pick 1 3 2`.",
+                    description="Use numbers like: `!pick 1 3 2` or `!pick 1 3 2 4`.",
                     color=discord.Color.red(),
                     emoji="❌",
                 )
