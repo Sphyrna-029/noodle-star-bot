@@ -1,9 +1,14 @@
+import asyncio
 import random
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Awaitable, Callable, Optional
 
-from cogs.gambling.constants import ROULETTE_CHAMBERS, ROULETTE_INVITE_TTL_HOURS
+from cogs.gambling.constants import (
+    ROULETTE_CHAMBERS,
+    ROULETTE_INVITE_TTL_HOURS,
+    RUSSIAN_TURN_TIMEOUT_SECONDS,
+)
 from cogs.gambling.dto import RouletteInviteResult, RoulettePvpResult
 from .base import BaseGamblingUseCase
 
@@ -15,10 +20,15 @@ class _ActivePvpGame:
     opponent_id: int
     opponent_name: str
     amount: int
+    channel_id: int
     bullet_chamber: int
     current_turn_user_id: int
-    remaining_chambers: set[int] = field(default_factory=lambda: set(range(1, ROULETTE_CHAMBERS + 1)))
+    turn_deadline: datetime
+    remaining_chambers: set[int] = field(
+        default_factory=lambda: set(range(1, ROULETTE_CHAMBERS + 1))
+    )
     trigger_log: list[tuple[int, int, bool]] = field(default_factory=list)
+    timeout_task: Optional[asyncio.Task] = field(default=None, repr=False)
 
 
 class RouletteUseCase(BaseGamblingUseCase):
@@ -27,14 +37,90 @@ class RouletteUseCase(BaseGamblingUseCase):
     def __init__(self, repository=None):
         super().__init__(repository)
         self._games_by_user: dict[int, _ActivePvpGame] = {}
+        self._event_callback: Optional[
+            Callable[[str, int, RoulettePvpResult], Awaitable[None]]
+        ] = None
+
+    def set_game_callback(
+        self, callback: Callable[[str, int, RoulettePvpResult], Awaitable[None]]
+    ) -> None:
+        """Set callback for async game events (e.g. timeout losses)."""
+        self._event_callback = callback
 
     def _set_active_game(self, game: _ActivePvpGame) -> None:
         self._games_by_user[game.challenger_id] = game
         self._games_by_user[game.opponent_id] = game
 
     def _clear_active_game(self, game: _ActivePvpGame) -> None:
+        if game.timeout_task and not game.timeout_task.done():
+            game.timeout_task.cancel()
         self._games_by_user.pop(game.challenger_id, None)
         self._games_by_user.pop(game.opponent_id, None)
+
+    def _schedule_turn_timeout(self, game: _ActivePvpGame) -> None:
+        if game.timeout_task and not game.timeout_task.done():
+            game.timeout_task.cancel()
+        game.turn_deadline = datetime.now() + timedelta(seconds=RUSSIAN_TURN_TIMEOUT_SECONDS)
+        game.timeout_task = asyncio.create_task(
+            self._handle_turn_timeout(game, game.current_turn_user_id, game.turn_deadline)
+        )
+
+    async def _handle_turn_timeout(
+        self,
+        game: _ActivePvpGame,
+        expected_turn_user_id: int,
+        expected_deadline: datetime,
+    ) -> None:
+        try:
+            await asyncio.sleep(RUSSIAN_TURN_TIMEOUT_SECONDS)
+        except asyncio.CancelledError:
+            return
+
+        current_game = self._games_by_user.get(expected_turn_user_id)
+        if current_game is not game:
+            return
+        if game.current_turn_user_id != expected_turn_user_id:
+            return
+        if game.turn_deadline != expected_deadline:
+            return
+
+        loser_id = expected_turn_user_id
+        winner_id = game.opponent_id if loser_id == game.challenger_id else game.challenger_id
+
+        settle_result = self.repo.settle_roulette_pvp_bet(
+            challenger_id=game.challenger_id,
+            challenger_name=game.challenger_name,
+            opponent_id=game.opponent_id,
+            opponent_name=game.opponent_name,
+            amount=game.amount,
+            winner_id=winner_id,
+        )
+        if settle_result is None:
+            self._clear_active_game(game)
+            return
+
+        result = RoulettePvpResult(
+            success=True,
+            message="TIMEOUT_LOSS",
+            game_over=True,
+            fired=False,
+            winner_id=winner_id,
+            loser_id=loser_id,
+            amount=game.amount,
+            next_turn_user_id=None,
+            trigger_log=list(game.trigger_log),
+            challenger_wallet=settle_result["challenger_wallet"],
+            challenger_bank=settle_result["challenger_bank"],
+            opponent_wallet=settle_result["opponent_wallet"],
+            opponent_bank=settle_result["opponent_bank"],
+        )
+        channel_id = game.channel_id
+        self._clear_active_game(game)
+        if self._event_callback:
+            try:
+                await self._event_callback("timeout_loss", channel_id, result)
+            except Exception:
+                pass
 
     def create_pvp_invite(
         self,
@@ -223,10 +309,13 @@ class RouletteUseCase(BaseGamblingUseCase):
             opponent_id=opponent_id,
             opponent_name=opponent_name,
             amount=amount,
+            channel_id=invite["channel_id"],
             bullet_chamber=random.randint(1, ROULETTE_CHAMBERS),
             current_turn_user_id=challenger_id,
+            turn_deadline=datetime.now() + timedelta(seconds=RUSSIAN_TURN_TIMEOUT_SECONDS),
         )
         self._set_active_game(game)
+        self._schedule_turn_timeout(game)
         self.repo.delete_roulette_invite(invite["id"])
 
         return RoulettePvpResult(
@@ -293,25 +382,6 @@ class RouletteUseCase(BaseGamblingUseCase):
                     message="Could not settle roulette game (balance changed mid-game).",
                 )
 
-            roulette_wins = self.repo.increment_achievement_progress(
-                winner_id, "roulette_wins", 1
-            )
-            roulette_deaths = self.repo.increment_achievement_progress(
-                loser_id, "roulette_deaths", 1
-            )
-            unlocked_achievements: list[tuple[int, str]] = []
-            if roulette_wins >= 1 and self.repo.unlock_achievement(
-                winner_id, "roulette_survivor"
-            ):
-                unlocked_achievements.append((winner_id, "roulette_survivor"))
-            if roulette_wins >= 10 and self.repo.unlock_achievement(
-                winner_id, "roulette_legend"
-            ):
-                unlocked_achievements.append((winner_id, "roulette_legend"))
-            if roulette_deaths >= 1 and self.repo.unlock_achievement(
-                loser_id, "roulette_fall_guy"
-            ):
-                unlocked_achievements.append((loser_id, "roulette_fall_guy"))
             self._clear_active_game(game)
             return RoulettePvpResult(
                 success=True,
@@ -328,11 +398,11 @@ class RouletteUseCase(BaseGamblingUseCase):
                 challenger_bank=settle_result["challenger_bank"],
                 opponent_wallet=settle_result["opponent_wallet"],
                 opponent_bank=settle_result["opponent_bank"],
-                unlocked_achievements=unlocked_achievements,
             )
 
         next_turn = game.opponent_id if user_id == game.challenger_id else game.challenger_id
         game.current_turn_user_id = next_turn
+        self._schedule_turn_timeout(game)
         return RoulettePvpResult(
             success=True,
             message="TURN_SAFE",
