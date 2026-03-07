@@ -367,6 +367,8 @@ def _gambling_embed() -> discord.Embed:
             "**⚔️ Duel** — `!duel @player 50`\n"
             "Both roll a d20, higher roll wins. Completely fair (50/50). "
             "Costs stamina.\n\n"
+            "**🔫 Russian Roulette** — `!russian @player 100` (or `!rr`)\n"
+            "PvP only: challenge another player, then they must accept before it starts.\n\n"
             "**🎲 Gamble** — `!gamble 50`\n"
             "Roll a d7, win only on 7 (14% chance). Can pay up to 20x. "
             "**Very risky!**"

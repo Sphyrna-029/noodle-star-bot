@@ -2,11 +2,18 @@
 
 import asyncio
 import traceback
+from datetime import datetime
 
 import discord
 from discord.ext import commands
 
-from cogs.gambling.use_cases import GambleUseCase, CoinflipUseCase, DuelUseCase, BlackJackUseCase
+from cogs.gambling.use_cases import (
+    GambleUseCase,
+    CoinflipUseCase,
+    DuelUseCase,
+    BlackJackUseCase,
+    RouletteUseCase,
+)
 from cogs.gambling.dto import BlackJackGameState, BlackJackResult
 
 
@@ -212,6 +219,7 @@ class GamblingCog(commands.Cog):
         self.coinflip_use_case = CoinflipUseCase()
         self.duel_use_case = DuelUseCase()
         self.blackjack_use_case = BlackJackUseCase()
+        self.roulette_use_case = RouletteUseCase()
 
     @commands.command(name="gamble")
     async def gamble(self, ctx, amount: int = None):
@@ -428,6 +436,129 @@ class GamblingCog(commands.Cog):
                 pass
             # Re-raise so it appears in logs
             raise
+
+    @commands.command(name="russian", aliases=["rr"])
+    async def russian(self, ctx, *, args: str = ""):
+        """Challenge another player in PvP Russian roulette."""
+        parts = args.split() if args else []
+        if not parts:
+            await ctx.send(
+                "🎯 **Russian Roulette**\n"
+                "`!russian @user <amount>` — Send PvP invite (6h expiry)\n"
+                "`!russian accept [@user]` — Accept pending PvP invite\n"
+                "`!russian cancel [@user]` — Cancel pending PvP invite\n"
+                "`!rr ...` works as shorthand."
+            )
+            return
+
+        action = parts[0].lower()
+
+        if action in {"accept", "a"}:
+            challenger_id = ctx.message.mentions[0].id if ctx.message.mentions else None
+            result = self.roulette_use_case.accept_pvp_invite(
+                opponent_id=ctx.author.id,
+                opponent_name=str(ctx.author),
+                challenger_id=challenger_id,
+            )
+            if not result.success:
+                await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
+                return
+
+            guild = ctx.guild
+            players = {}
+            if challenger_id is not None:
+                players[challenger_id] = guild.get_member(challenger_id) if guild else None
+            if result.winner_id is not None:
+                players[result.winner_id] = guild.get_member(result.winner_id) if guild else None
+            if result.loser_id is not None:
+                players[result.loser_id] = guild.get_member(result.loser_id) if guild else None
+
+            pull_lines = []
+            for idx, shooter_id in enumerate(result.trigger_log, start=1):
+                shooter = players.get(shooter_id)
+                shooter_name = shooter.mention if shooter else f"<@{shooter_id}>"
+                if idx == result.bullet_chamber:
+                    pull_lines.append(f"**{idx}.** {shooter_name} pulls... **BANG** 💥")
+                else:
+                    pull_lines.append(f"**{idx}.** {shooter_name} pulls... *click*")
+
+            winner = players.get(result.winner_id)
+            loser = players.get(result.loser_id)
+            winner_name = winner.mention if winner else f"<@{result.winner_id}>"
+            loser_name = loser.mention if loser else f"<@{result.loser_id}>"
+
+            await ctx.send(
+                "🔫 **PvP Russian Roulette**\n"
+                + "\n".join(pull_lines)
+                + "\n\n"
+                + f"🏆 {winner_name} wins **{result.amount}** stars.\n"
+                + f"💀 {loser_name} ate the bullet.\n"
+                + f"Challenger balance: Wallet **{result.challenger_wallet}** | Bank **{result.challenger_bank}**\n"
+                + f"Opponent balance: Wallet **{result.opponent_wallet}** | Bank **{result.opponent_bank}**"
+            )
+            return
+
+        if action in {"cancel", "decline"}:
+            challenger_id = ctx.message.mentions[0].id if ctx.message.mentions else None
+            result = self.roulette_use_case.cancel_pvp_invite(
+                user_id=ctx.author.id,
+                challenger_id=challenger_id,
+            )
+            if not result.success:
+                await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
+                return
+            await ctx.send("🚫 Roulette invite cancelled.")
+            return
+
+        # PvP invite if a user is mentioned: !russian @user <amount>
+        if ctx.message.mentions:
+            opponent = ctx.message.mentions[0]
+            if opponent.bot:
+                await ctx.send(f"❌ {ctx.author.mention}, you can't challenge a bot.")
+                return
+
+            amount_token = None
+            for part in parts[1:]:
+                if part.startswith("<@") and part.endswith(">"):
+                    continue
+                if part.startswith("@"):
+                    continue
+                amount_token = part
+                break
+
+            try:
+                amount = int(amount_token) if amount_token is not None else None
+            except (TypeError, ValueError):
+                amount = None
+
+            result = self.roulette_use_case.create_pvp_invite(
+                challenger_id=ctx.author.id,
+                challenger_name=str(ctx.author),
+                opponent_id=opponent.id,
+                opponent_name=str(opponent),
+                amount=amount,
+                channel_id=ctx.channel.id,
+            )
+            if not result.success:
+                await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
+                return
+
+            expires_text = ""
+            if result.expires_at:
+                expires_at = datetime.fromisoformat(result.expires_at)
+                expires_text = f" (expires <t:{int(expires_at.timestamp())}:R>)"
+
+            await ctx.send(
+                f"🔫 {opponent.mention}, {ctx.author.mention} challenged you to PvP Russian Roulette "
+                f"for **{result.amount}** stars each.\n"
+                f"Accept with `!russian accept {ctx.author.mention}`{expires_text}."
+            )
+            return
+
+        await ctx.send(
+            f"❌ {ctx.author.mention}, invalid russian roulette command.\n"
+            "Use `!russian` for syntax."
+        )
 
 
 async def setup(bot):

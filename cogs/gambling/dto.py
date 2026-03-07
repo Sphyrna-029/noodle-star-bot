@@ -48,6 +48,39 @@ class DuelResult:
 
 
 @dataclass(slots=True)
+class RouletteInviteResult:
+    """Result payload for PvP invite actions."""
+
+    success: bool
+    message: str
+    amount: int = 0
+    inviter_id: int = 0
+    opponent_id: int = 0
+    expires_at: Optional[str] = None
+
+
+@dataclass(slots=True)
+class RoulettePvpResult:
+    """Result payload for completed PvP roulette games."""
+
+    success: bool
+    message: str
+    winner_id: Optional[int] = None
+    loser_id: Optional[int] = None
+    amount: int = 0
+    bullet_chamber: int = 0
+    trigger_log: list[int] = None
+    challenger_wallet: int = 0
+    challenger_bank: int = 0
+    opponent_wallet: int = 0
+    opponent_bank: int = 0
+
+    def __post_init__(self):
+        if self.trigger_log is None:
+            self.trigger_log = []
+
+
+@dataclass(slots=True)
 class BlackJackResult:
     """Result of BlackJack."""
 

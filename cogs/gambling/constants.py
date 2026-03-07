@@ -18,6 +18,8 @@ __all__ = [
     "BLACKJACK_WIN_MULTIPLIER",
     "BLACKJACK_MIN_BET",
     "BLACKJACK_COOLDOWN_SECONDS",
+    "ROULETTE_CHAMBERS",
+    "ROULETTE_INVITE_TTL_HOURS",
 ]
 
 # -- Gambling
@@ -49,3 +51,7 @@ BLACKJACK_PAYOUT: Final[float] = 1.5  # 3:2 payout for natural blackjack
 BLACKJACK_WIN_MULTIPLIER: Final[float] = 1.0  # 1:1 payout for normal win
 BLACKJACK_MIN_BET: Final[int] = 20
 BLACKJACK_COOLDOWN_SECONDS: Final[int] = 30
+
+# -- Russian Roulette
+ROULETTE_CHAMBERS: Final[int] = 6
+ROULETTE_INVITE_TTL_HOURS: Final[int] = 6

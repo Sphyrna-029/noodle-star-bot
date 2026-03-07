@@ -129,3 +129,246 @@ class GamblingRepository(BaseRepository):
                 )
             except Exception:
                 pass
+
+    def create_roulette_invite(
+        self,
+        challenger_id: int,
+        challenger_name: str,
+        opponent_id: int,
+        opponent_name: str,
+        amount: int,
+        channel_id: int,
+        created_at: datetime,
+        expires_at: datetime,
+    ) -> None:
+        """Create a pending roulette invite."""
+        with self.db.get_cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO game_invites (
+                    game_type, challenger_id, challenger_name, opponent_id, opponent_name,
+                    amount, channel_id, created_at, expires_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    "russian_roulette",
+                    challenger_id,
+                    challenger_name,
+                    opponent_id,
+                    opponent_name,
+                    amount,
+                    channel_id,
+                    created_at.isoformat(),
+                    expires_at.isoformat(),
+                ),
+            )
+
+    def find_pending_roulette_invite_involving_user(
+        self,
+        user_id: int,
+        challenger_id: int | None = None,
+    ) -> Optional[dict]:
+        """Find a pending invite where the user is challenger or opponent."""
+        with self.db.get_cursor() as cursor:
+            if challenger_id is not None:
+                cursor.execute(
+                    """
+                    SELECT id, challenger_id, challenger_name, opponent_id, opponent_name,
+                           amount, channel_id, created_at, expires_at
+                    FROM game_invites
+                    WHERE game_type = 'russian_roulette'
+                      AND ((challenger_id = ? AND opponent_id = ?)
+                        OR (challenger_id = ? AND opponent_id = ?)
+                      )
+                    ORDER BY id DESC
+                    LIMIT 1
+                    """,
+                    (user_id, challenger_id, challenger_id, user_id),
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT id, challenger_id, challenger_name, opponent_id, opponent_name,
+                           amount, channel_id, created_at, expires_at
+                    FROM game_invites
+                    WHERE game_type = 'russian_roulette'
+                      AND (challenger_id = ? OR opponent_id = ?)
+                    ORDER BY id DESC
+                    LIMIT 1
+                    """,
+                    (user_id, user_id),
+                )
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
+    def find_pending_roulette_invite_for_opponent(
+        self,
+        opponent_id: int,
+        challenger_id: int | None = None,
+    ) -> Optional[dict]:
+        """Find a pending invite addressed to an opponent."""
+        with self.db.get_cursor() as cursor:
+            if challenger_id is not None:
+                cursor.execute(
+                    """
+                    SELECT id, challenger_id, challenger_name, opponent_id, opponent_name,
+                           amount, channel_id, created_at, expires_at
+                    FROM game_invites
+                    WHERE game_type = 'russian_roulette'
+                      AND opponent_id = ? AND challenger_id = ?
+                    ORDER BY id DESC
+                    LIMIT 1
+                    """,
+                    (opponent_id, challenger_id),
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT id, challenger_id, challenger_name, opponent_id, opponent_name,
+                           amount, channel_id, created_at, expires_at
+                    FROM game_invites
+                    WHERE game_type = 'russian_roulette'
+                      AND opponent_id = ?
+                    ORDER BY id DESC
+                    LIMIT 1
+                    """,
+                    (opponent_id,),
+                )
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
+    def delete_expired_roulette_invites(self, now: datetime) -> int:
+        """Delete expired roulette invites and return number removed."""
+        with self.db.get_cursor() as cursor:
+            cursor.execute(
+                "DELETE FROM game_invites WHERE game_type = ? AND expires_at <= ?",
+                ("russian_roulette", now.isoformat()),
+            )
+            return cursor.rowcount
+
+    def delete_roulette_invite(self, invite_id: int) -> None:
+        """Delete a specific roulette invite."""
+        with self.db.get_cursor() as cursor:
+            cursor.execute(
+                "DELETE FROM game_invites WHERE id = ? AND game_type = ?",
+                (invite_id, "russian_roulette"),
+            )
+
+    def settle_roulette_pvp_bet(
+        self,
+        challenger_id: int,
+        challenger_name: str,
+        opponent_id: int,
+        opponent_name: str,
+        amount: int,
+        winner_id: int,
+    ) -> Optional[dict]:
+        """
+        Settle a PvP roulette wager atomically using wallet+bank for stakes.
+
+        Returns updated balances dict, or None if either user can't cover the wager.
+        """
+        with self.db.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT user_id, stars, bank
+                FROM noodle_stars
+                WHERE user_id IN (?, ?)
+                """,
+                (challenger_id, opponent_id),
+            )
+            rows = cursor.fetchall()
+            if len(rows) != 2:
+                return None
+
+            by_id = {row["user_id"]: row for row in rows}
+            challenger = by_id.get(challenger_id)
+            opponent = by_id.get(opponent_id)
+            if challenger is None or opponent is None:
+                return None
+
+            challenger_wallet = challenger["stars"] or 0
+            challenger_bank = challenger["bank"] or 0
+            opponent_wallet = opponent["stars"] or 0
+            opponent_bank = opponent["bank"] or 0
+
+            if challenger_wallet + challenger_bank < amount:
+                return None
+            if opponent_wallet + opponent_bank < amount:
+                return None
+
+            challenger_wallet_take = min(challenger_wallet, amount)
+            challenger_bank_take = amount - challenger_wallet_take
+            challenger_wallet -= challenger_wallet_take
+            challenger_bank -= challenger_bank_take
+
+            opponent_wallet_take = min(opponent_wallet, amount)
+            opponent_bank_take = amount - opponent_wallet_take
+            opponent_wallet -= opponent_wallet_take
+            opponent_bank -= opponent_bank_take
+
+            pot = amount * 2
+            if winner_id == challenger_id:
+                challenger_wallet += pot
+            elif winner_id == opponent_id:
+                opponent_wallet += pot
+            else:
+                return None
+
+            cursor.execute(
+                """
+                UPDATE noodle_stars
+                SET stars = ?, bank = ?, username = ?
+                WHERE user_id = ?
+                """,
+                (challenger_wallet, challenger_bank, challenger_name, challenger_id),
+            )
+            cursor.execute(
+                """
+                UPDATE noodle_stars
+                SET stars = ?, bank = ?, username = ?
+                WHERE user_id = ?
+                """,
+                (opponent_wallet, opponent_bank, opponent_name, opponent_id),
+            )
+
+            # Annotate latest star_ledger rows produced by this settlement.
+            try:
+                if challenger_wallet != (challenger["stars"] or 0):
+                    cursor.execute(
+                        """
+                        UPDATE star_ledger
+                        SET source = ?, reason = ?
+                        WHERE id = (
+                            SELECT id FROM star_ledger
+                            WHERE user_id = ?
+                            ORDER BY id DESC
+                            LIMIT 1
+                        )
+                        """,
+                        ("gambling", "russian_pvp_result", challenger_id),
+                    )
+                if opponent_wallet != (opponent["stars"] or 0):
+                    cursor.execute(
+                        """
+                        UPDATE star_ledger
+                        SET source = ?, reason = ?
+                        WHERE id = (
+                            SELECT id FROM star_ledger
+                            WHERE user_id = ?
+                            ORDER BY id DESC
+                            LIMIT 1
+                        )
+                        """,
+                        ("gambling", "russian_pvp_result", opponent_id),
+                    )
+            except Exception:
+                pass
+
+            return {
+                "challenger_wallet": challenger_wallet,
+                "challenger_bank": challenger_bank,
+                "opponent_wallet": opponent_wallet,
+                "opponent_bank": opponent_bank,
+            }
