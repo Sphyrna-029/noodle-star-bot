@@ -195,6 +195,12 @@ class DuelUseCase(BaseGamblingUseCase):
             new_opponent_stars,
             reason="gambling:duel_result",
         )
+        duel_wins = self.repo.increment_achievement_progress(winner_id, "duel_wins", 1)
+        unlocked_achievement_keys: list[str] = []
+        if duel_wins >= 1 and self.repo.unlock_achievement(winner_id, "duel_first_blood"):
+            unlocked_achievement_keys.append("duel_first_blood")
+        if duel_wins >= 50 and self.repo.unlock_achievement(winner_id, "duel_warlord"):
+            unlocked_achievement_keys.append("duel_warlord")
 
         return DuelResult(
             success=True,
@@ -208,4 +214,5 @@ class DuelUseCase(BaseGamblingUseCase):
             stamina_cost=stamina_cost,
             challenger_stamina_before=stamina_before,
             challenger_stamina_after=stamina_after,
+            unlocked_achievement_keys=unlocked_achievement_keys,
         )
