@@ -87,6 +87,10 @@ class AlienAbductionCog(commands.Cog):
         if ctx.author.bot:
             return
 
+        # Don't trigger during banking commands
+        if ctx.command and ctx.command.name in ("deposit", "withdraw"):
+            return
+
         # Space explorers have higher abduction chance
         chance = ABDUCTION_CHANCE
         inventory = self.repo.get_user_inventory(ctx.author.id)
