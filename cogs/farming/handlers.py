@@ -74,7 +74,7 @@ class FarmingCog(commands.Cog):
             cells = []
             for plot in row_plots:
                 if plot.is_empty:
-                    cells.append("🟫")
+                    cells.append("🟫 ")
                 #elif plot.is_ready:
                 #    cells.append(f"{plot.crop_emoji}✨")
                 else:
