@@ -23,6 +23,9 @@ LOCK_ATTEMPTS: Final[int] = 5
 # Time a single user can hold the lock before it resets
 LOCK_OWNER_TIMEOUT: Final[timedelta] = timedelta(seconds=120)
 
+# Cooldown before the same user can claim a lock again
+LOCK_RECLAIM_COOLDOWN: Final[timedelta] = timedelta(minutes=1)
+
 # Time a chest stays available before expiring (if enabled)
 CHEST_LIFETIME: Final[timedelta] = timedelta(hours=1)
 
@@ -33,9 +36,17 @@ CHEST_SPAWN_COOLDOWN: Final[timedelta] = timedelta(minutes=5)
 # Rewards
 # =============================================================================
 
-# Reward range in stars for a successful pick
+# Reward range in stars for a successful standard chest pick
 TREASURE_REWARD_MIN: Final[int] = 75
 TREASURE_REWARD_MAX: Final[int] = 200
+
+# Reward range in stars for a successful rare chest pick
+TREASURE_REWARD_MIN_RARE: Final[int] = 125
+TREASURE_REWARD_MAX_RARE: Final[int] = 300
+
+# Retry-penalty range for repeated wrong guesses (after the first failed guess)
+LOCK_RETRY_PENALTY_MIN: Final[int] = 10
+LOCK_RETRY_PENALTY_MAX: Final[int] = 50
 
 # Chance a spawned chest is item-capable (harder lock, item roll enabled)
 CHEST_ITEM_TIER_CHANCE: Final[float] = 0.35
@@ -58,8 +69,11 @@ CHEST_ANNOUNCEMENT: Final[str] = (
 )
 
 LOCK_INSTRUCTIONS: Final[str] = (
-    "🔐 Lock has **{pins} pins**. Each pin is a number **{min_pin}-{max_pin}**. "
-    "You have **{attempts} tries**. Make a guess like: `{example_guess}`."
+    "🔑 **Lockpicking instructions:**\n"
+    "Pins: **{pins}** (each {min_pin}-{max_pin})\n"
+    "Attempts left: **{attempts}**\n"
+    "Guess with spaced numbers: `{example_guess}` or compact digits: `{compact_example_guess}`\n"
+    "Or with the drop down menu component!"
 )
 
 SUCCESS_MESSAGE: Final[str] = (
@@ -67,9 +81,11 @@ SUCCESS_MESSAGE: Final[str] = (
 )
 
 FAIL_MESSAGE: Final[str] = (
-    "❌ Wrong combo. Correct position: **{exact}**, "
-    "correct number wrong position: **{misplaced}**. "
-    "Attempts left: **{attempts_left}**."
+    "❌ _Wrong combo._\n\n"
+    "Guess: **{guess_slots}**\n"
+    "Feedback -> 🟩 Correct position: **{exact}** | 🟨 Correct pin: **{misplaced}**\n\n"
+    "Attempts left: **{attempts_left}**\n\n"
+    "{history_block}"
 )
 
 TIMEOUT_MESSAGE: Final[str] = (

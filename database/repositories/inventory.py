@@ -28,6 +28,8 @@ class InventoryRepository(BaseRepository):
         "space_planet_level",
         "active_space_planet",
         "farm_level",
+        "fertilizer",
+        "water",
         "rune_fragment",
         "fossilized_noodle",
         "bucktail_jig",
@@ -46,9 +48,10 @@ class InventoryRepository(BaseRepository):
                 bait_worm, bait_herring, bait_sturgeon, equipped_bait, telescope,
                 mine_level, active_mine_level, active_fish_level, golden_axe, mithril_shield,
                 bank_insurance, rocket_ship, space_planet_level, active_space_planet, farm_level,
+                fertilizer, water,
                 rune_fragment, fossilized_noodle, bucktail_jig, jig_active,
                 ray_gun, star_magnet, lucky_charm, heart_of_leviathan
-            ) VALUES (?, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0)
+            ) VALUES (?, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
             ON CONFLICT(user_id) DO NOTHING
             """,
             (user_id,),
@@ -64,7 +67,7 @@ class InventoryRepository(BaseRepository):
                        bait_worm, bait_herring, bait_sturgeon, telescope,
                        mine_level, active_mine_level, golden_axe, mithril_shield,
                        bank_insurance, rocket_ship, space_planet_level,
-                       active_space_planet, farm_level,
+                       active_space_planet, farm_level, fertilizer, water,
                        rune_fragment, fossilized_noodle, bucktail_jig, jig_active,
                        ray_gun, star_magnet, lucky_charm, heart_of_leviathan
                 FROM user_inventory WHERE user_id = ?
@@ -93,6 +96,8 @@ class InventoryRepository(BaseRepository):
                     "space_planet_level": 0,
                     "active_space_planet": 0,
                     "farm_level": 1,
+                    "fertilizer": 0,
+                    "water": 0,
                     "rune_fragment": 0,
                     "fossilized_noodle": 0,
                     "bucktail_jig": 0,
@@ -122,6 +127,8 @@ class InventoryRepository(BaseRepository):
                 "space_planet_level": row["space_planet_level"] or 0,
                 "active_space_planet": row["active_space_planet"] or 0,
                 "farm_level": row["farm_level"] or 1,
+                "fertilizer": (row["fertilizer"] if "fertilizer" in row.keys() else 0) or 0,
+                "water": (row["water"] if "water" in row.keys() else 0) or 0,
                 "rune_fragment": row["rune_fragment"] or 0,
                 "fossilized_noodle": row["fossilized_noodle"] or 0,
                 "bucktail_jig": row["bucktail_jig"] or 0,
@@ -172,7 +179,8 @@ class InventoryRepository(BaseRepository):
                     rune_fragment = 0, fossilized_noodle = 0,
                     bucktail_jig = 0, jig_active = 0,
                     ray_gun = 0, star_magnet = 0,
-                    lucky_charm = 0, heart_of_leviathan = 0
+                    lucky_charm = 0, heart_of_leviathan = 0,
+                    fertilizer = 0, water = 0
                 WHERE user_id = ?
                 """,
                 (user_id,),

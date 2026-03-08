@@ -92,13 +92,10 @@ class TreasureCog(commands.Cog):
             color=color,
         )
 
-    def _build_chest_alert_embed(self) -> discord.Embed:
+    def _build_chest_alert_embed(self, description: str) -> discord.Embed:
         return self._build_alert_embed(
             title="Treasure Chest Alert!",
-            description=(
-                "A **locked treasure chest** appears!\n"
-                "Use `!pick start` to claim the lock and begin."
-            ),
+            description=description,
             color=discord.Color.gold(),
             emoji="🧰",
         )
@@ -155,7 +152,7 @@ class TreasureCog(commands.Cog):
         if channel is not None:
             result = self.treasure.spawn_chest(channel.id)
             if result.success:
-                await channel.send(embed=self._build_chest_alert_embed())
+                await channel.send(embed=self._build_chest_alert_embed(result.message))
 
         self._advance_spawn_schedule()
 
@@ -207,7 +204,7 @@ class TreasureCog(commands.Cog):
                 await ctx.send(f"❌ {result.message}")
                 return
 
-            await ctx.send(embed=self._build_chest_alert_embed())
+            await ctx.send(embed=self._build_chest_alert_embed(result.message))
             return
 
         if action in ("end", "stop"):
@@ -273,13 +270,26 @@ class TreasureCog(commands.Cog):
             return
 
         # Interpret args as a guess
+        if len(args) == 1 and args[0].isdigit():
+            raw_digits = [int(ch) for ch in args[0]]
+            if len(raw_digits) in (3, 4):
+                guess = raw_digits
+            else:
+                guess = []
+        else:
+            guess = []
+
         try:
-            guess = [int(x) for x in args]
+            if not guess:
+                guess = [int(x) for x in args]
         except ValueError:
             await ctx.send(
                 embed=self._build_pick_embed(
                     title="Invalid Guess",
-                    description="Use numbers like: `!pick 1 3 2` or `!pick 1 3 2 4`.",
+                    description=(
+                        "Use numbers like: `!pick 1 3 2` / `!pick 1 3 2 4` "
+                        "or compact digits: `!pick 132` / `!pick 1324`."
+                    ),
                     color=discord.Color.red(),
                     emoji="❌",
                 )

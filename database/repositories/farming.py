@@ -18,6 +18,17 @@ class PlantedCropRow:
     weather_bonus: float = 1.0  # Default no bonus
 
 
+@dataclass
+class FarmPlotStateRow:
+    """Database row for persistent per-plot farm state."""
+
+    user_id: int
+    plot_number: int
+    soil_condition: int = 100
+    last_crop_type: Optional[str] = None
+    same_crop_streak: int = 0
+
+
 class FarmingRepository(BaseRepository):
     """Farming plot and crop operations."""
 
@@ -63,6 +74,103 @@ class FarmingRepository(BaseRepository):
             cursor.execute(
                 "UPDATE user_inventory SET farm_plots = ? WHERE user_id = ?",
                 (count, user_id),
+            )
+            # Ensure plot state rows exist for all owned plots.
+            for plot_number in range(1, count + 1):
+                cursor.execute(
+                    """
+                    INSERT INTO farm_plot_state (user_id, plot_number, soil_condition, last_crop_type, same_crop_streak)
+                    VALUES (?, ?, 100, NULL, 0)
+                    ON CONFLICT(user_id, plot_number) DO NOTHING
+                    """,
+                    (user_id, plot_number),
+                )
+
+    def get_plot_states(self, user_id: int) -> dict[int, FarmPlotStateRow]:
+        """Get all persistent plot states for a user keyed by plot number."""
+        with self.db.get_cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT user_id, plot_number, COALESCE(soil_condition, 100) AS soil_condition,
+                       last_crop_type, COALESCE(same_crop_streak, 0) AS same_crop_streak
+                FROM farm_plot_state
+                WHERE user_id = ?
+                ORDER BY plot_number
+                """,
+                (user_id,),
+            )
+            rows = cursor.fetchall()
+            return {
+                int(row["plot_number"]): FarmPlotStateRow(
+                    user_id=int(row["user_id"]),
+                    plot_number=int(row["plot_number"]),
+                    soil_condition=int(row["soil_condition"]),
+                    last_crop_type=row["last_crop_type"],
+                    same_crop_streak=int(row["same_crop_streak"]),
+                )
+                for row in rows
+            }
+
+    def get_plot_state(self, user_id: int, plot_number: int) -> FarmPlotStateRow:
+        """Get persistent state for one plot, creating a default row if missing."""
+        with self.db.get_cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO farm_plot_state (user_id, plot_number, soil_condition, last_crop_type, same_crop_streak)
+                VALUES (?, ?, 100, NULL, 0)
+                ON CONFLICT(user_id, plot_number) DO NOTHING
+                """,
+                (user_id, plot_number),
+            )
+            cursor.execute(
+                """
+                SELECT user_id, plot_number, COALESCE(soil_condition, 100) AS soil_condition,
+                       last_crop_type, COALESCE(same_crop_streak, 0) AS same_crop_streak
+                FROM farm_plot_state
+                WHERE user_id = ? AND plot_number = ?
+                """,
+                (user_id, plot_number),
+            )
+            row = cursor.fetchone()
+            return FarmPlotStateRow(
+                user_id=int(row["user_id"]),
+                plot_number=int(row["plot_number"]),
+                soil_condition=int(row["soil_condition"]),
+                last_crop_type=row["last_crop_type"],
+                same_crop_streak=int(row["same_crop_streak"]),
+            )
+
+    def set_plot_soil_condition(self, user_id: int, plot_number: int, soil_condition: int) -> None:
+        """Set soil condition for a plot."""
+        with self.db.get_cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO farm_plot_state (user_id, plot_number, soil_condition, last_crop_type, same_crop_streak)
+                VALUES (?, ?, ?, NULL, 0)
+                ON CONFLICT(user_id, plot_number) DO UPDATE SET
+                    soil_condition = excluded.soil_condition
+                """,
+                (user_id, plot_number, soil_condition),
+            )
+
+    def set_plot_crop_streak(
+        self,
+        user_id: int,
+        plot_number: int,
+        crop_type: str,
+        same_crop_streak: int,
+    ) -> None:
+        """Set crop history fields used for rotation penalties."""
+        with self.db.get_cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO farm_plot_state (user_id, plot_number, soil_condition, last_crop_type, same_crop_streak)
+                VALUES (?, ?, 100, ?, ?)
+                ON CONFLICT(user_id, plot_number) DO UPDATE SET
+                    last_crop_type = excluded.last_crop_type,
+                    same_crop_streak = excluded.same_crop_streak
+                """,
+                (user_id, plot_number, crop_type, same_crop_streak),
             )
 
     def get_planted_crops(self, user_id: int) -> list[PlantedCropRow]:

@@ -26,6 +26,11 @@ __all__ = [
     "FARM_LEVEL_UPGRADE_COSTS",
     "QUALITY_MULTIPLIERS",
     "QUALITY_WEIGHTS_BY_LEVEL",
+    "SOIL_MAX_CONDITION",
+    "SOIL_DRAIN_BY_CROP",
+    "SOIL_MULTIPLIER_BY_THRESHOLD",
+    "SOIL_BAD_WEIGHT_BY_THRESHOLD",
+    "TEND_ITEM_SOIL_RESTORE",
     "get_crop_by_name",
 ]
 
@@ -105,12 +110,17 @@ MAX_PLOTS: Final[int] = 6
 # Farm Progression
 # ---------------------------------------------------------------------------
 # Costs are keyed by target level (e.g. upgrading 1->2 uses key 2).
-MAX_FARM_LEVEL: Final[int] = 5
+MAX_FARM_LEVEL: Final[int] = 10
 FARM_LEVEL_UPGRADE_COSTS: Final[dict[int, int]] = {
     2: 1200,
     3: 2800,
     4: 5200,
     5: 9000,
+    6: 15000,
+    7: 24000,
+    8: 36000,
+    9: 52000,
+    10: 72000,
 }
 
 # Harvest quality bonuses.
@@ -124,10 +134,51 @@ QUALITY_MULTIPLIERS: Final[dict[str, float]] = {
 # (quality, weight)
 QUALITY_WEIGHTS_BY_LEVEL: Final[dict[int, tuple[tuple[str, int], ...]]] = {
     1: (("bad", 20), ("normal", 60), ("great", 20)),
-    2: (("bad", 15), ("normal", 60), ("great", 25)),
-    3: (("bad", 10), ("normal", 60), ("great", 30)),
-    4: (("bad", 5), ("normal", 60), ("great", 35)),
-    5: (("bad", 0), ("normal", 60), ("great", 40)),
+    2: (("bad", 16), ("normal", 60), ("great", 24)),
+    3: (("bad", 12), ("normal", 58), ("great", 30)),
+    4: (("bad", 8), ("normal", 56), ("great", 36)),
+    5: (("bad", 5), ("normal", 50), ("great", 45)),
+    6: (("bad", 5), ("normal", 47), ("great", 48)),
+    7: (("bad", 4), ("normal", 46), ("great", 50)),
+    8: (("bad", 4), ("normal", 43), ("great", 53)),
+    9: (("bad", 3), ("normal", 43), ("great", 54)),
+    10: (("bad", 2), ("normal", 43), ("great", 55)),
+}
+
+# ---------------------------------------------------------------------------
+# Soil fatigue and tending
+# ---------------------------------------------------------------------------
+SOIL_MAX_CONDITION: Final[int] = 100
+
+# Base soil drain applied on harvest by crop type.
+SOIL_DRAIN_BY_CROP: Final[dict[str, int]] = {
+    "wheat": 4,
+    "carrot": 10,
+    "corn": 14,
+    "tomato": 15,
+    "melon": 20,
+    "mushroom": 30,
+}
+
+# Soil condition thresholds and associated payout multipliers.
+SOIL_MULTIPLIER_BY_THRESHOLD: Final[tuple[tuple[int, float], ...]] = (
+    (75, 1.00),
+    (50, 0.70),
+    (25, 0.40),
+    (0, 0.15),
+)
+
+# Additional bad-quality weight based on soil condition.
+SOIL_BAD_WEIGHT_BY_THRESHOLD: Final[tuple[tuple[int, int], ...]] = (
+    (75, 0),
+    (50, 25),
+    (25, 40),
+    (0, 70),
+)
+
+TEND_ITEM_SOIL_RESTORE: Final[dict[str, int]] = {
+    "fertilizer": 30,
+    "water": 10,
 }
 
 

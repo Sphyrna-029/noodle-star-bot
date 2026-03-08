@@ -13,6 +13,22 @@ class ShopUseCases:
     def __init__(self, repository: UserRepository = None):
         self.repo = repository or UserRepository()
         self._non_store_items = {"golden_mushroom"}
+        self._item_categories = {
+            "gold_pickaxe": "Mining",
+            "helmet": "Mining",
+            "sword": "Mining",
+            "raw_potato": "Mining",
+            "fertilizer": "Farming",
+            "water": "Farming",
+            "bait_worm": "Fishing",
+            "bait_herring": "Fishing",
+            "bait_sturgeon": "Fishing",
+            "telescope": "Utility",
+            "bank_insurance": "Utility",
+            "ray_gun": "Utility",
+            "rocket_ship": "Utility",
+        }
+        self._category_order = ("Mining", "Farming", "Fishing", "Utility")
 
     def get_items(self) -> List[ShopItem]:
         """Get all items available in the shop."""
@@ -29,9 +45,19 @@ class ShopUseCases:
                     emoji=data.emoji,
                     display_name=data.display_name,
                     description=data.description,
+                    category=self._item_categories.get(key, "Other"),
                 )
             )
         return items
+
+    def get_items_by_category(self) -> Dict[str, List[ShopItem]]:
+        """Get store items grouped by category in display order."""
+        grouped: Dict[str, List[ShopItem]] = {category: [] for category in self._category_order}
+
+        for item in self.get_items():
+            grouped.setdefault(item.category, []).append(item)
+
+        return {category: items for category, items in grouped.items() if items}
 
     def get_item(self, item_name: str) -> Optional[ShopItem]:
         """Get a shop item by name or alias."""
@@ -46,6 +72,7 @@ class ShopUseCases:
                 emoji=shop_item.emoji,
                 display_name=shop_item.display_name,
                 description=shop_item.description,
+                category=self._item_categories.get(key, "Other"),
             )
 
     @staticmethod
@@ -239,6 +266,12 @@ class ShopUseCases:
 
         if inventory["golden_mushroom"] > 0:
             items.append(f"🍄 **Golden Mushroom** x{inventory['golden_mushroom']}")
+
+        if inventory.get("fertilizer", 0) > 0:
+            items.append(f"🧪 **Fertilizer** x{inventory['fertilizer']}")
+
+        if inventory.get("water", 0) > 0:
+            items.append(f"💧 **Water** x{inventory['water']}")
 
         if inventory["telescope"] > 0:
             items.append("📷 **Telescope** (Permanent)")

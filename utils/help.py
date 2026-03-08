@@ -225,8 +225,8 @@ def _farming_embed() -> discord.Embed:
         title="🌾 Farming — How It Works",
         description=(
             "Farming is the safest way to earn stars. "
-            "Plant crops, wait for them to grow, harvest for guaranteed profit. "
-            "**Zero risk, zero cooldowns** — just patience!"
+            "Plant crops, wait for them to grow, and harvest for profit. "
+            "No cooldowns, but soil quality now matters."
         ),
         color=discord.Color.green(),
     )
@@ -237,7 +237,8 @@ def _farming_embed() -> discord.Embed:
             "**Step 2:** Type `!buyplot 1` to buy your first plot (300 stars)\n"
             "**Step 3:** Type `!plant wheat 1` to plant wheat in plot 1\n"
             "**Step 4:** Wait 1 hour (check progress with `!farm`)\n"
-            "**Step 5:** Type `!harvest` to collect your stars!"
+            "**Step 5:** Type `!harvest` to collect your stars\n"
+            "**Step 6:** Use `!tend <plot> <fertilizer|water>` when soil gets low"
         ),
         inline=False,
     )
@@ -252,6 +253,7 @@ def _farming_embed() -> discord.Embed:
             "`!plant wheat 1` — Plant a crop in a plot\n"
             "`!harvest` — Harvest ALL ready crops at once\n"
             "`!harvest 1` — Harvest just one plot\n"
+            "`!tend 1 fertilizer` — Restore soil on a plot using a tending item\n"
             "`!crops` — See all available crops and stats"
         ),
         inline=False,
@@ -280,12 +282,26 @@ def _farming_embed() -> discord.Embed:
         inline=False,
     )
     embed.add_field(
+        name="Soil & Plot Fatigue",
+        value=(
+            "• Each plot has soil condition shown in `!farm`\n"
+            "• Repeatedly planting the same crop in one plot increases soil drain\n"
+            "• Lower soil condition reduces harvest value and worsens quality odds\n"
+            "• Use `!tend <plot> fertilizer` (+25 soil) or `!tend <plot> water` (+10 soil)\n"
+            "• Buy tending items in `!store` (Farming category)"
+        ),
+        inline=False,
+    )
+    embed.add_field(
         name="Good to Know",
         value=(
-            "• Harvest value can swing up or down based on quality and hidden farm events\n"
-            "• No cooldowns — plant and harvest as fast as you want\n"
+            "• Farm level now goes up to 10, and bad quality is always possible\n"
+            "• Harvest value swings with quality, weather events, and soil condition\n"
+            "• Replanting the same crop repeatedly on one plot drains soil faster\n"
+            "• Buy 🧪 Fertilizer and 💧 Water from `!store` to tend plots\n"
+            "• No cooldowns — plant and harvest as often as your crops are ready\n"
             "• 🍄 Mushroom crops are the source of Golden Mushrooms for instant mining\n"
-            "• Your farm can be affected by hidden daily events that buff or nerf harvest value\n"
+            "• Hidden daily weather events can buff or nerf harvest value\n"
             "• A plot must be empty to plant in it (harvest first)"
         ),
         inline=False,
@@ -730,6 +746,21 @@ def _items_embed() -> discord.Embed:
     return embed
 
 
+_CATEGORY_HELP_BUILDERS = {
+    "mining": _mining_embed,
+    "fishing": _fishing_embed,
+    "farming": _farming_embed,
+    "economy": _economy_embed,
+    "gambling": _gambling_embed,
+    "shop": _shop_embed,
+    "trading": _shop_embed,  # "Shop & Trade" interactive section
+    "space": _space_embed,
+    "treasure": _treasure_embed,
+    "treasure hunt": _treasure_embed,
+    "items": _items_embed,
+}
+
+
 # ---------------------------------------------------------------------------
 # Interactive help views with navigation buttons
 # ---------------------------------------------------------------------------
@@ -988,6 +1019,17 @@ class NoodleHelpCommand(commands.HelpCommand):
         if command is not None:
             normalized = command.strip()
             if " " not in normalized and ctx.bot.get_command(normalized) is None:
+                category_builder = _CATEGORY_HELP_BUILDERS.get(normalized.lower())
+                if category_builder is not None:
+                    self.context = ctx
+                    await self._safe_send_embed(
+                        category_builder(),
+                        fallback_text=(
+                            "This help page is best viewed as an embed. "
+                            "Type `!help` to open the interactive menu."
+                        ),
+                    )
+                    return
                 cog = self._find_cog_by_help_name(normalized)
                 if cog is not None:
                     self.context = ctx
@@ -1032,6 +1074,18 @@ class NoodleHelpCommand(commands.HelpCommand):
     # --- !help <cog> -> list commands in that cog ----------------------------
 
     async def send_cog_help(self, cog: commands.Cog):
+        cleaned = self._clean_cog_name(cog).lower()
+        category_builder = _CATEGORY_HELP_BUILDERS.get(cleaned)
+        if category_builder is not None:
+            await self._safe_send_embed(
+                category_builder(),
+                fallback_text=(
+                    "This help page is best viewed as an embed. "
+                    "Type `!help` to open the interactive menu."
+                ),
+            )
+            return
+
         commands_list = await self.filter_commands(cog.get_commands(), sort=True)
 
         embed = discord.Embed(

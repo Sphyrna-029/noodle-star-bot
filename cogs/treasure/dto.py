@@ -33,6 +33,7 @@ class TreasureChest:
     expires_at: Optional[datetime] = None
     owner_id: Optional[int] = None
     combo: tuple[int, ...] = field(default_factory=tuple)
+    guess_history: list[tuple[tuple[int, ...], int, int]] = field(default_factory=list)
     attempts_left: int = 0
     owner_expires_at: Optional[datetime] = None
     task: Optional[asyncio.Task] = field(default=None, repr=False)

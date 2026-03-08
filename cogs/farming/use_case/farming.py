@@ -26,6 +26,11 @@ from cogs.farming.constants import (
     PLOT_COSTS,
     QUALITY_MULTIPLIERS,
     QUALITY_WEIGHTS_BY_LEVEL,
+    SOIL_BAD_WEIGHT_BY_THRESHOLD,
+    SOIL_DRAIN_BY_CROP,
+    SOIL_MAX_CONDITION,
+    SOIL_MULTIPLIER_BY_THRESHOLD,
+    TEND_ITEM_SOIL_RESTORE,
     get_crop_by_name,
 )
 from cogs.farming.dto import (
@@ -35,6 +40,7 @@ from cogs.farming.dto import (
     HarvestResult,
     PlantResult,
     PlotStatus,
+    TendPlotResult,
     UpgradeFarmLevelResult,
 )
 from database.repository import UserRepository
@@ -53,6 +59,7 @@ class FarmingUseCases:
 
         total_plots = self.repo.get_farm_plots(user_id)
         planted_crops = self.repo.get_planted_crops(user_id)
+        plot_states = self.repo.get_plot_states(user_id)
         now = datetime.now()
 
         # Build plot statuses
@@ -64,7 +71,15 @@ class FarmingUseCases:
 
             if crop_data is None:
                 # Empty plot
-                plots.append(PlotStatus(plot_number=plot_num, is_empty=True))
+                state = plot_states.get(plot_num)
+                plots.append(
+                    PlotStatus(
+                        plot_number=plot_num,
+                        is_empty=True,
+                        soil_condition=state.soil_condition if state else SOIL_MAX_CONDITION,
+                        same_crop_streak=state.same_crop_streak if state else 0,
+                    )
+                )
             else:
                 # Get crop info
                 crop = get_crop_by_name(crop_data.crop_type)
@@ -72,6 +87,7 @@ class FarmingUseCases:
                 time_remaining = 0
                 if not is_ready:
                     time_remaining = int((crop_data.ready_at - now).total_seconds())
+                state = plot_states.get(plot_num)
 
                 plots.append(
                     PlotStatus(
@@ -83,6 +99,8 @@ class FarmingUseCases:
                         ready_at=crop_data.ready_at,
                         is_ready=is_ready,
                         time_remaining_seconds=time_remaining,
+                        soil_condition=state.soil_condition if state else SOIL_MAX_CONDITION,
+                        same_crop_streak=state.same_crop_streak if state else 0,
                     )
                 )
 
@@ -155,9 +173,36 @@ class FarmingUseCases:
         )
 
     @staticmethod
-    def _roll_quality(farm_level: int) -> tuple[str, float]:
+    def _soil_bad_weight_bonus(soil_condition: int) -> int:
+        for threshold, bonus in SOIL_BAD_WEIGHT_BY_THRESHOLD:
+            if soil_condition >= threshold:
+                return bonus
+        return 0
+
+    @staticmethod
+    def _soil_multiplier(soil_condition: int) -> float:
+        for threshold, mult in SOIL_MULTIPLIER_BY_THRESHOLD:
+            if soil_condition >= threshold:
+                return mult
+        return SOIL_MULTIPLIER_BY_THRESHOLD[-1][1]
+
+    @classmethod
+    def _roll_quality(cls, farm_level: int, soil_condition: int) -> tuple[str, float]:
         level = min(max(farm_level, 1), MAX_FARM_LEVEL)
-        entries = QUALITY_WEIGHTS_BY_LEVEL[level]
+        entries = list(QUALITY_WEIGHTS_BY_LEVEL[level])
+        bad_bonus = cls._soil_bad_weight_bonus(soil_condition)
+        if bad_bonus > 0:
+            adjusted: dict[str, int] = {name: weight for name, weight in entries}
+            adjusted["bad"] = adjusted.get("bad", 0) + bad_bonus
+            # Remove from normal first, then great, to keep total at 100.
+            shift_remaining = bad_bonus
+            from_normal = min(shift_remaining, adjusted.get("normal", 0))
+            adjusted["normal"] -= from_normal
+            shift_remaining -= from_normal
+            if shift_remaining > 0:
+                adjusted["great"] = max(0, adjusted.get("great", 0) - shift_remaining)
+            entries = list(adjusted.items())
+
         quality = random.choices(
             [entry[0] for entry in entries],
             weights=[entry[1] for entry in entries],
@@ -254,6 +299,7 @@ class FarmingUseCases:
                 success=False,
                 message=f"Invalid plot number! You own plots 1-{total_plots}.",
             )
+        self.repo.get_plot_state(user_id, plot_number)
 
         # Check if plot is already occupied
         existing_crop = self.repo.get_planted_crop(user_id, plot_number)
@@ -291,6 +337,16 @@ class FarmingUseCases:
         ready_at = now + timedelta(hours=crop.growth_hours)
 
         self.repo.plant_crop(user_id, plot_number, crop_name.lower(), now, ready_at)
+        plot_state = self.repo.get_plot_state(user_id, plot_number)
+        new_streak = 1
+        is_rotation = False
+        if plot_state.last_crop_type == crop_name.lower():
+            new_streak = plot_state.same_crop_streak + 1
+        elif plot_state.last_crop_type:
+            is_rotation = True
+        self.repo.set_plot_crop_streak(user_id, plot_number, crop_name.lower(), new_streak)
+        if is_rotation:
+            self.repo.increment_achievement_progress(user_id, "farming_crop_rotations", 1)
 
         return PlantResult(
             success=True,
@@ -370,17 +426,21 @@ class FarmingUseCases:
         for crop_data in ready_crops:
             crop_info = get_crop_by_name(crop_data.crop_type)
             if crop_info:
+                plot_state = self.repo.get_plot_state(user_id, crop_data.plot_number)
+                soil_condition = max(0, min(SOIL_MAX_CONDITION, plot_state.soil_condition))
+                soil_mult = self._soil_multiplier(soil_condition)
                 # Special crop: mushroom plants yield mining mushrooms, not stars.
                 if crop_info.golden_mushroom_yield > 0:
                     actual_price = 0
                     mushrooms_earned += crop_info.golden_mushroom_yield
                 else:
-                    quality_name, quality_multiplier = self._roll_quality(farm_level)
+                    quality_name, quality_multiplier = self._roll_quality(farm_level, soil_condition)
                     weather_multiplier = crop_data.weather_bonus
                     # Apply bonuses additively to match gameplay expectation:
                     # +20% great quality and +100% perfect weather = +120% total.
                     combined_multiplier = 1.0 + (quality_multiplier - 1.0) + (weather_multiplier - 1.0)
-                    actual_price = max(0, int(crop_info.sell_price * combined_multiplier))
+                    # Apply soil multiplier separately as a balancing gate.
+                    actual_price = max(0, int(crop_info.sell_price * combined_multiplier * soil_mult))
                     quality_rolls.append(
                         (crop_data.plot_number, quality_name, quality_multiplier, weather_multiplier)
                     )
@@ -394,6 +454,12 @@ class FarmingUseCases:
                 )
                 total_stars += actual_price
                 plots_to_clear.append(crop_data.plot_number)
+
+                # Soil drain: base by crop + penalty for repeated same-crop streak.
+                base_drain = SOIL_DRAIN_BY_CROP.get(crop_data.crop_type, 3)
+                streak_penalty = max(0, min(3, plot_state.same_crop_streak - 1))
+                new_soil = max(0, soil_condition - (base_drain + streak_penalty))
+                self.repo.set_plot_soil_condition(user_id, crop_data.plot_number, new_soil)
 
         # Update database
         if plots_to_clear:
@@ -425,6 +491,55 @@ class FarmingUseCases:
             mushrooms_earned=mushrooms_earned,
             quality_rolls=quality_rolls,
             weather_blessed=weather_blessed,
+        )
+
+    def tend_plot(self, user_id: int, username: str, plot_number: int, item_name: str) -> TendPlotResult:
+        """Apply a tending item to restore soil condition on a plot."""
+        self.repo.get_user(user_id, username)
+        total_plots = self.repo.get_farm_plots(user_id)
+        if total_plots == 0:
+            return TendPlotResult(
+                success=False,
+                message="You don't own any plots yet! Use `!buyplot` to buy your first plot.",
+            )
+        if plot_number < 1 or plot_number > total_plots:
+            return TendPlotResult(
+                success=False,
+                message=f"Invalid plot number! You own plots 1-{total_plots}.",
+            )
+
+        item_key = item_name.strip().lower()
+        if item_key not in TEND_ITEM_SOIL_RESTORE:
+            valid = ", ".join(TEND_ITEM_SOIL_RESTORE.keys())
+            return TendPlotResult(
+                success=False,
+                message=f"Unknown tending item `{item_name}`. Use one of: {valid}",
+            )
+
+        inventory = self.repo.get_user_inventory(user_id)
+        current_count = inventory.get(item_key, 0)
+        if current_count <= 0:
+            return TendPlotResult(
+                success=False,
+                message=f"You don't have any {item_key}. Buy some from `!store` first.",
+            )
+
+        plot_state = self.repo.get_plot_state(user_id, plot_number)
+        soil_before = max(0, min(SOIL_MAX_CONDITION, plot_state.soil_condition))
+        restore = TEND_ITEM_SOIL_RESTORE[item_key]
+        soil_after = min(SOIL_MAX_CONDITION, soil_before + restore)
+        self.repo.set_plot_soil_condition(user_id, plot_number, soil_after)
+        self.repo.update_user_inventory(user_id, item_key, current_count - 1)
+        self.repo.increment_achievement_progress(user_id, "farming_tends", 1)
+
+        return TendPlotResult(
+            success=True,
+            message=f"Tended plot #{plot_number} with {item_key}.",
+            plot_number=plot_number,
+            item_used=item_key,
+            soil_before=soil_before,
+            soil_after=soil_after,
+            remaining_items=current_count - 1,
         )
 
     def get_crops_info(self) -> CropsInfo:

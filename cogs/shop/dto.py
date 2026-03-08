@@ -27,3 +27,4 @@ class ShopItem:
     emoji: str
     display_name: str
     description: str
+    category: str

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import math
 import random
 from datetime import datetime, timedelta
 from typing import Callable, Optional
@@ -10,21 +11,25 @@ from typing import Callable, Optional
 from cogs.treasure.constants import (
     CHEST_ITEM_DROP_CHANCE,
     CHEST_ITEM_TIER_CHANCE,
-    CHEST_ANNOUNCEMENT,
     CHEST_LIFETIME,
+    CHEST_RARE_ITEM_DROP_CHANCE,
     FAIL_MESSAGE,
     LOCK_ATTEMPTS,
     LOCK_INSTRUCTIONS,
     LOCK_OWNER_TIMEOUT,
+    LOCK_RECLAIM_COOLDOWN,
     LOCK_PIN_COUNT,
     LOCK_PIN_COUNT_ITEM_CHEST,
     LOCK_PIN_MAX,
     LOCK_PIN_MIN,
-    CHEST_RARE_ITEM_DROP_CHANCE,
+    LOCK_RETRY_PENALTY_MAX,
+    LOCK_RETRY_PENALTY_MIN,
     SUCCESS_MESSAGE,
     TIMEOUT_MESSAGE,
     TREASURE_REWARD_MAX,
+    TREASURE_REWARD_MAX_RARE,
     TREASURE_REWARD_MIN,
+    TREASURE_REWARD_MIN_RARE,
 )
 from cogs.treasure.dto import (
     ChestState,
@@ -46,6 +51,7 @@ class TreasureUseCases:
         self._expire_task: Optional[asyncio.Task] = None
         self._owner_task: Optional[asyncio.Task] = None
         self._event_callback: Optional[Callable] = None
+        self._user_reclaim_cooldowns: dict[int, datetime] = {}
         self._common_drop_table = (
             ("helmet", "🪖", "Mining Helmet", 1),
             ("sword", "⚔️", "Sword", 1),
@@ -82,8 +88,11 @@ class TreasureUseCases:
         self._cancel_tasks()
 
         now = datetime.now()
-        reward = random.randint(TREASURE_REWARD_MIN, TREASURE_REWARD_MAX)
         item_tier = random.random() < CHEST_ITEM_TIER_CHANCE
+        if item_tier:
+            reward = random.randint(TREASURE_REWARD_MIN_RARE, TREASURE_REWARD_MAX_RARE)
+        else:
+            reward = random.randint(TREASURE_REWARD_MIN, TREASURE_REWARD_MAX)
         expires_at = now + CHEST_LIFETIME if CHEST_LIFETIME else None
 
         self._chest = TreasureChest(
@@ -100,7 +109,7 @@ class TreasureUseCases:
         if expires_at is not None:
             self._expire_task = asyncio.create_task(self._expire_after(CHEST_LIFETIME))
 
-        return SpawnResult(True, CHEST_ANNOUNCEMENT, self._chest)
+        return SpawnResult(True, self._build_spawn_announcement(item_tier), self._chest)
 
     def start_pick(self, user_id: int, channel_id: int) -> StartPickResult:
         """Start a lock-picking session for a user."""
@@ -120,6 +129,7 @@ class TreasureUseCases:
                     max_pin=LOCK_PIN_MAX,
                     attempts=chest.attempts_left,
                     example_guess=self._build_guess_example(chest.pin_count),
+                    compact_example_guess=self._build_compact_guess_example(chest.pin_count),
                 ),
                 chest,
             )
@@ -134,9 +144,19 @@ class TreasureUseCases:
                     chest,
                 )
 
+        reclaim_remaining = self._get_reclaim_cooldown_remaining(user_id)
+        if reclaim_remaining is not None:
+            remaining_seconds = max(1, math.ceil(reclaim_remaining.total_seconds()))
+            return StartPickResult(
+                False,
+                f"You just had a lock attempt. You can try again in **{remaining_seconds}s**.",
+                chest,
+            )
+
         chest.state = ChestState.LOCKED
         chest.owner_id = user_id
         chest.combo = self._generate_combo(chest.pin_count)
+        chest.guess_history = []
         chest.attempts_left = LOCK_ATTEMPTS
         chest.owner_expires_at = datetime.now() + LOCK_OWNER_TIMEOUT
 
@@ -151,6 +171,7 @@ class TreasureUseCases:
                 max_pin=LOCK_PIN_MAX,
                 attempts=LOCK_ATTEMPTS,
                 example_guess=self._build_guess_example(chest.pin_count),
+                compact_example_guess=self._build_compact_guess_example(chest.pin_count),
             ),
             chest,
         )
@@ -183,7 +204,11 @@ class TreasureUseCases:
         if len(guess) != chest.pin_count:
             return PickResult(
                 False,
-                f"Enter **{chest.pin_count}** numbers between {LOCK_PIN_MIN}-{LOCK_PIN_MAX}.",
+                (
+                    f"Enter **{chest.pin_count}** digits between {LOCK_PIN_MIN}-{LOCK_PIN_MAX}.\n"
+                    f"Examples: `{self._build_guess_example(chest.pin_count)}` or "
+                    f"`{self._build_compact_guess_example(chest.pin_count)}`."
+                ),
                 attempts_left=chest.attempts_left,
             )
 
@@ -197,6 +222,7 @@ class TreasureUseCases:
 
         exact, misplaced = self._compute_feedback(chest.combo, guess)
         chest.attempts_left -= 1
+        guess_tuple = tuple(guess)
 
         if exact == chest.pin_count:
             reward = chest.reward
@@ -227,28 +253,72 @@ class TreasureUseCases:
                 found_items=found_items,
             )
 
+        chest.guess_history.append((guess_tuple, exact, misplaced))
+        chest.guess_history = chest.guess_history[-5:]
+
+        failed_guesses = LOCK_ATTEMPTS - chest.attempts_left
+        penalty_notice = (
+            "First failed guess is free. "
+            f"Further retries cost **{LOCK_RETRY_PENALTY_MIN}-{LOCK_RETRY_PENALTY_MAX}** stars each."
+        )
+        penalty_loss = 0
+        new_balance = 0
+        rolled_penalty = 0
+        if failed_guesses > 1:
+            rolled_penalty = random.randint(LOCK_RETRY_PENALTY_MIN, LOCK_RETRY_PENALTY_MAX)
+            current_stars = self.repo.get_user_stars(user_id, username)
+            updated_stars = max(0, current_stars - rolled_penalty)
+            penalty_loss = current_stars - updated_stars
+            if penalty_loss > 0:
+                self.repo.update_user_stars(user_id, username, updated_stars)
+                self.repo.update_username(user_id, username)
+            new_balance = updated_stars
+            if penalty_loss > 0:
+                penalty_notice = (
+                    f"Retry penalty: **-{penalty_loss}** stars. "
+                    f"New balance: **{updated_stars}**."
+                )
+            else:
+                penalty_notice = (
+                    f"Retry penalty rolled **{rolled_penalty}**, but you had no stars to lose."
+                )
+
         if chest.attempts_left <= 0:
             self._reset_lock(reason="failed")
+            jam_message = (
+                "❌ The lock jammed after too many attempts. The chest resets for others.\n\n"
+                f"Last guess: {self._format_guess_slots(guess_tuple)}\n"
+                f"Feedback: 🟩 Correct position: **{exact}** | "
+                f"🟨 Correct pin: **{misplaced}**"
+            )
+            if penalty_loss > 0:
+                jam_message += f"\nRetry cost applied: **-{penalty_loss}** stars."
+            elif failed_guesses > 1 and rolled_penalty > 0:
+                jam_message += "\nRetry cost rolled, but you had no stars to lose."
             return PickResult(
                 True,
-                "❌ The lock jammed after too many attempts. The chest resets for others.",
+                jam_message,
                 opened=False,
                 exact=exact,
                 misplaced=misplaced,
                 attempts_left=0,
+                new_balance=new_balance,
             )
 
         return PickResult(
             True,
             FAIL_MESSAGE.format(
+                guess_slots=self._format_guess_slots(guess_tuple),
                 exact=exact,
                 misplaced=misplaced,
                 attempts_left=chest.attempts_left,
+                history_block=self._build_guess_history(chest),
             ),
             opened=False,
             exact=exact,
             misplaced=misplaced,
             attempts_left=chest.attempts_left,
+            new_balance=new_balance,
         )
 
     def status(self) -> StatusResult:
@@ -258,12 +328,23 @@ class TreasureUseCases:
             return StatusResult(False, "There is no active chest right now.", None)
 
         if chest.state == ChestState.AVAILABLE:
-            return StatusResult(True, "A chest is available to pick.", chest)
-
-        if chest.state == ChestState.LOCKED:
             return StatusResult(
                 True,
-                f"The chest is being picked by <@{chest.owner_id}>.",
+                (
+                    "A chest is available to pick.\n"
+                    "Use `!pick start` to claim the lock."
+                ),
+                chest,
+            )
+
+        if chest.state == ChestState.LOCKED:
+            attempts_used = LOCK_ATTEMPTS - chest.attempts_left
+            return StatusResult(
+                True,
+                (
+                    f"The chest is being picked by <@{chest.owner_id}>.\n"
+                    f"Progress: **{attempts_used}/{LOCK_ATTEMPTS}** attempts used."
+                ),
                 chest,
             )
 
@@ -290,6 +371,41 @@ class TreasureUseCases:
     def _build_guess_example(pin_count: int) -> str:
         sample = " ".join(str(random.randint(LOCK_PIN_MIN, LOCK_PIN_MAX)) for _ in range(pin_count))
         return f"!pick {sample}"
+
+    @staticmethod
+    def _build_compact_guess_example(pin_count: int) -> str:
+        sample = "".join(str(random.randint(LOCK_PIN_MIN, LOCK_PIN_MAX)) for _ in range(pin_count))
+        return f"!pick {sample}"
+
+    @staticmethod
+    def _format_guess_slots(guess: tuple[int, ...]) -> str:
+        return ", ".join(str(pin) for pin in guess)
+
+    def _build_guess_history(self, chest: TreasureChest, limit: int = 3) -> str:
+        if not chest.guess_history:
+            return "Recent guesses: _none yet_"
+
+        rows = chest.guess_history[-limit:]
+        lines = ["Recent guesses:"]
+        for guess, exact, misplaced in reversed(rows):
+            lines.append(
+                f"• {self._format_guess_slots(guess)} -> "
+                f"🟩 correct position: {exact} | 🟨 correct pin: {misplaced}"
+            )
+        return "\n".join(lines)
+
+    @staticmethod
+    def _build_spawn_announcement(item_tier: bool) -> str:
+        if item_tier:
+            return (
+                "🧰 A **RARE locked treasure chest** appears! "
+                "It has a harder lock, higher star rewards, and rare-drop potential. "
+                "Use `!pick start` to begin."
+            )
+        return (
+            "🧰 A **standard locked treasure chest** appears! "
+            "Use `!pick start` to begin."
+        )
 
     def _roll_item_drop(self, user_id: int, chest: TreasureChest) -> str | None:
         if chest.item_drop_chance <= 0:
@@ -332,11 +448,28 @@ class TreasureUseCases:
             return False
         return datetime.now() >= chest.owner_expires_at
 
+    def _get_reclaim_cooldown_remaining(self, user_id: int) -> timedelta | None:
+        ready_at = self._user_reclaim_cooldowns.get(user_id)
+        if ready_at is None:
+            return None
+
+        remaining = ready_at - datetime.now()
+        if remaining <= timedelta(0):
+            self._user_reclaim_cooldowns.pop(user_id, None)
+            return None
+        return remaining
+
+    def _set_reclaim_cooldown(self, user_id: int | None) -> None:
+        if user_id is None:
+            return
+        self._user_reclaim_cooldowns[user_id] = datetime.now() + LOCK_RECLAIM_COOLDOWN
+
     def _reset_lock(self, reason: str = "timeout") -> None:
         chest = self._chest
         if chest is None:
             return
 
+        self._set_reclaim_cooldown(chest.owner_id)
         chest.state = ChestState.AVAILABLE
         chest.owner_id = None
         chest.combo = tuple()
@@ -355,6 +488,7 @@ class TreasureUseCases:
         if chest is None:
             return
 
+        self._set_reclaim_cooldown(chest.owner_id)
         chest.state = ChestState.OPENED
         self._cleanup_chest()
 
@@ -369,6 +503,8 @@ class TreasureUseCases:
             await asyncio.sleep(duration.total_seconds())
             chest = self._chest
             if chest and chest.state in (ChestState.AVAILABLE, ChestState.LOCKED):
+                if chest.state == ChestState.LOCKED:
+                    self._set_reclaim_cooldown(chest.owner_id)
                 chest.state = ChestState.EXPIRED
                 self._cleanup_chest()
                 if self._event_callback:
