@@ -332,7 +332,7 @@ class TreasureUseCases:
                 True,
                 (
                     "A chest is available to pick.\n"
-                    "Use `!pick start` (or the Start button) to claim the lock."
+                    "Use `!pick start` to claim the lock."
                 ),
                 chest,
             )
@@ -357,24 +357,6 @@ class TreasureUseCases:
 
         self._cleanup_chest()
         return StatusResult(True, "Chest ended.", None)
-
-    def give_up_pick(self, user_id: int, channel_id: int) -> StatusResult:
-        """Release the lock if the current owner gives up."""
-        chest = self._chest
-        if chest is None or chest.state == ChestState.IDLE:
-            return StatusResult(False, "There is no active chest right now.", None)
-
-        if chest.channel_id != channel_id:
-            return StatusResult(False, "The chest is in a different channel.", chest)
-
-        if chest.state != ChestState.LOCKED:
-            return StatusResult(False, "The chest is not currently locked.", chest)
-
-        if chest.owner_id != user_id:
-            return StatusResult(False, "Only the current picker can give up the lock.", chest)
-
-        self._reset_lock(reason="give_up")
-        return StatusResult(True, "You gave up the lock. The chest is now available to others.", chest)
 
     # --------------------------------------------------------------------- #
     # Internal helpers

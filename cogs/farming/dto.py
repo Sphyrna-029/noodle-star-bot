@@ -15,6 +15,8 @@ class PlotStatus:
     ready_at: Optional[datetime] = None
     is_ready: bool = False
     time_remaining_seconds: int = 0
+    soil_condition: int = 100
+    same_crop_streak: int = 0
 
 
 @dataclass(slots=True)
@@ -79,6 +81,19 @@ class UpgradeFarmLevelResult:
     new_level: int = 1
     cost: int = 0
     new_balance: int = 0
+
+
+@dataclass(slots=True)
+class TendPlotResult:
+    """Result of tending a farm plot with an item."""
+
+    success: bool
+    message: str
+    plot_number: int = 0
+    item_used: str = ""
+    soil_before: int = 0
+    soil_after: int = 0
+    remaining_items: int = 0
 
 
 @dataclass(slots=True)

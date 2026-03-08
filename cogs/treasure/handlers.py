@@ -16,44 +16,6 @@ from cogs.treasure.constants import (
 from cogs.treasure.use_case import TreasureUseCases
 
 
-class GiveUpButton(discord.ui.Button):
-    """Release the currently held lock."""
-
-    def __init__(self):
-        super().__init__(
-            label="Give Up",
-            style=discord.ButtonStyle.danger,
-            emoji="🏳️",
-            row=0,
-        )
-
-    async def callback(self, interaction: discord.Interaction):
-        view = self.view
-        if not isinstance(view, LockpickView):
-            await interaction.response.send_message("View state error.", ephemeral=True)
-            return
-
-        result = view.treasure.give_up_pick(interaction.user.id, interaction.channel_id)
-        await interaction.response.send_message(
-            embed=view.cog._build_pick_embed(
-                title="Lock Released" if result.success else "Can't Give Up",
-                description=result.message,
-                color=discord.Color.orange() if result.success else discord.Color.red(),
-                emoji="🧹" if result.success else "⛔",
-            ),
-            ephemeral=True,
-        )
-
-
-class LockpickView(discord.ui.View):
-    """Interactive controls for claiming and picking chest locks."""
-
-    def __init__(self, cog: "TreasureCog", treasure: TreasureUseCases):
-        super().__init__(timeout=300)
-        self.cog = cog
-        self.treasure = treasure
-        self.add_item(GiveUpButton())
-
 class TreasureCog(commands.Cog):
     """Commands for spawning and lock-picking treasure chests."""
 
@@ -272,8 +234,6 @@ class TreasureCog(commands.Cog):
     @commands.command(name="pick")
     async def pick(self, ctx, *args: str):
         """Lock-pick a treasure chest. Usage: !pick start | !pick <3 or 4 numbers>"""
-        pick_view = LockpickView(self, self.treasure)
-
         if not args or args[0].lower() == "start":
             result = self.treasure.start_pick(ctx.author.id, ctx.channel.id)
             if not result.success:
@@ -293,8 +253,7 @@ class TreasureCog(commands.Cog):
                     description=result.message,
                     color=discord.Color.gold(),
                     emoji="🔐",
-                ),
-                view=pick_view,
+                )
             )
             return
 
@@ -306,8 +265,7 @@ class TreasureCog(commands.Cog):
                     description=result.message,
                     color=discord.Color.blurple(),
                     emoji="🧰",
-                ),
-                view=pick_view,
+                )
             )
             return
 
@@ -334,8 +292,7 @@ class TreasureCog(commands.Cog):
                     ),
                     color=discord.Color.red(),
                     emoji="❌",
-                ),
-                view=pick_view,
+                )
             )
             return
 
@@ -353,8 +310,7 @@ class TreasureCog(commands.Cog):
                     description=result.message,
                     color=discord.Color.red(),
                     emoji="❌",
-                ),
-                view=pick_view,
+                )
             )
             return
 
@@ -364,8 +320,7 @@ class TreasureCog(commands.Cog):
                 description=result.message,
                 color=discord.Color.green(),
                 emoji="🔓",
-            ),
-            view=None if result.opened else pick_view,
+            )
         )
 
 

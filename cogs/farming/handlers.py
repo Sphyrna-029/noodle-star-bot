@@ -90,7 +90,7 @@ class FarmingCog(commands.Cog):
             # Plot details below each row
             for plot in row_plots:
                 if plot.is_empty:
-                    grid_lines.append(f"Plot {plot.plot_number}: Empty")
+                    grid_lines.append(f"Plot {plot.plot_number}: Empty • Soil {plot.soil_condition}%")
                 #elif plot.is_ready:
                 #    grid_lines.append(f"Plot {plot.plot_number}: {plot.crop_name} - ✨ READY!")
                 else:
@@ -101,7 +101,11 @@ class FarmingCog(commands.Cog):
                         time_str = f"{hours}h {minutes}m"
                     else:
                         time_str = f"{minutes}m"
-                    grid_lines.append(f"Plot {plot.plot_number}: {plot.crop_name} - {time_str} remaining")
+                    streak = f" • streak x{plot.same_crop_streak}" if plot.same_crop_streak > 1 else ""
+                    grid_lines.append(
+                        f"Plot {plot.plot_number}: {plot.crop_name} - {time_str} remaining"
+                        f" • Soil {plot.soil_condition}%{streak}"
+                    )
 
             # Add spacing between rows if not the last row
             if row < num_rows - 1:
@@ -151,10 +155,10 @@ class FarmingCog(commands.Cog):
         # Add footer with next plot info
         if status.can_buy_more and status.next_plot_cost:
             embed.set_footer(
-                text=f"💰 Next plot: {status.next_plot_cost}⭐ • !buyplot <number> • !upgradefarm • !harvest"
+                text=f"💰 Next plot: {status.next_plot_cost}⭐ • !buyplot <number> • !upgradefarm • !harvest • !tend"
             )
         elif not status.can_buy_more:
-            embed.set_footer(text=f"🌟 Maximum plots reached ({MAX_PLOTS}) • !upgradefarm • !harvest")
+            embed.set_footer(text=f"🌟 Maximum plots reached ({MAX_PLOTS}) • !upgradefarm • !harvest • !tend")
 
         await ctx.send(embed=embed)
 
@@ -277,6 +281,14 @@ class FarmingCog(commands.Cog):
                 ),
                 inline=False,
             )
+        embed.add_field(
+            name="Quality Notes",
+            value=(
+                "Bad quality is always possible (even at high levels), but upgrades improve odds.\n"
+                "Soil condition also affects quality and payout."
+            ),
+            inline=False,
+        )
         embed.add_field(name="Your Balance", value=f"💰 **{stars}⭐**", inline=False)
         await ctx.send(embed=embed)
 
@@ -290,11 +302,16 @@ class FarmingCog(commands.Cog):
 
         quality_preview = {
             1: "Bad 20% • Normal 60% • Great 20%",
-            2: "Bad 15% • Normal 60% • Great 25%",
-            3: "Bad 10% • Normal 60% • Great 30%",
-            4: "Bad 5% • Normal 60% • Great 35%",
-            5: "Bad 0% • Normal 60% • Great 40%",
-        }[result.new_level]
+            2: "Bad 16% • Normal 60% • Great 24%",
+            3: "Bad 12% • Normal 58% • Great 30%",
+            4: "Bad 8% • Normal 56% • Great 36%",
+            5: "Bad 5% • Normal 50% • Great 45%",
+            6: "Bad 5% • Normal 47% • Great 48%",
+            7: "Bad 4% • Normal 46% • Great 50%",
+            8: "Bad 4% • Normal 43% • Great 53%",
+            9: "Bad 3% • Normal 43% • Great 54%",
+            10: "Bad 2% • Normal 43% • Great 55%",
+        }.get(result.new_level, "Bad ? • Normal ? • Great ?")
 
         next_cost = FARM_LEVEL_UPGRADE_COSTS.get(result.new_level + 1)
         next_line = (
@@ -386,6 +403,27 @@ class FarmingCog(commands.Cog):
             lines.append(f"New balance: **{result.new_balance}** stars")
             await ctx.send("\n".join(lines))
 
+    @commands.command(name="tend")
+    async def tend(self, ctx, plot: int = 0, item: str = ""):
+        """Tend a farm plot with fertilizer/water. Usage: !tend <plot_number> <item>"""
+        if plot <= 0 or not item:
+            await ctx.send(
+                f"❌ {ctx.author.mention}, usage: `!tend <plot_number> <fertilizer|water>`"
+            )
+            return
+
+        result = self.farming.tend_plot(ctx.author.id, str(ctx.author), plot, item)
+        if not result.success:
+            await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
+            return
+
+        item_display = "Fertilizer" if result.item_used == "fertilizer" else "Water"
+        await ctx.send(
+            f"🧑‍🌾 {ctx.author.mention} tended Plot #{result.plot_number} using **{item_display}**.\n"
+            f"🌱 Soil: **{result.soil_before}% → {result.soil_after}%**\n"
+            f"🎒 {item_display} left: **{result.remaining_items}**"
+        )
+
     @commands.command(name="crops")
     async def crops(self, ctx):
         """View available crops and their stats."""
@@ -423,7 +461,24 @@ class FarmingCog(commands.Cog):
                 inline=True,
             )
 
-        embed.set_footer(text="You do not need to pre-purchase crops, they will automatically purchase when you plant them!\nLonger crops = higher hourly rate, but require patience!")
+        embed.add_field(
+            name="Farming Guide",
+            value=(
+                "1. Buy plots: `!buyplot`\n"
+                "2. Plant crops: `!plant <crop> <plot>`\n"
+                "3. Harvest when ready: `!harvest all`\n"
+                "4. Maintain soil with `!tend <plot> <fertilizer|water>`\n"
+                "5. Buy tending items in `!store` (🧪 Fertilizer, 💧 Water)\n"
+                "6. Rotate crops to avoid heavy same-crop soil drain"
+            ),
+            inline=False,
+        )
+        embed.set_footer(
+            text=(
+                "Seeds are bought automatically when planting. "
+                "Longer crops usually offer better hourly value, but soil and rotation matter."
+            )
+        )
         await ctx.send(embed=embed)
 
 

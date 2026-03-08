@@ -240,6 +240,12 @@ class ShopUseCases:
         if inventory["golden_mushroom"] > 0:
             items.append(f"🍄 **Golden Mushroom** x{inventory['golden_mushroom']}")
 
+        if inventory.get("fertilizer", 0) > 0:
+            items.append(f"🧪 **Fertilizer** x{inventory['fertilizer']}")
+
+        if inventory.get("water", 0) > 0:
+            items.append(f"💧 **Water** x{inventory['water']}")
+
         if inventory["telescope"] > 0:
             items.append("📷 **Telescope** (Permanent)")
 
