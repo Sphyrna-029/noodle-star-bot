@@ -11,6 +11,7 @@ from cogs.pets.constants import (
     MAX_NEED,
     MIN_NEED,
     PET_CATALOG,
+    PET_EXPRESSION_DIR,
     PET_SPRITE_DIR,
     PLAY_AMOUNT,
     get_pet_by_alias,
@@ -33,7 +34,7 @@ class PetUseCases:
         """Buy a pet from the catalog."""
         pet = get_pet_by_alias(pet_query)
         if pet is None:
-            return BuyPetResult(False, "That pet doesn't exist. Use `!petshop`.")
+            return BuyPetResult(False, "That pet doesn't exist. Use `!pet shop`.")
 
         if self.repo.user_owns_pet(user_id, pet.key):
             return BuyPetResult(
@@ -98,7 +99,7 @@ class PetUseCases:
         """Switch active pet to one the user owns."""
         pet = get_pet_by_alias(pet_query)
         if pet is None:
-            return ActionResult(False, "Unknown pet. Use `!mypets`.")
+            return ActionResult(False, "Unknown pet. Use `!pet list`.")
 
         if not self.repo.user_owns_pet(user_id, pet.key):
             return ActionResult(False, "You don't own that pet yet.")
@@ -115,7 +116,7 @@ class PetUseCases:
         """Set or update a nickname for one owned pet."""
         pet = get_pet_by_alias(pet_query)
         if pet is None:
-            return ActionResult(False, "Unknown pet. Use `!mypets`.")
+            return ActionResult(False, "Unknown pet. Use `!pet list`.")
 
         row = self.repo.get_user_pet(user_id, pet.key)
         if row is None:
@@ -141,7 +142,7 @@ class PetUseCases:
         """Rename the currently active pet."""
         row = self.repo.get_active_pet(user_id)
         if row is None:
-            return ActionResult(False, "You don't have an active pet. Buy one with `!buypet`.")
+            return ActionResult(False, "You don't have an active pet. Buy one with `!pet buy`.")
 
         clean_name = self._normalize_nickname(nickname)
         if clean_name is None:
@@ -186,7 +187,7 @@ class PetUseCases:
         )
         row = self.repo.get_active_pet(user_id)
         if row is None:
-            return ActionResult(False, "You don't have an active pet. Buy one with `!buypet`.")
+            return ActionResult(False, "You don't have an active pet. Buy one with `!pet buy`.")
 
         current = int(row[stat_name])
         new_value = min(MAX_NEED, max(MIN_NEED, current + increase_amount))
@@ -229,9 +230,13 @@ class PetUseCases:
         pet_emoji = catalog.emoji if catalog else "🐾"
         sprite_path = None
         if catalog is not None:
-            candidate = PET_SPRITE_DIR / catalog.sprite_file
-            if candidate.exists():
-                sprite_path = str(candidate)
+            expression_candidate = PET_EXPRESSION_DIR / f"{catalog.key}_{sprite_state}.png"
+            if expression_candidate.exists():
+                sprite_path = str(expression_candidate)
+            else:
+                sheet_candidate = PET_SPRITE_DIR / catalog.sprite_file
+                if sheet_candidate.exists():
+                    sprite_path = str(sheet_candidate)
 
         return PetStatus(
             user_id=int(row["user_id"]),

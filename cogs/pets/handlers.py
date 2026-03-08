@@ -1,6 +1,5 @@
 """Pet commands cog."""
 
-import io
 import os
 
 import discord
@@ -22,80 +21,16 @@ class PetsCog(commands.Cog):
             return None
         if not os.path.isfile(status.sprite_path):
             return None
-        state_index = {"default": 0, "happy": 1, "sad": 2}.get(status.sprite_state, 0)
+        return discord.File(status.sprite_path, filename=os.path.basename(status.sprite_path))
 
-        try:
-            from PIL import Image
-
-            with Image.open(status.sprite_path) as image:
-                frame_width = image.width // 3
-                if frame_width <= 0:
-                    return discord.File(
-                        status.sprite_path,
-                        filename=os.path.basename(status.sprite_path),
-                    )
-
-                left = max(0, min(state_index * frame_width, image.width - frame_width))
-                box = (left, 0, left + frame_width, image.height)
-                cropped = image.crop(box)
-
-                buffer = io.BytesIO()
-                cropped.save(buffer, format="PNG")
-                buffer.seek(0)
-
-                base_name = os.path.splitext(os.path.basename(status.sprite_path))[0]
-                filename = f"{base_name}_{status.sprite_state}.png"
-                return discord.File(buffer, filename=filename)
-        except Exception:
-            return discord.File(status.sprite_path, filename=os.path.basename(status.sprite_path))
-
-    @commands.command(name="petshop")
-    async def petshop(self, ctx):
-        """View pets available for adoption."""
-        items = self.pets.get_pet_shop_items()
-
-        embed = discord.Embed(
-            title="🐾 Pet Shop",
-            description="Buy a companion with `!buypet <name>`.",
-            color=discord.Color.gold(),
-        )
-
-        for item in items:
-            embed.add_field(
-                name=f"{item.emoji} {item.display_name} - {item.price}⭐",
-                value=item.description,
-                inline=False,
-            )
-
-        embed.set_footer(text="No neglect penalties: pets never die or punish you for inactivity.")
-        await ctx.send(embed=embed)
-
-    @commands.command(name="buypet")
-    async def buypet(self, ctx, *, pet_name: str = ""):
-        """Buy/adopt a pet from the pet shop."""
-        if not pet_name.strip():
-            await ctx.send(f"❌ {ctx.author.mention}, specify a pet name. Use `!petshop`.")
-            return
-
-        result = self.pets.buy_pet(ctx.author.id, str(ctx.author), pet_name)
-        if not result.success:
-            await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
-            return
-
-        await ctx.send(
-            f"✅ {ctx.author.mention}, {result.message} Cost: **{result.price}⭐**\n"
-            f"💰 New balance: **{result.new_balance}⭐**"
-        )
-
-    @commands.command(name="pet")
-    async def pet(self, ctx, member: discord.Member = None):
-        """Show active pet status."""
-        target = member or ctx.author
+    async def _send_pet_status(self, ctx, target: discord.Member) -> None:
         status = self.pets.get_pet_status(target.id)
 
         if status is None:
             if target.id == ctx.author.id:
-                await ctx.send(f"❌ {ctx.author.mention}, you don't have an active pet. Use `!petshop`.")
+                await ctx.send(
+                    f"❌ {ctx.author.mention}, you don't have an active pet. Use `!pet shop` first."
+                )
                 return
             await ctx.send(f"❌ {target.display_name} does not have an active pet.")
             return
@@ -112,20 +47,68 @@ class PetsCog(commands.Cog):
             value=f"**{status.mood.title()}** (sprite: `{status.sprite_state}`)",
             inline=False,
         )
-        embed.set_footer(text="Care: !feedpet • !cleanpet • !playpet | Rename: !renamepet <name>")
+        embed.set_footer(
+            text="Care: !pet feed • !pet clean • !pet play | Rename: !pet rename <name>"
+        )
+
         image_file = self._build_pet_image(status)
         if image_file is not None:
             embed.set_image(url=f"attachment://{image_file.filename}")
             await ctx.send(embed=embed, file=image_file)
             return
+
         await ctx.send(embed=embed)
 
-    @commands.command(name="mypets")
-    async def mypets(self, ctx):
+    @commands.group(name="pet", invoke_without_command=True)
+    async def pet(self, ctx, member: discord.Member = None):
+        """Pet commands. Use !pet help in global help for subcommands."""
+        target = member or ctx.author
+        await self._send_pet_status(ctx, target)
+
+    @pet.command(name="shop")
+    async def pet_shop(self, ctx):
+        """View pets available for adoption."""
+        items = self.pets.get_pet_shop_items()
+
+        embed = discord.Embed(
+            title="🐾 Pet Shop",
+            description="Buy a companion with `!pet buy <name>`.",
+            color=discord.Color.gold(),
+        )
+
+        for item in items:
+            embed.add_field(
+                name=f"{item.emoji} {item.display_name} - {item.price}⭐",
+                value=item.description,
+                inline=False,
+            )
+
+        embed.set_footer(text="No neglect penalties: pets never die or punish you for inactivity.")
+        await ctx.send(embed=embed)
+
+    @pet.command(name="buy")
+    async def pet_buy(self, ctx, *, pet_name: str = ""):
+        """Buy/adopt a pet from the pet shop."""
+        if not pet_name.strip():
+            await ctx.send(f"❌ {ctx.author.mention}, specify a pet name. Use `!pet shop`.")
+            return
+
+        result = self.pets.buy_pet(ctx.author.id, str(ctx.author), pet_name)
+        if not result.success:
+            await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
+            return
+
+        await ctx.send(
+            f"✅ {ctx.author.mention}, {result.message} Cost: **{result.price}⭐**\n"
+            f"💰 New balance: **{result.new_balance}⭐**"
+        )
+
+    @pet.command(name="list")
+    async def pet_list(self, ctx):
         """List all pets you own."""
         result = self.pets.list_owned_pets(ctx.author.id)
         if not result.pets:
-            await ctx.send(f"❌ {ctx.author.mention}, you don't own any pets yet. Use `!petshop`.")
+            await ctx.send(f"❌ {ctx.author.mention}, you don't own any pets yet. Use `!pet shop`.")
             return
 
         lines = []
@@ -141,11 +124,11 @@ class PetsCog(commands.Cog):
             description="\n".join(lines),
             color=discord.Color.blue(),
         )
-        embed.set_footer(text="Switch with !selectpet <name> | Name specific pet: !namepet <pet> | <nickname>")
+        embed.set_footer(text="Switch: !pet select <name> | Name: !pet name <pet> | <nickname>")
         await ctx.send(embed=embed)
 
-    @commands.command(name="selectpet")
-    async def selectpet(self, ctx, *, pet_name: str = ""):
+    @pet.command(name="select")
+    async def pet_select(self, ctx, *, pet_name: str = ""):
         """Set one of your owned pets as active."""
         if not pet_name.strip():
             await ctx.send(f"❌ {ctx.author.mention}, specify which pet to activate.")
@@ -158,13 +141,13 @@ class PetsCog(commands.Cog):
 
         await ctx.send(f"✅ {ctx.author.mention}, {result.message}")
 
-    @commands.command(name="namepet")
-    async def namepet(self, ctx, *, name_args: str = ""):
-        """Name a specific owned pet. Usage: !namepet <pet> | <nickname>"""
+    @pet.command(name="name")
+    async def pet_name(self, ctx, *, name_args: str = ""):
+        """Name a specific owned pet. Usage: !pet name <pet> | <nickname>"""
         if "|" not in name_args:
             await ctx.send(
-                f"❌ {ctx.author.mention}, usage: `!namepet <pet> | <nickname>` "
-                "(example: `!namepet cat | Luna`)."
+                f"❌ {ctx.author.mention}, usage: `!pet name <pet> | <nickname>` "
+                "(example: `!pet name cat | Luna`)."
             )
             return
 
@@ -177,10 +160,11 @@ class PetsCog(commands.Cog):
         if not result.success:
             await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
             return
+
         await ctx.send(f"✅ {ctx.author.mention}, {result.message}")
 
-    @commands.command(name="renamepet")
-    async def renamepet(self, ctx, *, nickname: str = ""):
+    @pet.command(name="rename")
+    async def pet_rename(self, ctx, *, nickname: str = ""):
         """Rename your active pet."""
         if not nickname.strip():
             await ctx.send(f"❌ {ctx.author.mention}, specify a nickname.")
@@ -190,10 +174,11 @@ class PetsCog(commands.Cog):
         if not result.success:
             await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
             return
+
         await ctx.send(f"✅ {ctx.author.mention}, {result.message}")
 
-    @commands.command(name="feedpet")
-    async def feedpet(self, ctx):
+    @pet.command(name="feed")
+    async def pet_feed(self, ctx):
         """Feed your active pet."""
         result = self.pets.feed_pet(ctx.author.id)
         if not result.success:
@@ -201,8 +186,8 @@ class PetsCog(commands.Cog):
             return
         await ctx.send(f"🍜 {ctx.author.mention}, {result.message}")
 
-    @commands.command(name="cleanpet")
-    async def cleanpet(self, ctx):
+    @pet.command(name="clean")
+    async def pet_clean(self, ctx):
         """Clean your active pet."""
         result = self.pets.clean_pet(ctx.author.id)
         if not result.success:
@@ -210,8 +195,8 @@ class PetsCog(commands.Cog):
             return
         await ctx.send(f"🧼 {ctx.author.mention}, {result.message}")
 
-    @commands.command(name="playpet")
-    async def playpet(self, ctx):
+    @pet.command(name="play")
+    async def pet_play(self, ctx):
         """Play with your active pet."""
         result = self.pets.play_with_pet(ctx.author.id)
         if not result.success:

@@ -30,6 +30,7 @@ class PetCatalogEntry:
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PET_SPRITE_DIR = PROJECT_ROOT / "assets" / "pets" / "sprites"
+PET_EXPRESSION_DIR = PROJECT_ROOT / "assets" / "pets" / "expressions"
 
 
 PET_CATALOG: dict[str, PetCatalogEntry] = {
