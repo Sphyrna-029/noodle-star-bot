@@ -30,7 +30,7 @@ class PinDigitSelect(discord.ui.Select):
             min_values=1,
             max_values=1,
             options=options,
-            row=1 + slot_index // 2,
+            row=1 + slot_index,
         )
         self.slot_index = slot_index
 
@@ -52,7 +52,7 @@ class SubmitGuessButton(discord.ui.Button):
             label="Submit Guess",
             style=discord.ButtonStyle.success,
             emoji="🎯",
-            row=4,
+            row=0,
         )
 
     async def callback(self, interaction: discord.Interaction):
