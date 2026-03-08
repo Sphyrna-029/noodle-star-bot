@@ -131,33 +131,6 @@ class LockpickView(discord.ui.View):
         self._sync_select_visibility()
         return True
 
-    @discord.ui.button(label="Start", style=discord.ButtonStyle.primary, emoji="🔐", row=0)
-    async def start_button(self, interaction: discord.Interaction, _button: discord.ui.Button):
-        result = self.treasure.start_pick(interaction.user.id, interaction.channel_id)
-        await interaction.response.send_message(
-            embed=self.cog._build_pick_embed(
-                title="Lock Claimed!" if result.success else "Can't Start Picking",
-                description=result.message,
-                color=discord.Color.gold() if result.success else discord.Color.red(),
-                emoji="🔐" if result.success else "⛔",
-            ),
-            ephemeral=True,
-        )
-        self._sync_select_visibility()
-
-    @discord.ui.button(label="Status", style=discord.ButtonStyle.secondary, emoji="🧭", row=0)
-    async def status_button(self, interaction: discord.Interaction, _button: discord.ui.Button):
-        result = self.treasure.status()
-        await interaction.response.send_message(
-            embed=self.cog._build_pick_embed(
-                title="Chest Status",
-                description=result.message,
-                color=discord.Color.blurple(),
-                emoji="🧰",
-            ),
-            ephemeral=True,
-        )
-
     @discord.ui.button(label="Give Up", style=discord.ButtonStyle.danger, emoji="🏳️", row=0)
     async def give_up_button(self, interaction: discord.Interaction, _button: discord.ui.Button):
         result = self.treasure.give_up_pick(interaction.user.id, interaction.channel_id)

@@ -72,8 +72,8 @@ LOCK_INSTRUCTIONS: Final[str] = (
     "🔐 **Lock Claimed**\n"
     "Pins: **{pins}** (each {min_pin}-{max_pin})\n"
     "Attempts left: **{attempts}**\n"
-    "Guess with spaced numbers: `{example_guess}`\n"
-    "Or compact digits: `{compact_example_guess}`"
+    "Guess with spaced numbers: `{example_guess}` or compact digits: `{compact_example_guess}`\n"
+    "Or with the drop down menu component!"
 )
 
 SUCCESS_MESSAGE: Final[str] = (
