@@ -62,6 +62,11 @@ def _main_embed() -> discord.Embed:
         inline=True,
     )
     embed.add_field(
+        name="🚀 Space Mining",
+        value="Launch into space, mine 5 planets",
+        inline=True,
+    )
+    embed.add_field(
         name="🧰 Treasure Hunt",
         value="Lock-pick chests for star rewards",
         inline=True,
@@ -508,6 +513,79 @@ def _treasure_embed() -> discord.Embed:
     return embed
 
 
+def _space_embed() -> discord.Embed:
+    embed = discord.Embed(
+        title="🚀 Space Mining — How It Works",
+        description=(
+            "Space mining is the endgame! After reaching mine level 5, "
+            "buy a Rocket Ship and blast off to mine on 5 planets with "
+            "bigger rewards and deadlier hazards."
+        ),
+        color=discord.Color.dark_blue(),
+    )
+    embed.add_field(
+        name="Getting Started (step by step)",
+        value=(
+            "**Step 1:** Reach mine level 5 (`!unlock 5`)\n"
+            "**Step 2:** Buy a Rocket Ship from `!store` (10,000 stars)\n"
+            "**Step 3:** Type `!launch` to blast off into space\n"
+            "**Step 4:** Type `!spacemine` to mine on the Moon\n"
+            "**Step 5:** Earn stars and unlock more planets with `!unlockplanet`"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="All Space Commands",
+        value=(
+            "`!launch` — Blast off into space (one-time, requires Rocket Ship + mine Lv5)\n"
+            "`!spacemine` — Mine on your active planet (shares mining cooldown)\n"
+            "`!spacemine potato` — Mine with reduced cooldown (uses 1 Raw Potato)\n"
+            "`!spacemine mushroom` — Mine instantly (uses 1 Golden Mushroom)\n"
+            "`!planets` — View all planets and your active planet\n"
+            "`!planets 3` — Switch to a different planet\n"
+            "`!unlockplanet 2` — Pay to unlock the next planet"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="The 5 Planets",
+        value=(
+            "🌕 **Planet 1 — The Moon** — Free! 12% disaster chance\n"
+            "🔴 **Planet 2 — Mars** — 5,000 stars, 14% disaster\n"
+            "🪐 **Planet 3 — Saturn** — 10,000 stars, 16% disaster, **bank risk!**\n"
+            "💠 **Planet 4 — Uranus** — 15,000 stars, 18% disaster, **bank risk!**\n"
+            "🥶 **Planet 5 — Pluto** — 20,000 stars, 22% disaster, **bank risk!**\n\n"
+            "Planets must be unlocked in order (1 → 2 → 3 → 4 → 5)."
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Space Hazards",
+        value=(
+            "☄️ **Meteor Strike** — Blocked by Helmet (50% wallet loss)\n"
+            "🏴‍☠️ **Space Pirate** — Blocked by Sword (75% wallet loss)\n"
+            "☀️ **Solar Flare** (P3+) — Blocked by Helmet (85% wallet + 10% bank)\n"
+            "🕳️ **Black Hole Rift** (P3+) — Blocked by Sword (85% wallet + 15% bank)\n"
+            "👁️ **Void Entity** (P5 only) — Blocked by Sword (90% wallet + 30% bank)\n\n"
+            "**Helmets and swords have a HIGH failure chance in space!**\n"
+            "Golden Axe and Mithril Shield never fail — they're essential here."
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Pro Tips",
+        value=(
+            "• `!deposit all` before space mining — the hazards are brutal\n"
+            "• Buy Bank Insurance for planets 3+ to protect your bank\n"
+            "• Space mining shares the same cooldown as regular mining\n"
+            "• Higher planets = better ores but much more dangerous\n"
+            "• Protection failure chance goes up to 50% on Pluto!"
+        ),
+        inline=False,
+    )
+    return embed
+
+
 def _items_embed() -> discord.Embed:
     embed = discord.Embed(
         title="🎒 Items — Rare Effects & How to Get Them",
@@ -633,6 +711,11 @@ class HelpView(discord.ui.View):
         view = SubHelpView(self.author_id)
         await interaction.response.edit_message(embed=_shop_embed(), view=view)
 
+    @discord.ui.button(label="Space", style=discord.ButtonStyle.secondary, emoji="🚀", row=2)
+    async def space_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = SubHelpView(self.author_id)
+        await interaction.response.edit_message(embed=_space_embed(), view=view)
+
     @discord.ui.button(label="Treasure Hunt", style=discord.ButtonStyle.secondary, emoji="🧰", row=2)
     async def treasure_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = SubHelpView(self.author_id)
@@ -698,6 +781,11 @@ class SubHelpView(discord.ui.View):
     async def shop_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = SubHelpView(self.author_id)
         await interaction.response.edit_message(embed=_shop_embed(), view=view)
+
+    @discord.ui.button(label="Space", style=discord.ButtonStyle.secondary, emoji="🚀", row=3)
+    async def space_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = SubHelpView(self.author_id)
+        await interaction.response.edit_message(embed=_space_embed(), view=view)
 
     @discord.ui.button(label="Treasure Hunt", style=discord.ButtonStyle.secondary, emoji="🧰", row=3)
     async def treasure_button(self, interaction: discord.Interaction, button: discord.ui.Button):
