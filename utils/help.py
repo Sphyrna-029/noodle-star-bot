@@ -673,6 +673,21 @@ def _items_embed() -> discord.Embed:
     return embed
 
 
+_CATEGORY_HELP_BUILDERS = {
+    "mining": _mining_embed,
+    "fishing": _fishing_embed,
+    "farming": _farming_embed,
+    "economy": _economy_embed,
+    "gambling": _gambling_embed,
+    "shop": _shop_embed,
+    "trading": _shop_embed,  # "Shop & Trade" interactive section
+    "space": _space_embed,
+    "treasure": _treasure_embed,
+    "treasure hunt": _treasure_embed,
+    "items": _items_embed,
+}
+
+
 # ---------------------------------------------------------------------------
 # Interactive help views with navigation buttons
 # ---------------------------------------------------------------------------
@@ -931,6 +946,17 @@ class NoodleHelpCommand(commands.HelpCommand):
         if command is not None:
             normalized = command.strip()
             if " " not in normalized and ctx.bot.get_command(normalized) is None:
+                category_builder = _CATEGORY_HELP_BUILDERS.get(normalized.lower())
+                if category_builder is not None:
+                    self.context = ctx
+                    await self._safe_send_embed(
+                        category_builder(),
+                        fallback_text=(
+                            "This help page is best viewed as an embed. "
+                            "Type `!help` to open the interactive menu."
+                        ),
+                    )
+                    return
                 cog = self._find_cog_by_help_name(normalized)
                 if cog is not None:
                     self.context = ctx
@@ -975,6 +1001,18 @@ class NoodleHelpCommand(commands.HelpCommand):
     # --- !help <cog> -> list commands in that cog ----------------------------
 
     async def send_cog_help(self, cog: commands.Cog):
+        cleaned = self._clean_cog_name(cog).lower()
+        category_builder = _CATEGORY_HELP_BUILDERS.get(cleaned)
+        if category_builder is not None:
+            await self._safe_send_embed(
+                category_builder(),
+                fallback_text=(
+                    "This help page is best viewed as an embed. "
+                    "Type `!help` to open the interactive menu."
+                ),
+            )
+            return
+
         commands_list = await self.filter_commands(cog.get_commands(), sort=True)
 
         embed = discord.Embed(
