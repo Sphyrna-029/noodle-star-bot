@@ -12,7 +12,6 @@ from cogs.pets.constants import (
     MIN_NEED,
     PET_CATALOG,
     PET_EXPRESSION_DIR,
-    PET_SPRITE_DIR,
     PLAY_AMOUNT,
     get_pet_by_alias,
 )
@@ -99,7 +98,7 @@ class PetUseCases:
         """Switch active pet to one the user owns."""
         pet = get_pet_by_alias(pet_query)
         if pet is None:
-            return ActionResult(False, "Unknown pet. Use `!pet list`.")
+            return ActionResult(False, "Unknown pet. Use `!pet shop`.")
 
         if not self.repo.user_owns_pet(user_id, pet.key):
             return ActionResult(False, "You don't own that pet yet.")
@@ -116,7 +115,7 @@ class PetUseCases:
         """Set or update a nickname for one owned pet."""
         pet = get_pet_by_alias(pet_query)
         if pet is None:
-            return ActionResult(False, "Unknown pet. Use `!pet list`.")
+            return ActionResult(False, "Unknown pet. Use `!pet shop`.")
 
         row = self.repo.get_user_pet(user_id, pet.key)
         if row is None:
@@ -233,10 +232,6 @@ class PetUseCases:
             expression_candidate = PET_EXPRESSION_DIR / f"{catalog.key}_{sprite_state}.png"
             if expression_candidate.exists():
                 sprite_path = str(expression_candidate)
-            else:
-                sheet_candidate = PET_SPRITE_DIR / catalog.sprite_file
-                if sheet_candidate.exists():
-                    sprite_path = str(sheet_candidate)
 
         return PetStatus(
             user_id=int(row["user_id"]),

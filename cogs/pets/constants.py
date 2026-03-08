@@ -25,11 +25,9 @@ class PetCatalogEntry:
     emoji: str
     price: int
     description: str
-    sprite_file: str
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-PET_SPRITE_DIR = PROJECT_ROOT / "assets" / "pets" / "sprites"
 PET_EXPRESSION_DIR = PROJECT_ROOT / "assets" / "pets" / "expressions"
 
 
@@ -40,7 +38,6 @@ PET_CATALOG: dict[str, PetCatalogEntry] = {
         emoji="🐜",
         price=350,
         description="Small but relentless, always exploring.",
-        sprite_file="ant_pet.png",
     ),
     "cat": PetCatalogEntry(
         key="cat",
@@ -48,7 +45,6 @@ PET_CATALOG: dict[str, PetCatalogEntry] = {
         emoji="🐈",
         price=650,
         description="Quiet, dramatic, and very clean when pampered.",
-        sprite_file="cat_pet.png",
     ),
     "dog": PetCatalogEntry(
         key="dog",
@@ -56,7 +52,6 @@ PET_CATALOG: dict[str, PetCatalogEntry] = {
         emoji="🐕",
         price=700,
         description="Loyal and playful with boundless energy.",
-        sprite_file="dog_pet.png",
     ),
     "frog": PetCatalogEntry(
         key="frog",
@@ -64,7 +59,6 @@ PET_CATALOG: dict[str, PetCatalogEntry] = {
         emoji="🐸",
         price=500,
         description="Chill little hopper who loves snack time.",
-        sprite_file="frog_pet.png",
     ),
     "horse": PetCatalogEntry(
         key="horse",
@@ -72,7 +66,6 @@ PET_CATALOG: dict[str, PetCatalogEntry] = {
         emoji="🐴",
         price=900,
         description="A sturdy companion with heroic vibes.",
-        sprite_file="horse_pet.png",
     ),
     "dragon": PetCatalogEntry(
         key="dragon",
@@ -80,7 +73,6 @@ PET_CATALOG: dict[str, PetCatalogEntry] = {
         emoji="🐉",
         price=1400,
         description="Tiny fire-breather with a huge appetite.",
-        sprite_file="dragon_pet.png",
     ),
 }
 

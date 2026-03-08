@@ -5,6 +5,7 @@ import os
 import discord
 from discord.ext import commands
 
+from cogs.pets.constants import PET_ALIASES
 from cogs.pets.use_case import PetUseCases
 
 
@@ -22,6 +23,35 @@ class PetsCog(commands.Cog):
         if not os.path.isfile(status.sprite_path):
             return None
         return discord.File(status.sprite_path, filename=os.path.basename(status.sprite_path))
+
+    @staticmethod
+    def _split_pet_and_nickname(name_args: str) -> tuple[str, str] | None:
+        normalized = " ".join(name_args.split()).strip()
+        if not normalized:
+            return None
+
+        tokens = normalized.split(" ")
+        lower_tokens = [token.lower() for token in tokens]
+
+        aliases_by_length = sorted(
+            PET_ALIASES.keys(),
+            key=lambda alias: len(alias.split(" ")),
+            reverse=True,
+        )
+
+        for alias in aliases_by_length:
+            alias_tokens = alias.split(" ")
+            alias_len = len(alias_tokens)
+            if len(tokens) <= alias_len:
+                continue
+            if lower_tokens[:alias_len] == alias_tokens:
+                pet_query = " ".join(tokens[:alias_len])
+                nickname = " ".join(tokens[alias_len:])
+                return pet_query, nickname
+
+        if len(tokens) < 2:
+            return None
+        return tokens[0], " ".join(tokens[1:])
 
     async def _send_pet_status(self, ctx, target: discord.Member) -> None:
         status = self.pets.get_pet_status(target.id)
@@ -103,30 +133,6 @@ class PetsCog(commands.Cog):
             f"💰 New balance: **{result.new_balance}⭐**"
         )
 
-    @pet.command(name="list")
-    async def pet_list(self, ctx):
-        """List all pets you own."""
-        result = self.pets.list_owned_pets(ctx.author.id)
-        if not result.pets:
-            await ctx.send(f"❌ {ctx.author.mention}, you don't own any pets yet. Use `!pet shop`.")
-            return
-
-        lines = []
-        for pet in result.pets:
-            active_marker = " (active)" if pet.is_active else ""
-            lines.append(
-                f"{pet.pet_emoji} **{pet.display_name}**{active_marker}"
-                f" - H:{pet.hunger}% C:{pet.cleanliness}% P:{pet.happiness}%"
-            )
-
-        embed = discord.Embed(
-            title=f"🐾 {ctx.author.display_name}'s Pets",
-            description="\n".join(lines),
-            color=discord.Color.blue(),
-        )
-        embed.set_footer(text="Switch: !pet select <name> | Name: !pet name <pet> | <nickname>")
-        await ctx.send(embed=embed)
-
     @pet.command(name="select")
     async def pet_select(self, ctx, *, pet_name: str = ""):
         """Set one of your owned pets as active."""
@@ -143,18 +149,15 @@ class PetsCog(commands.Cog):
 
     @pet.command(name="name")
     async def pet_name(self, ctx, *, name_args: str = ""):
-        """Name a specific owned pet. Usage: !pet name <pet> | <nickname>"""
-        if "|" not in name_args:
+        """Name a specific owned pet. Usage: !pet name <pet> <nickname>"""
+        parsed = self._split_pet_and_nickname(name_args)
+        if parsed is None:
             await ctx.send(
-                f"❌ {ctx.author.mention}, usage: `!pet name <pet> | <nickname>` "
-                "(example: `!pet name cat | Luna`)."
+                f"❌ {ctx.author.mention}, usage: `!pet name <pet> <nickname>` "
+                "(example: `!pet name cat Luna`)."
             )
             return
-
-        pet_name, nickname = (part.strip() for part in name_args.split("|", 1))
-        if not pet_name or not nickname:
-            await ctx.send(f"❌ {ctx.author.mention}, provide both pet and nickname.")
-            return
+        pet_name, nickname = parsed
 
         result = self.pets.name_pet(ctx.author.id, pet_name, nickname)
         if not result.success:
