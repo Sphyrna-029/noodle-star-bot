@@ -339,9 +339,14 @@ class FarmingUseCases:
         self.repo.plant_crop(user_id, plot_number, crop_name.lower(), now, ready_at)
         plot_state = self.repo.get_plot_state(user_id, plot_number)
         new_streak = 1
+        is_rotation = False
         if plot_state.last_crop_type == crop_name.lower():
             new_streak = plot_state.same_crop_streak + 1
+        elif plot_state.last_crop_type:
+            is_rotation = True
         self.repo.set_plot_crop_streak(user_id, plot_number, crop_name.lower(), new_streak)
+        if is_rotation:
+            self.repo.increment_achievement_progress(user_id, "farming_crop_rotations", 1)
 
         return PlantResult(
             success=True,
@@ -525,6 +530,7 @@ class FarmingUseCases:
         soil_after = min(SOIL_MAX_CONDITION, soil_before + restore)
         self.repo.set_plot_soil_condition(user_id, plot_number, soil_after)
         self.repo.update_user_inventory(user_id, item_key, current_count - 1)
+        self.repo.increment_achievement_progress(user_id, "farming_tends", 1)
 
         return TendPlotResult(
             success=True,
