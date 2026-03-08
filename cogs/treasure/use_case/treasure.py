@@ -288,8 +288,8 @@ class TreasureUseCases:
             jam_message = (
                 "❌ The lock jammed after too many attempts. The chest resets for others.\n"
                 f"Last guess: {self._format_guess_slots(guess_tuple)}\n"
-                f"Feedback (counts only): 🟩 Correct pin+slot **{exact}** | "
-                f"🟨 Correct pin wrong slot **{misplaced}**"
+                f"Feedback: 🟩 Correct pin + slot **{exact}** | "
+                f"🟨 Correct pin, wrong slot **{misplaced}**"
             )
             if penalty_loss > 0:
                 jam_message += f"\nRetry cost applied: **-{penalty_loss}** stars."
@@ -397,7 +397,7 @@ class TreasureUseCases:
 
     @staticmethod
     def _format_guess_slots(guess: tuple[int, ...]) -> str:
-        return "".join(f"[{pin}]" for pin in guess)
+        return ", ".join(str(pin) for pin in guess)
 
     def _build_guess_history(self, chest: TreasureChest, limit: int = 3) -> str:
         if not chest.guess_history:
