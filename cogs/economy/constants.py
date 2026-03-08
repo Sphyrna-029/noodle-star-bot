@@ -79,6 +79,12 @@ ACHIEVEMENT_DEFS = (
         "key": "master_farmer",
         "name": "Master Farmer",
         "emoji": "🌾",
+        "description": "Upgrade your farm to level 5.",
+    },
+    {
+        "key": "grandmaster_farmer",
+        "name": "Grandmaster Farmer",
+        "emoji": "🌟",
         "description": "Upgrade your farm to max level.",
     },
     {
