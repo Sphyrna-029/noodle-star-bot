@@ -83,7 +83,7 @@ SUCCESS_MESSAGE: Final[str] = (
 FAIL_MESSAGE: Final[str] = (
     "❌ Wrong combo.\n"
     "Guess: {guess_slots}\n"
-    "Feedback (counts only): 🟩 Correct pin+slot **{exact}** | 🟨 Correct pin wrong slot **{misplaced}**\n"
+    "Feedback: 🟩 Correct pin + slot **{exact}** | 🟨 Correct pin, wrong slot **{misplaced}**\n"
     "Attempts left: **{attempts_left}**\n"
     "{history_block}"
 )

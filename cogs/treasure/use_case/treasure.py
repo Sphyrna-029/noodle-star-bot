@@ -408,7 +408,7 @@ class TreasureUseCases:
         for guess, exact, misplaced in reversed(rows):
             lines.append(
                 f"• {self._format_guess_slots(guess)} -> "
-                f"🟩 correct pin+slot: {exact}, 🟨 correct pin wrong slot: {misplaced}"
+                f"🟩 correct pin + slot: {exact}, 🟨 correct pin, wrong slot: {misplaced}"
             )
         return "\n".join(lines)
 
