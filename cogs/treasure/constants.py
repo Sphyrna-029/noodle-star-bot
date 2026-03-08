@@ -69,7 +69,7 @@ CHEST_ANNOUNCEMENT: Final[str] = (
 )
 
 LOCK_INSTRUCTIONS: Final[str] = (
-    "🔐 **Lock Claimed**\n"
+    "🔑 **Lockpicking instructions:**\n"
     "Pins: **{pins}** (each {min_pin}-{max_pin})\n"
     "Attempts left: **{attempts}**\n"
     "Guess with spaced numbers: `{example_guess}` or compact digits: `{compact_example_guess}`\n"
