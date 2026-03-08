@@ -286,10 +286,10 @@ class TreasureUseCases:
         if chest.attempts_left <= 0:
             self._reset_lock(reason="failed")
             jam_message = (
-                "❌ The lock jammed after too many attempts. The chest resets for others.\n"
+                "❌ The lock jammed after too many attempts. The chest resets for others.\n\n"
                 f"Last guess: {self._format_guess_slots(guess_tuple)}\n"
-                f"Feedback: 🟩 Correct pin + slot **{exact}** | "
-                f"🟨 Correct pin, wrong slot **{misplaced}**"
+                f"Feedback: 🟩 Correct position: **{exact}** | "
+                f"🟨 Correct pin: **{misplaced}**"
             )
             if penalty_loss > 0:
                 jam_message += f"\nRetry cost applied: **-{penalty_loss}** stars."
@@ -408,7 +408,7 @@ class TreasureUseCases:
         for guess, exact, misplaced in reversed(rows):
             lines.append(
                 f"• {self._format_guess_slots(guess)} -> "
-                f"🟩 correct pin + slot: {exact}, 🟨 correct pin, wrong slot: {misplaced}"
+                f"🟩 correct position: {exact} | 🟨 correct pin: {misplaced}"
             )
         return "\n".join(lines)
 
