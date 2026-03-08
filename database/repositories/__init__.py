@@ -8,6 +8,7 @@ from database.repositories.fishing import FishingRepository
 from database.repositories.gambling import GamblingRepository
 from database.repositories.inventory import InventoryRepository
 from database.repositories.mining import MiningRepository
+from database.repositories.pets import PetsRepository
 from database.repositories.user_core import UserCoreRepository
 
 __all__ = [
@@ -20,4 +21,5 @@ __all__ = [
     "FishingRepository",
     "GamblingRepository",
     "FarmingRepository",
+    "PetsRepository",
 ]
