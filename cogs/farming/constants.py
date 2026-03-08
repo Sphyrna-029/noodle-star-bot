@@ -153,31 +153,31 @@ SOIL_MAX_CONDITION: Final[int] = 100
 # Base soil drain applied on harvest by crop type.
 SOIL_DRAIN_BY_CROP: Final[dict[str, int]] = {
     "wheat": 2,
-    "carrot": 2,
-    "corn": 3,
-    "tomato": 3,
-    "melon": 4,
-    "mushroom": 4,
+    "carrot": 4,
+    "corn": 7,
+    "tomato": 8,
+    "melon": 10,
+    "mushroom": 20,
 }
 
 # Soil condition thresholds and associated payout multipliers.
 SOIL_MULTIPLIER_BY_THRESHOLD: Final[tuple[tuple[int, float], ...]] = (
     (75, 1.00),
-    (50, 0.97),
-    (25, 0.94),
-    (0, 0.90),
+    (50, 0.70),
+    (25, 0.40),
+    (0, 0.15),
 )
 
 # Additional bad-quality weight based on soil condition.
 SOIL_BAD_WEIGHT_BY_THRESHOLD: Final[tuple[tuple[int, int], ...]] = (
     (75, 0),
-    (50, 2),
-    (25, 5),
-    (0, 8),
+    (50, 25),
+    (25, 40),
+    (0, 70),
 )
 
 TEND_ITEM_SOIL_RESTORE: Final[dict[str, int]] = {
-    "fertilizer": 25,
+    "fertilizer": 30,
     "water": 10,
 }
 
