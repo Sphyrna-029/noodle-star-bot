@@ -152,12 +152,12 @@ SOIL_MAX_CONDITION: Final[int] = 100
 
 # Base soil drain applied on harvest by crop type.
 SOIL_DRAIN_BY_CROP: Final[dict[str, int]] = {
-    "wheat": 2,
-    "carrot": 4,
-    "corn": 7,
-    "tomato": 8,
-    "melon": 10,
-    "mushroom": 20,
+    "wheat": 4,
+    "carrot": 10,
+    "corn": 14,
+    "tomato": 15,
+    "melon": 20,
+    "mushroom": 30,
 }
 
 # Soil condition thresholds and associated payout multipliers.
