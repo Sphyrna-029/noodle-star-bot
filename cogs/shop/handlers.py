@@ -6,6 +6,74 @@ from discord.ext import commands
 from cogs.shop.use_case import ShopUseCases
 
 
+class StoreCategoryButton(discord.ui.Button):
+    """Button used to switch store category pages."""
+
+    def __init__(self, category: str):
+        super().__init__(label=category, style=discord.ButtonStyle.secondary)
+        self.category = category
+
+    async def callback(self, interaction: discord.Interaction):
+        view = self.view
+        if not isinstance(view, StoreCategoryView):
+            return
+        await view.switch_category(interaction, self.category)
+
+
+class StoreCategoryView(discord.ui.View):
+    """Interactive view for browsing shop items by category."""
+
+    def __init__(self, author_id: int, items_by_category: dict[str, list], timeout: float = 180):
+        super().__init__(timeout=timeout)
+        self.author_id = author_id
+        self.items_by_category = items_by_category
+        self.categories = list(items_by_category.keys())
+        self.current_category = self.categories[0]
+
+        for category in self.categories:
+            self.add_item(StoreCategoryButton(category))
+        self._refresh_button_state()
+
+    def _refresh_button_state(self):
+        for child in self.children:
+            if not isinstance(child, StoreCategoryButton):
+                continue
+            is_active = child.category == self.current_category
+            child.disabled = is_active
+            child.style = (
+                discord.ButtonStyle.primary if is_active else discord.ButtonStyle.secondary
+            )
+
+    def build_embed(self) -> discord.Embed:
+        embed = discord.Embed(title="🏪 Noodle Star Store", color=discord.Color.gold())
+        embed.description = "Use `!buy <item> [quantity]` to purchase items!"
+        embed.add_field(name="Category", value=f"**{self.current_category}**", inline=False)
+
+        for item in self.items_by_category[self.current_category]:
+            embed.add_field(
+                name=f"{item.emoji} {item.display_name} - {item.price} stars",
+                value=item.description,
+                inline=False,
+            )
+        return embed
+
+    async def switch_category(self, interaction: discord.Interaction, category: str):
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message(
+                "Only the user who opened this store menu can use these buttons.",
+                ephemeral=True,
+            )
+            return
+
+        if category not in self.items_by_category:
+            await interaction.response.defer()
+            return
+
+        self.current_category = category
+        self._refresh_button_state()
+        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+
+
 class ShopCog(commands.Cog):
     """Commands for the store and inventory."""
 
@@ -16,18 +84,13 @@ class ShopCog(commands.Cog):
     @commands.command(name="store")
     async def store(self, ctx):
         """View items available for purchase"""
-        embed = discord.Embed(title="🏪 Noodle Star Store", color=discord.Color.gold())
-        embed.description = "Use `!buy <item> [quantity]` to purchase items!"
+        items_by_category = self.shop.get_items_by_category()
+        if not items_by_category:
+            await ctx.send("❌ The store is currently empty.")
+            return
 
-        items = self.shop.get_items()
-        for item in items:
-            embed.add_field(
-                name=f"{item.emoji} {item.display_name} - {item.price} stars",
-                value=item.description,
-                inline=False,
-            )
-
-        await ctx.send(embed=embed)
+        view = StoreCategoryView(ctx.author.id, items_by_category)
+        await ctx.send(embed=view.build_embed(), view=view)
 
     @commands.command(name="buy")
     async def buy(self, ctx, *, item_name: str = ''):

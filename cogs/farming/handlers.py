@@ -461,18 +461,6 @@ class FarmingCog(commands.Cog):
                 inline=True,
             )
 
-        embed.add_field(
-            name="Farming Guide",
-            value=(
-                "1. Buy plots: `!buyplot`\n"
-                "2. Plant crops: `!plant <crop> <plot>`\n"
-                "3. Harvest when ready: `!harvest all`\n"
-                "4. Maintain soil with `!tend <plot> <fertilizer|water>`\n"
-                "5. Buy tending items in `!store` (🧪 Fertilizer, 💧 Water)\n"
-                "6. Rotate crops to avoid heavy same-crop soil drain"
-            ),
-            inline=False,
-        )
         embed.set_footer(
             text=(
                 "Seeds are bought automatically when planting. "
