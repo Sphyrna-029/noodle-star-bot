@@ -13,95 +13,7 @@ from cogs.treasure.constants import (
     TIMEOUT_MESSAGE,
     TREASURE_ANNOUNCEMENT_CHANNEL_ID,
 )
-from cogs.treasure.dto import ChestState
 from cogs.treasure.use_case import TreasureUseCases
-
-
-class PinDigitSelect(discord.ui.Select):
-    """Digit selector for one pin slot."""
-
-    def __init__(self, slot_index: int):
-        options = [
-            discord.SelectOption(label=str(pin), value=str(pin))
-            for pin in range(1, 5)
-        ]
-        super().__init__(
-            placeholder=f"Pin {slot_index + 1}",
-            min_values=1,
-            max_values=1,
-            options=options,
-            row=1 + slot_index,
-        )
-        self.slot_index = slot_index
-
-    async def callback(self, interaction: discord.Interaction):
-        view = self.view
-        if not isinstance(view, LockpickView):
-            await interaction.response.send_message("View state error.", ephemeral=True)
-            return
-
-        view.selected_pins[self.slot_index] = int(self.values[0])
-        await interaction.response.defer()
-
-
-class SubmitGuessButton(discord.ui.Button):
-    """Submit currently selected pin digits as a guess."""
-
-    def __init__(self):
-        super().__init__(
-            label="Submit Guess",
-            style=discord.ButtonStyle.success,
-            emoji="🎯",
-            row=0,
-        )
-
-    async def callback(self, interaction: discord.Interaction):
-        view = self.view
-        if not isinstance(view, LockpickView):
-            await interaction.response.send_message("View state error.", ephemeral=True)
-            return
-
-        chest = view.treasure.status().chest
-        if chest is None or chest.state != ChestState.LOCKED:
-            await interaction.response.send_message(
-                "No active locked chest right now.",
-                ephemeral=True,
-            )
-            return
-
-        if chest.owner_id != interaction.user.id:
-            await interaction.response.send_message(
-                "You don't have the lock. Use Start to claim it first.",
-                ephemeral=True,
-            )
-            return
-
-        expected = chest.pin_count
-        pins = view.selected_pins[:expected]
-        if len(pins) != expected or any(pin is None for pin in pins):
-            await interaction.response.send_message(
-                f"Select all {expected} pins first.",
-                ephemeral=True,
-            )
-            return
-
-        guess = [int(pin) for pin in pins if pin is not None]
-        result = view.treasure.make_guess(
-            user_id=interaction.user.id,
-            username=str(interaction.user),
-            channel_id=interaction.channel_id,
-            guess=guess,
-        )
-
-        await interaction.response.send_message(
-            embed=view.cog._build_pick_embed(
-                title="Pick Result" if result.success else "Pick Failed",
-                description=result.message,
-                color=discord.Color.green() if result.success else discord.Color.red(),
-                emoji="🔓" if result.success else "❌",
-            ),
-            view=view if not result.opened else None,
-        )
 
 
 class GiveUpButton(discord.ui.Button):
@@ -131,7 +43,6 @@ class GiveUpButton(discord.ui.Button):
             ),
             ephemeral=True,
         )
-        view._sync_select_visibility()
 
 
 class LockpickView(discord.ui.View):
@@ -141,26 +52,7 @@ class LockpickView(discord.ui.View):
         super().__init__(timeout=300)
         self.cog = cog
         self.treasure = treasure
-        self.selected_pins: list[int | None] = [None, None, None, None]
-
-        for slot_index in range(4):
-            self.add_item(PinDigitSelect(slot_index))
-        self.add_item(SubmitGuessButton())
         self.add_item(GiveUpButton())
-        self._sync_select_visibility()
-
-    def _sync_select_visibility(self) -> None:
-        status = self.treasure.status()
-        pin_count = status.chest.pin_count if status.chest else 4
-        for item in self.children:
-            if isinstance(item, PinDigitSelect):
-                item.disabled = item.slot_index >= pin_count
-
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        if interaction.channel_id is None:
-            return False
-        self._sync_select_visibility()
-        return True
 
 class TreasureCog(commands.Cog):
     """Commands for spawning and lock-picking treasure chests."""
