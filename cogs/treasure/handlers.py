@@ -104,6 +104,36 @@ class SubmitGuessButton(discord.ui.Button):
         )
 
 
+class GiveUpButton(discord.ui.Button):
+    """Release the currently held lock."""
+
+    def __init__(self):
+        super().__init__(
+            label="Give Up",
+            style=discord.ButtonStyle.danger,
+            emoji="🏳️",
+            row=0,
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        view = self.view
+        if not isinstance(view, LockpickView):
+            await interaction.response.send_message("View state error.", ephemeral=True)
+            return
+
+        result = view.treasure.give_up_pick(interaction.user.id, interaction.channel_id)
+        await interaction.response.send_message(
+            embed=view.cog._build_pick_embed(
+                title="Lock Released" if result.success else "Can't Give Up",
+                description=result.message,
+                color=discord.Color.orange() if result.success else discord.Color.red(),
+                emoji="🧹" if result.success else "⛔",
+            ),
+            ephemeral=True,
+        )
+        view._sync_select_visibility()
+
+
 class LockpickView(discord.ui.View):
     """Interactive controls for claiming and picking chest locks."""
 
@@ -116,6 +146,7 @@ class LockpickView(discord.ui.View):
         for slot_index in range(4):
             self.add_item(PinDigitSelect(slot_index))
         self.add_item(SubmitGuessButton())
+        self.add_item(GiveUpButton())
         self._sync_select_visibility()
 
     def _sync_select_visibility(self) -> None:
@@ -130,21 +161,6 @@ class LockpickView(discord.ui.View):
             return False
         self._sync_select_visibility()
         return True
-
-    @discord.ui.button(label="Give Up", style=discord.ButtonStyle.danger, emoji="🏳️", row=0)
-    async def give_up_button(self, interaction: discord.Interaction, _button: discord.ui.Button):
-        result = self.treasure.give_up_pick(interaction.user.id, interaction.channel_id)
-        await interaction.response.send_message(
-            embed=self.cog._build_pick_embed(
-                title="Lock Released" if result.success else "Can't Give Up",
-                description=result.message,
-                color=discord.Color.orange() if result.success else discord.Color.red(),
-                emoji="🧹" if result.success else "⛔",
-            ),
-            ephemeral=True,
-        )
-        self._sync_select_visibility()
-
 
 class TreasureCog(commands.Cog):
     """Commands for spawning and lock-picking treasure chests."""
