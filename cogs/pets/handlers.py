@@ -96,7 +96,7 @@ class PetsCog(commands.Cog):
 
         image_file = self._build_pet_image(status)
         if image_file is not None:
-            embed.set_image(url=f"attachment://{image_file.filename}")
+            embed.set_thumbnail(url=f"attachment://{image_file.filename}")
             await ctx.send(embed=embed, file=image_file)
             return
 
