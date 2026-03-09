@@ -77,7 +77,21 @@ class ShopUseCases:
         return {category: items for category, items in grouped.items() if items}
 
     def get_item(self, item_name: str) -> Optional[ShopItem]:
-        """Get a shop item by name or alias."""
+        """Get a shop item by name, key, or alias."""
+        # Direct key lookup first (used by button-based purchases)
+        if item_name in SHOP_ITEMS:
+            key = item_name
+            shop_item = SHOP_ITEMS[key]
+            return ShopItem(
+                key=key,
+                price=shop_item.price,
+                db_column=shop_item.db_column,
+                consumable=shop_item.consumable,
+                emoji=shop_item.emoji,
+                display_name=shop_item.display_name,
+                description=shop_item.description,
+                category=self._item_categories.get(key, "Other"),
+            )
         match = get_item_by_alias(item_name)
         if match is not None:
             key, shop_item = match

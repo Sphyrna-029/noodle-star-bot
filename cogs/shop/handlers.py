@@ -11,7 +11,7 @@ from cogs.shop.use_case import ShopUseCases
 # ---------------------------------------------------------------------------
 
 class BuyItemView(discord.ui.View):
-    """View for buying a specific item with quantity buttons."""
+    """View for confirming a single item purchase."""
 
     def __init__(self, author_id: int, username: str, item, shop: ShopUseCases,
                  store_view_factory, timeout: float = 60):
@@ -21,13 +21,6 @@ class BuyItemView(discord.ui.View):
         self.item = item
         self.shop = shop
         self.store_view_factory = store_view_factory
-
-        # For non-consumable items, only show "Buy 1" button
-        if not item.consumable:
-            self.clear_items()
-            self.add_item(BuyQuantityButton(1))
-            self.add_item(BackToStoreButton())
-        # Consumable items get multiple quantity options
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id != self.author_id:
@@ -41,21 +34,28 @@ class BuyItemView(discord.ui.View):
     def build_embed(self) -> discord.Embed:
         embed = discord.Embed(
             title=f"{self.item.emoji} Buy {self.item.display_name}",
-            description=f"{self.item.description}\n\nPrice: **{self.item.price}** stars each",
+            description=f"{self.item.description}\n\nPrice: **{self.item.price}** stars",
             color=discord.Color.green(),
         )
-        embed.set_footer(text="Select a quantity to purchase, or go back to the store.")
+        embed.set_footer(text="Press Buy to purchase, or go back to the store.")
         return embed
 
-    async def do_purchase(self, interaction: discord.Interaction, quantity: int):
+    async def on_error(self, interaction: discord.Interaction, error: Exception, item) -> None:
+        if not interaction.response.is_done():
+            await interaction.response.send_message(
+                "Something went wrong. Try using `!store` again.", ephemeral=True
+            )
+
+    @discord.ui.button(label="Buy", style=discord.ButtonStyle.success, row=0)
+    async def buy_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         result = self.shop.buy(
-            self.author_id, self.username, self.item.key, quantity=quantity
+            self.author_id, self.username, self.item.key.replace("_", " ")
         )
 
         if not result.success:
             await interaction.response.edit_message(
                 embed=discord.Embed(
-                    title=f"❌ Purchase Failed",
+                    title="❌ Purchase Failed",
                     description=result.message,
                     color=discord.Color.red(),
                 ),
@@ -63,75 +63,26 @@ class BuyItemView(discord.ui.View):
             )
             return
 
-        purchased_item = (
-            result.item_name if result.quantity == 1
-            else f"{result.item_name} x{result.quantity}"
-        )
         success_embed = discord.Embed(
-            title=f"✅ Purchased!",
+            title="✅ Purchased!",
             description=(
-                f"Bought {result.item_emoji} **{purchased_item}** "
+                f"Bought {result.item_emoji} **{result.item_name}** "
                 f"for **{result.price}** stars!\n"
                 f"New balance: **{result.new_balance}** stars"
             ),
             color=discord.Color.green(),
         )
 
-        # Show "Buy More" and "Back to Store" after purchase
         post_view = PostPurchaseView(
             self.author_id, self.username, self.item,
             self.shop, self.store_view_factory
         )
         await interaction.response.edit_message(embed=success_embed, view=post_view)
 
-    async def go_back(self, interaction: discord.Interaction):
+    @discord.ui.button(label="Back to Store", style=discord.ButtonStyle.danger, emoji="◀️", row=0)
+    async def back_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = self.store_view_factory()
         await interaction.response.edit_message(embed=view.build_embed(), view=view)
-
-    @discord.ui.button(label="Buy 1", style=discord.ButtonStyle.success, row=0)
-    async def buy_1(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.do_purchase(interaction, 1)
-
-    @discord.ui.button(label="Buy 5", style=discord.ButtonStyle.success, row=0)
-    async def buy_5(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.do_purchase(interaction, 5)
-
-    @discord.ui.button(label="Buy 10", style=discord.ButtonStyle.success, row=0)
-    async def buy_10(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.do_purchase(interaction, 10)
-
-    @discord.ui.button(label="Buy 25", style=discord.ButtonStyle.success, row=0)
-    async def buy_25(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.do_purchase(interaction, 25)
-
-    @discord.ui.button(label="Back to Store", style=discord.ButtonStyle.danger, emoji="◀️", row=1)
-    async def back_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.go_back(interaction)
-
-
-class BuyQuantityButton(discord.ui.Button):
-    """Single buy button for non-consumable items."""
-
-    def __init__(self, quantity: int):
-        super().__init__(label=f"Buy {quantity}", style=discord.ButtonStyle.success, row=0)
-        self.quantity = quantity
-
-    async def callback(self, interaction: discord.Interaction):
-        view = self.view
-        if isinstance(view, BuyItemView):
-            await view.do_purchase(interaction, self.quantity)
-
-
-class BackToStoreButton(discord.ui.Button):
-    """Back button for non-consumable buy view."""
-
-    def __init__(self):
-        super().__init__(label="Back to Store", style=discord.ButtonStyle.danger, emoji="◀️", row=1)
-
-    async def callback(self, interaction: discord.Interaction):
-        view = self.view
-        if isinstance(view, BuyItemView):
-            await view.go_back(interaction)
 
 
 # ---------------------------------------------------------------------------
@@ -158,6 +109,12 @@ class PostPurchaseView(discord.ui.View):
             )
             return False
         return True
+
+    async def on_error(self, interaction: discord.Interaction, error: Exception, item) -> None:
+        if not interaction.response.is_done():
+            await interaction.response.send_message(
+                f"Something went wrong. Try using `!store` again.", ephemeral=True
+            )
 
     @discord.ui.button(label="Buy More", style=discord.ButtonStyle.success, emoji="🔄", row=0)
     async def buy_more(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -198,9 +155,12 @@ class ItemSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         view = self.view
-        if not isinstance(view, StoreCategoryView):
-            return
-        await view.select_item(interaction, self.values[0])
+        if hasattr(view, "select_item"):
+            await view.select_item(interaction, self.values[0])
+        else:
+            await interaction.response.send_message(
+                "This store has expired. Use `!store` to open a new one.", ephemeral=True
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -216,9 +176,12 @@ class StoreCategoryButton(discord.ui.Button):
 
     async def callback(self, interaction: discord.Interaction):
         view = self.view
-        if not isinstance(view, StoreCategoryView):
-            return
-        await view.switch_category(interaction, self.category)
+        if hasattr(view, "switch_category"):
+            await view.switch_category(interaction, self.category)
+        else:
+            await interaction.response.send_message(
+                "This store has expired. Use `!store` to open a new one.", ephemeral=True
+            )
 
 
 class StoreCategoryView(discord.ui.View):
@@ -270,6 +233,12 @@ class StoreCategoryView(discord.ui.View):
                 inline=False,
             )
         return embed
+
+    async def on_error(self, interaction: discord.Interaction, error: Exception, item) -> None:
+        if not interaction.response.is_done():
+            await interaction.response.send_message(
+                f"Something went wrong. Try using `!store` again.", ephemeral=True
+            )
 
     async def switch_category(self, interaction: discord.Interaction, category: str):
         if interaction.user.id != self.author_id:
