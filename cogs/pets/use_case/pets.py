@@ -33,7 +33,7 @@ class PetUseCases:
         """Buy a pet from the catalog."""
         pet = get_pet_by_alias(pet_query)
         if pet is None:
-            return BuyPetResult(False, "That pet doesn't exist. Use `!pet shop`.")
+            return BuyPetResult(False, "That pet doesn't exist. Use `!store`.")
 
         if self.repo.user_owns_pet(user_id, pet.key):
             return BuyPetResult(
@@ -98,7 +98,7 @@ class PetUseCases:
         """Switch active pet to one the user owns."""
         pet = get_pet_by_alias(pet_query)
         if pet is None:
-            return ActionResult(False, "Unknown pet. Use `!pet shop`.")
+            return ActionResult(False, "Unknown pet. Use `!store`.")
 
         if not self.repo.user_owns_pet(user_id, pet.key):
             return ActionResult(False, "You don't own that pet yet.")
@@ -115,7 +115,7 @@ class PetUseCases:
         """Set or update a nickname for one owned pet."""
         pet = get_pet_by_alias(pet_query)
         if pet is None:
-            return ActionResult(False, "Unknown pet. Use `!pet shop`.")
+            return ActionResult(False, "Unknown pet. Use `!store`.")
 
         row = self.repo.get_user_pet(user_id, pet.key)
         if row is None:
@@ -141,7 +141,7 @@ class PetUseCases:
         """Rename the currently active pet."""
         row = self.repo.get_active_pet(user_id)
         if row is None:
-            return ActionResult(False, "You don't have an active pet. Buy one with `!pet buy`.")
+            return ActionResult(False, "You don't have an active pet. Buy one with `!buy <pet>`.")
 
         clean_name = self._normalize_nickname(nickname)
         if clean_name is None:
@@ -186,7 +186,7 @@ class PetUseCases:
         )
         row = self.repo.get_active_pet(user_id)
         if row is None:
-            return ActionResult(False, "You don't have an active pet. Buy one with `!pet buy`.")
+            return ActionResult(False, "You don't have an active pet. Buy one with `!buy <pet>`.")
 
         current = int(row[stat_name])
         new_value = min(MAX_NEED, max(MIN_NEED, current + increase_amount))
@@ -215,7 +215,7 @@ class PetUseCases:
         score = (hunger + cleanliness + happiness) / 3
         if score >= 75:
             return "happy", "happy"
-        if score >= 35:
+        if score >= 40:
             return "idle", "default"
         return "sad", "sad"
 

@@ -7,9 +7,9 @@ from pathlib import Path
 MAX_NEED = 100
 MIN_NEED = 0
 
-HUNGER_DECAY_PER_HOUR = 3
-CLEANLINESS_DECAY_PER_HOUR = 2
-HAPPINESS_DECAY_PER_HOUR = 2
+HUNGER_DECAY_PER_HOUR = 5
+CLEANLINESS_DECAY_PER_HOUR = 3
+HAPPINESS_DECAY_PER_HOUR = 4
 
 FEED_AMOUNT = 35
 CLEAN_AMOUNT = 35
@@ -34,44 +34,44 @@ PET_EXPRESSION_DIR = PROJECT_ROOT / "assets" / "pets" / "expressions"
 PET_CATALOG: dict[str, PetCatalogEntry] = {
     "ant": PetCatalogEntry(
         key="ant",
-        display_name="Cosmic Ant",
+        display_name="Anthony",
         emoji="🐜",
-        price=350,
+        price=50000,
         description="Small but relentless, always exploring.",
     ),
     "cat": PetCatalogEntry(
         key="cat",
         display_name="Nebula Cat",
         emoji="🐈",
-        price=650,
+        price=15000,
         description="Quiet, dramatic, and very clean when pampered.",
     ),
     "dog": PetCatalogEntry(
         key="dog",
         display_name="Orbit Pup",
         emoji="🐕",
-        price=700,
+        price=15000,
         description="Loyal and playful with boundless energy.",
     ),
     "frog": PetCatalogEntry(
         key="frog",
         display_name="Comet Frog",
         emoji="🐸",
-        price=500,
+        price=15000,
         description="Chill little hopper who loves snack time.",
     ),
     "horse": PetCatalogEntry(
         key="horse",
         display_name="Starlight Steed",
         emoji="🐴",
-        price=900,
+        price=15000,
         description="A sturdy companion with heroic vibes.",
     ),
     "dragon": PetCatalogEntry(
         key="dragon",
         display_name="Pocket Dragon",
         emoji="🐉",
-        price=1400,
+        price=15000,
         description="Tiny fire-breather with a huge appetite.",
     ),
 }
@@ -79,17 +79,11 @@ PET_CATALOG: dict[str, PetCatalogEntry] = {
 
 PET_ALIASES: dict[str, str] = {
     "ant": "ant",
-    "cosmic ant": "ant",
     "cat": "cat",
-    "nebula cat": "cat",
     "dog": "dog",
-    "orbit pup": "dog",
     "frog": "frog",
-    "comet frog": "frog",
     "horse": "horse",
-    "starlight steed": "horse",
     "dragon": "dragon",
-    "pocket dragon": "dragon",
 }
 
 

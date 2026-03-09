@@ -72,7 +72,7 @@ class PetsCog(commands.Cog):
         if status is None:
             if target.id == ctx.author.id:
                 await ctx.send(
-                    f"❌ {ctx.author.mention}, you don't have an active pet. Use `!pet shop` first."
+                    f"❌ {ctx.author.mention}, you don't have an active pet. Use `!store` and `!buy <pet>` first."
                 )
                 return
             await ctx.send(f"❌ {target.display_name} does not have an active pet.")
@@ -108,43 +108,34 @@ class PetsCog(commands.Cog):
         target = member or ctx.author
         await self._send_pet_status(ctx, target)
 
-    @pet.command(name="shop")
-    async def pet_shop(self, ctx):
-        """View pets available for adoption."""
-        items = self.pets.get_pet_shop_items()
+    @pet.command(name="all")
+    async def pet_all(self, ctx, member: discord.Member = None):
+        """Show all owned pets and their stats."""
+        target = member or ctx.author
+        result = self.pets.list_owned_pets(target.id)
+        if not result.pets:
+            if target.id == ctx.author.id:
+                await ctx.send(
+                    f"❌ {ctx.author.mention}, you don't own any pets yet. Use `!store` and `!buy <pet>`."
+                )
+                return
+            await ctx.send(f"❌ {target.display_name} does not own any pets yet.")
+            return
 
-        embed = discord.Embed(
-            title="🐾 Pet Shop",
-            description="Buy a companion with `!pet buy <name>`.",
-            color=discord.Color.gold(),
-        )
-
-        for item in items:
-            embed.add_field(
-                name=f"{item.emoji} {item.display_name} - {item.price}⭐",
-                value=item.description,
-                inline=False,
+        lines = []
+        for pet in result.pets:
+            active_marker = " (active)" if pet.is_active else ""
+            lines.append(
+                f"{pet.pet_emoji} **{pet.display_name}**{active_marker}\n"
+                f"H:{pet.hunger}% • C:{pet.cleanliness}% • P:{pet.happiness}% • Mood: {pet.mood.title()}"
             )
 
-        embed.set_footer(text="No neglect penalties: pets never die or punish you for inactivity.")
-        await ctx.send(embed=embed)
-
-    @pet.command(name="buy")
-    async def pet_buy(self, ctx, *, pet_name: str = ""):
-        """Buy/adopt a pet from the pet shop."""
-        if not pet_name.strip():
-            await ctx.send(f"❌ {ctx.author.mention}, specify a pet name. Use `!pet shop`.")
-            return
-
-        result = self.pets.buy_pet(ctx.author.id, str(ctx.author), pet_name)
-        if not result.success:
-            await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
-            return
-
-        await ctx.send(
-            f"✅ {ctx.author.mention}, {result.message} Cost: **{result.price}⭐**\n"
-            f"💰 New balance: **{result.new_balance}⭐**"
+        embed = discord.Embed(
+            title=f"🐾 {target.display_name}'s Pets",
+            description="\n\n".join(lines),
+            color=discord.Color.blue(),
         )
+        await ctx.send(embed=embed)
 
     @pet.command(name="select")
     async def pet_select(self, ctx, *, pet_name: str = ""):
