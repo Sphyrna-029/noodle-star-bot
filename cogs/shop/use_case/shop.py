@@ -2,6 +2,9 @@
 
 from typing import Dict, List, Optional
 
+from cogs.pets.constants import PET_CATALOG
+from cogs.pets.constants import get_pet_by_alias
+from cogs.pets.use_case import PetUseCases
 from cogs.shop.constants import SHOP_ITEMS, get_item_by_alias
 from database.repository import UserRepository
 from ..dto import PurchaseResult, ShopItem
@@ -12,6 +15,7 @@ class ShopUseCases:
 
     def __init__(self, repository: UserRepository = None):
         self.repo = repository or UserRepository()
+        self.pets = PetUseCases(self.repo)
         self._non_store_items = {"golden_mushroom"}
         self._item_categories = {
             "gold_pickaxe": "Mining",
@@ -28,7 +32,7 @@ class ShopUseCases:
             "ray_gun": "Utility",
             "rocket_ship": "Utility",
         }
-        self._category_order = ("Mining", "Farming", "Fishing", "Utility")
+        self._category_order = ("Mining", "Farming", "Fishing", "Utility", "Pets")
 
     def get_items(self) -> List[ShopItem]:
         """Get all items available in the shop."""
@@ -46,6 +50,19 @@ class ShopUseCases:
                     display_name=data.display_name,
                     description=data.description,
                     category=self._item_categories.get(key, "Other"),
+                )
+            )
+        for pet in PET_CATALOG.values():
+            items.append(
+                ShopItem(
+                    key=pet.key,
+                    price=pet.price,
+                    db_column="pet",
+                    consumable=False,
+                    emoji=pet.emoji,
+                    display_name=pet.display_name,
+                    description=pet.description,
+                    category="Pets",
                 )
             )
         return items
@@ -141,6 +158,27 @@ class ShopUseCases:
             return PurchaseResult(
                 success=False,
                 message="Quantity must be a positive number.",
+            )
+
+        pet = get_pet_by_alias(parsed_item_name)
+        if pet is not None:
+            if quantity > 1:
+                return PurchaseResult(
+                    success=False,
+                    message=f"{pet.emoji} **{pet.display_name}** can only be bought one at a time.",
+                    item_name=pet.display_name,
+                    item_emoji=pet.emoji,
+                    quantity=quantity,
+                )
+            pet_result = self.pets.buy_pet(user_id, username, parsed_item_name)
+            return PurchaseResult(
+                success=pet_result.success,
+                message=pet_result.message,
+                item_name=pet.display_name,
+                item_emoji=pet.emoji,
+                price=pet_result.price,
+                quantity=1,
+                new_balance=pet_result.new_balance,
             )
 
         item = self.get_item(parsed_item_name)

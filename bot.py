@@ -45,6 +45,7 @@ class NoodleStarBot(commands.Bot):
             "cogs.dev.handlers",
             "cogs.fishing.handlers",
             "cogs.farming.handlers",
+            "cogs.pets.handlers",
             "cogs.trading.handlers",
             "cogs.space.handlers",
             "cogs.treasure.handlers",

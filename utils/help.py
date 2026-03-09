@@ -47,6 +47,11 @@ def _main_embed() -> discord.Embed:
         inline=True,
     )
     embed.add_field(
+        name="🐾 Pets",
+        value="Adopt and care for companions",
+        inline=True,
+    )
+    embed.add_field(
         name="💰 Economy",
         value="Check stars, bank, leaderboards",
         inline=True,
@@ -309,6 +314,63 @@ def _farming_embed() -> discord.Embed:
     return embed
 
 
+def _pets_embed() -> discord.Embed:
+    embed = discord.Embed(
+        title="🐾 Pets — How It Works",
+        description=(
+            "Pets are Tamagotchi-style companions with no neglect penalties. "
+            "Care actions improve mood and expression."
+        ),
+        color=discord.Color.orange(),
+    )
+    embed.add_field(
+        name="Getting Started (step by step)",
+        value=(
+            "**Step 1:** Open `!store` and go to the **Pets** category\n"
+            "**Step 2:** Buy a pet with `!buy <pet>` (example: `!buy cat`)\n"
+            "**Step 3:** Check your active pet with `!pet`\n"
+            "**Step 4:** Keep mood up with `!pet feed`, `!pet clean`, `!pet play`"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="All Pet Commands",
+        value=(
+            "`!pet` — View your active pet\n"
+            "`!pet @user` — View someone else's active pet\n"
+            "`!pet all` — View all owned pets with full stats\n"
+            "`!pet select <pet>` — Set active pet\n"
+            "`!pet name <pet> <nickname>` — Name one owned pet\n"
+            "`!pet rename <nickname>` — Rename active pet\n"
+            "`!pet feed` — Increase hunger stat\n"
+            "`!pet clean` — Increase cleanliness stat\n"
+            "`!pet play` — Increase happiness stat"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Mood & Sprites",
+        value=(
+            "Mood is based on hunger, cleanliness, and happiness:\n"
+            "• **Happy** — high average care\n"
+            "• **Idle** — medium average care\n"
+            "• **Sad** — low average care\n\n"
+            "Your pet expression image updates based on this mood state."
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Important Rules",
+        value=(
+            "• No punishments for inactivity (no death, no hard penalties)\n"
+            "• You can own multiple pets and switch the active one\n"
+            "• Pets are bought through `!store`/`!buy`, not a separate pet shop"
+        ),
+        inline=False,
+    )
+    return embed
+
+
 def _economy_embed() -> discord.Embed:
     embed = discord.Embed(
         title="💰 Economy — How It Works",
@@ -436,6 +498,7 @@ def _shop_embed() -> discord.Embed:
         value=(
             "`!store` — See all items and prices\n"
             "`!buy helmet` — Buy an item\n"
+            "`!buy cat` — Buy a pet from the Pets category\n"
             "`!buy worm 5` — Buy 5 of something\n"
             "`!inventory` — See what you own\n"
             "`!inventory @someone` — See what someone else owns"
@@ -465,7 +528,8 @@ def _shop_embed() -> discord.Embed:
             "🍄 Golden Mushroom (farm harvest) — Mine instantly, skip cooldown\n"
             "💸 Bank Insurance (250) — Protects your bank from 1 disaster\n"
             "📷 Telescope (200) — View a starfield (permanent, fun item)\n"
-            "🪱 Worm (33) / 🐟 Herring (79) / 🐋 Sturgeon (110) — Fishing bait"
+            "🪱 Worm (33) / 🐟 Herring (79) / 🐋 Sturgeon (110) — Fishing bait\n"
+            "🐾 Pets — Companion category in `!store` (buy with `!buy <pet>`)"
         ),
         inline=False,
     )
@@ -750,6 +814,8 @@ _CATEGORY_HELP_BUILDERS = {
     "mining": _mining_embed,
     "fishing": _fishing_embed,
     "farming": _farming_embed,
+    "pets": _pets_embed,
+    "pet": _pets_embed,
     "economy": _economy_embed,
     "gambling": _gambling_embed,
     "shop": _shop_embed,
@@ -799,6 +865,11 @@ class HelpView(discord.ui.View):
     async def farming_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = SubHelpView(self.author_id)
         await interaction.response.edit_message(embed=_farming_embed(), view=view)
+
+    @discord.ui.button(label="Pets", style=discord.ButtonStyle.secondary, emoji="🐾", row=1)
+    async def pets_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = SubHelpView(self.author_id)
+        await interaction.response.edit_message(embed=_pets_embed(), view=view)
 
     @discord.ui.button(label="Economy", style=discord.ButtonStyle.secondary, emoji="💰", row=1)
     async def economy_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -871,6 +942,11 @@ class SubHelpView(discord.ui.View):
         view = SubHelpView(self.author_id)
         await interaction.response.edit_message(embed=_farming_embed(), view=view)
 
+    @discord.ui.button(label="Pets", style=discord.ButtonStyle.secondary, emoji="🐾", row=1)
+    async def pets_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = SubHelpView(self.author_id)
+        await interaction.response.edit_message(embed=_pets_embed(), view=view)
+
     @discord.ui.button(label="Economy", style=discord.ButtonStyle.secondary, emoji="💰", row=2)
     async def economy_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = SubHelpView(self.author_id)
@@ -920,6 +996,7 @@ class NoodleHelpCommand(commands.HelpCommand):
         "Mining",
         "Fishing",
         "Farming",
+        "Pets",
         "Treasure",
         "Shop",
         "Trading",
