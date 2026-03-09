@@ -1,5 +1,6 @@
 """Pet commands cog."""
 
+import io
 import os
 
 import discord
@@ -22,7 +23,19 @@ class PetsCog(commands.Cog):
             return None
         if not os.path.isfile(status.sprite_path):
             return None
-        return discord.File(status.sprite_path, filename=os.path.basename(status.sprite_path))
+        try:
+            from PIL import Image
+
+            with Image.open(status.sprite_path) as img:
+                # Keep embeds compact by downscaling render size.
+                preview = img.convert("RGBA")
+                preview.thumbnail((120, 120), Image.Resampling.LANCZOS)
+                buf = io.BytesIO()
+                preview.save(buf, format="PNG", optimize=True)
+                buf.seek(0)
+                return discord.File(buf, filename=os.path.basename(status.sprite_path))
+        except Exception:
+            return discord.File(status.sprite_path, filename=os.path.basename(status.sprite_path))
 
     @staticmethod
     def _split_pet_and_nickname(name_args: str) -> tuple[str, str] | None:
