@@ -241,7 +241,9 @@ class StoreCategoryView(discord.ui.View):
 
     def _add_item_select(self):
         # Remove existing selects
-        self.children = [c for c in self.children if not isinstance(c, ItemSelect)]
+        for child in list(self.children):
+            if isinstance(child, ItemSelect):
+                self.remove_item(child)
         items = self.items_by_category.get(self.current_category, [])
         if items:
             self.add_item(ItemSelect(items))
