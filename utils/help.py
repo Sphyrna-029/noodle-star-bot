@@ -25,11 +25,17 @@ def _main_embed() -> discord.Embed:
             "1. Type `!mine` to earn your first stars\n"
             "2. Type `!stars` to check how many you have\n"
             "3. Type `!store` to see what you can buy\n"
-            "4. Type `!deposit all` to keep your stars safe in the bank\n\n"
+            "4. Type `!deposit all` to keep your stars safe in the bank\n"
+            "5. Use `!travel` to move between locations\n\n"
             "**Click a button below** to learn about each feature, "
             "or type `!help <command>` for info on a specific command."
         ),
         color=discord.Color.blurple(),
+    )
+    embed.add_field(
+        name="🗺️ Travel",
+        value="Locations, where to go, what works where",
+        inline=True,
     )
     embed.add_field(
         name="⛏️ Mining",
@@ -82,6 +88,79 @@ def _main_embed() -> discord.Embed:
         inline=True,
     )
     embed.set_footer(text="Buttons expire after 3 minutes. Type !help anytime to reopen.")
+    return embed
+
+
+def _travel_embed() -> discord.Embed:
+    embed = discord.Embed(
+        title="🗺️ Travel & Locations — How It Works",
+        description=(
+            "The world has **5 locations**. Most commands only work "
+            "at specific locations, so you need to travel first!"
+        ),
+        color=discord.Color.teal(),
+    )
+    embed.add_field(
+        name="Travel Commands",
+        value=(
+            "`!travel` (or `!t`) — Open the travel menu with buttons\n"
+            "`!where` — Check your current location\n"
+            "`!where @someone` — Check where another player is"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="The 5 Locations",
+        value=(
+            "🏘️ **Noodle Town** — Banking, store, trading, gambling\n"
+            "⛏️ **Crystal Cave** — Mine for minerals and stars\n"
+            "🎣 **Starfish Bay** — Cast your line and catch fish\n"
+            "🌾 **Fusilli Farms** — Plant, tend, and harvest crops\n"
+            "🚀 **Starport Ziti** — Launch into space and mine planets"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="What Works Where?",
+        value=(
+            "**🏘️ Noodle Town**\n"
+            "`!deposit` `!withdraw` `!store` `!buy` `!trade`\n"
+            "`!gamble` `!coinflip` `!blackjack` `!duel` `!russian`\n\n"
+            "**⛏️ Crystal Cave** — `!mine` `!minelevel`\n"
+            "**🎣 Starfish Bay** — `!fish` `!pull` `!fishing`\n"
+            "**🌾 Fusilli Farms** — `!plant` `!harvest` `!tend`\n"
+            "**🚀 Starport Ziti** — `!launch` `!spacemine`"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Works From Multiple Locations",
+        value=(
+            "`!unlock` — Crystal Cave or Noodle Town\n"
+            "`!unlockplanet` — Starport Ziti or Noodle Town\n"
+            "`!buyplot` `!upgradefarm` — Fusilli Farms or Noodle Town"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Works Everywhere",
+        value=(
+            "`!stars` `!profile` `!inventory` `!farm` `!crops`\n"
+            "`!farm growbot ...` `!farm preserver ...`\n"
+            "`!pet` `!fishlevel` `!baitshop` `!planets` `!where`"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Travel Rules",
+        value=(
+            "• Everyone starts at **Noodle Town**\n"
+            "• Travel is instant with a **1 minute cooldown**\n"
+            "• Returning to Noodle Town is always **free** (no cooldown)\n"
+            "• Use `!travel` to open the button menu and pick a destination"
+        ),
+        inline=False,
+    )
     return embed
 
 
@@ -268,6 +347,16 @@ def _farming_embed() -> discord.Embed:
             "Plot 1: 300 • Plot 2: 400 • Plot 3: 500\n"
             "Plot 4: 600 • Plot 5: 700 • Plot 6: 800\n"
             "Must buy in order. Max 6 plots total."
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="📍 Location Rules",
+        value=(
+            "`!plant` `!harvest` `!tend` — Require **Fusilli Farms** 🌾\n"
+            "`!buyplot` `!upgradefarm` — Work at Fusilli Farms or Noodle Town\n"
+            "`!farm growbot ...` `!farm preserver ...` — Work **anywhere**\n"
+            "`!farm` `!crops` — View from anywhere"
         ),
         inline=False,
     )
@@ -716,79 +805,6 @@ def _space_embed() -> discord.Embed:
     return embed
 
 
-def _space_embed() -> discord.Embed:
-    embed = discord.Embed(
-        title="🚀 Space Mining — How It Works",
-        description=(
-            "Space mining is the endgame! After reaching mine level 5, "
-            "buy a Rocket Ship and blast off to mine on 5 planets with "
-            "bigger rewards and deadlier hazards."
-        ),
-        color=discord.Color.dark_blue(),
-    )
-    embed.add_field(
-        name="Getting Started (step by step)",
-        value=(
-            "**Step 1:** Reach mine level 5 (`!unlock 5`)\n"
-            "**Step 2:** Buy a Rocket Ship from `!store` (10,000 stars)\n"
-            "**Step 3:** Type `!launch` to blast off into space\n"
-            "**Step 4:** Type `!spacemine` to mine on the Moon\n"
-            "**Step 5:** Earn stars and unlock more planets with `!unlockplanet`"
-        ),
-        inline=False,
-    )
-    embed.add_field(
-        name="All Space Commands",
-        value=(
-            "`!launch` — Blast off into space (one-time, requires Rocket Ship + mine Lv5)\n"
-            "`!spacemine` — Mine on your active planet (shares mining cooldown)\n"
-            "`!spacemine potato` — Mine with reduced cooldown (uses 1 Raw Potato)\n"
-            "`!spacemine mushroom` — Mine instantly (uses 1 Golden Mushroom)\n"
-            "`!planets` — View all planets and your active planet\n"
-            "`!planets 3` — Switch to a different planet\n"
-            "`!unlockplanet 2` — Pay to unlock the next planet"
-        ),
-        inline=False,
-    )
-    embed.add_field(
-        name="The 5 Planets",
-        value=(
-            "🌕 **Planet 1 — The Moon** — Free! 12% disaster chance\n"
-            "🔴 **Planet 2 — Mars** — 5,000 stars, 14% disaster\n"
-            "🪐 **Planet 3 — Saturn** — 10,000 stars, 16% disaster, **bank risk!**\n"
-            "💠 **Planet 4 — Uranus** — 15,000 stars, 18% disaster, **bank risk!**\n"
-            "🥶 **Planet 5 — Pluto** — 20,000 stars, 22% disaster, **bank risk!**\n\n"
-            "Planets must be unlocked in order (1 → 2 → 3 → 4 → 5)."
-        ),
-        inline=False,
-    )
-    embed.add_field(
-        name="Space Hazards",
-        value=(
-            "☄️ **Meteor Strike** — Blocked by Helmet (50% wallet loss)\n"
-            "🏴‍☠️ **Space Pirate** — Blocked by Sword (75% wallet loss)\n"
-            "☀️ **Solar Flare** (P3+) — Blocked by Helmet (85% wallet + 10% bank)\n"
-            "🕳️ **Black Hole Rift** (P3+) — Blocked by Sword (85% wallet + 15% bank)\n"
-            "👁️ **Void Entity** (P5 only) — Blocked by Sword (90% wallet + 30% bank)\n\n"
-            "**Helmets and swords have a HIGH failure chance in space!**\n"
-            "Golden Axe and Mithril Shield never fail — they're essential here."
-        ),
-        inline=False,
-    )
-    embed.add_field(
-        name="Pro Tips",
-        value=(
-            "• `!deposit all` before space mining — the hazards are brutal\n"
-            "• Buy Bank Insurance for planets 3+ to protect your bank\n"
-            "• Space mining shares the same cooldown as regular mining\n"
-            "• Higher planets = better ores but much more dangerous\n"
-            "• Protection failure chance goes up to 50% on Pluto!"
-        ),
-        inline=False,
-    )
-    return embed
-
-
 def _items_embed() -> discord.Embed:
     embed = discord.Embed(
         title="🎒 Items — Rare Effects & How to Get Them",
@@ -861,6 +877,8 @@ def _items_embed() -> discord.Embed:
 
 
 _CATEGORY_HELP_BUILDERS = {
+    "travel": _travel_embed,
+    "locations": _travel_embed,
     "mining": _mining_embed,
     "fishing": _fishing_embed,
     "farming": _farming_embed,
@@ -900,6 +918,11 @@ class HelpView(discord.ui.View):
     async def on_timeout(self) -> None:
         for item in self.children:
             item.disabled = True  # type: ignore[union-attr]
+
+    @discord.ui.button(label="Travel", style=discord.ButtonStyle.primary, emoji="🗺️", row=0)
+    async def travel_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = SubHelpView(self.author_id)
+        await interaction.response.edit_message(embed=_travel_embed(), view=view)
 
     @discord.ui.button(label="Mining", style=discord.ButtonStyle.secondary, emoji="⛏️", row=0)
     async def mining_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -977,6 +1000,11 @@ class SubHelpView(discord.ui.View):
         view = HelpView(self.author_id)
         await interaction.response.edit_message(embed=_main_embed(), view=view)
 
+    @discord.ui.button(label="Travel", style=discord.ButtonStyle.primary, emoji="🗺️", row=1)
+    async def travel_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = SubHelpView(self.author_id)
+        await interaction.response.edit_message(embed=_travel_embed(), view=view)
+
     @discord.ui.button(label="Mining", style=discord.ButtonStyle.secondary, emoji="⛏️", row=1)
     async def mining_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = SubHelpView(self.author_id)
@@ -992,7 +1020,7 @@ class SubHelpView(discord.ui.View):
         view = FarmingHelpView(self.author_id)
         await interaction.response.edit_message(embed=_farming_embed(), view=view)
 
-    @discord.ui.button(label="Pets", style=discord.ButtonStyle.secondary, emoji="🐾", row=1)
+    @discord.ui.button(label="Pets", style=discord.ButtonStyle.secondary, emoji="🐾", row=2)
     async def pets_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = SubHelpView(self.author_id)
         await interaction.response.edit_message(embed=_pets_embed(), view=view)
@@ -1087,6 +1115,7 @@ class NoodleHelpCommand(commands.HelpCommand):
     """
 
     CATEGORY_ORDER = [
+        "Locations",
         "Economy",
         "Gambling",
         "Mining",
