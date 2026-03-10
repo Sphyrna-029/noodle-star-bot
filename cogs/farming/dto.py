@@ -30,6 +30,13 @@ class FarmStatus:
     stars: int = 0  # User's current star balance
     farm_level: int = 1
     next_farm_level_cost: Optional[int] = None
+    preserver_owned: bool = False
+    preserver_level: int = 0
+    preserver_next_cost: Optional[int] = None
+    preserver_pending_stars: int = 0
+    preserver_ready_in_seconds: int = 0
+    growbot_owned: bool = False
+    growbot_level: int = 0
 
 
 @dataclass(slots=True)
@@ -69,6 +76,8 @@ class HarvestResult:
     mushrooms_earned: int = 0
     quality_rolls: list[tuple[int, str, float, float]] = field(default_factory=list)  # (plot, quality, quality_mult, weather_mult)
     weather_blessed: list[tuple[str, str, int, int]] = field(default_factory=list)  # (name, emoji, base_price, actual_price) for bonus crops
+    preserver_bonus_queued: int = 0
+    preserver_ready_in_seconds: int = 0
 
 
 @dataclass(slots=True)
@@ -97,7 +106,56 @@ class TendPlotResult:
 
 
 @dataclass(slots=True)
+class UpgradePreserverResult:
+    """Result of upgrading the Preserver machine."""
+
+    success: bool
+    message: str
+    old_level: int = 0
+    new_level: int = 0
+    cost: int = 0
+    new_balance: int = 0
+
+
+@dataclass(slots=True)
+class CollectPreserverResult:
+    """Result of collecting processed Preserver stars."""
+
+    success: bool
+    message: str
+    collected_stars: int = 0
+    new_balance: int = 0
+    ready_in_seconds: int = 0
+
+
+@dataclass(slots=True)
 class CropsInfo:
     """Information about available crops."""
 
     crops: list[tuple[str, str, int, int, int, int]]  # (name, emoji, seed_cost, sell_price, profit, growth_hours)
+
+
+@dataclass(slots=True)
+class GrowBotTendResult:
+    """Result of using GrowBot to tend multiple plots."""
+
+    success: bool
+    message: str
+    item_used: str = ""
+    tended_plots: list[tuple[int, int, int]] = field(default_factory=list)  # (plot, before, after)
+    skipped_full_soil: list[int] = field(default_factory=list)
+    remaining_items: int = 0
+
+
+@dataclass(slots=True)
+class GrowBotPlantResult:
+    """Result of using GrowBot to plant across multiple plots."""
+
+    success: bool
+    message: str
+    crop_name: str = ""
+    crop_emoji: str = ""
+    planted_plots: list[int] = field(default_factory=list)
+    skipped_occupied: list[int] = field(default_factory=list)
+    total_seed_cost: int = 0
+    new_balance: int = 0

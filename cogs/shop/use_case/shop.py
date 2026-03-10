@@ -24,6 +24,8 @@ class ShopUseCases:
             "raw_potato": "Mining",
             "fertilizer": "Farming",
             "water": "Farming",
+            "growbot": "Farming",
+            "preserver": "Farming",
             "bait_worm": "Fishing",
             "bait_herring": "Fishing",
             "bait_sturgeon": "Fishing",
@@ -263,6 +265,12 @@ class ShopUseCases:
         # Ray-gun grants 3 uses per purchase
         add_amount = quantity * 3 if item.key == "ray_gun" else quantity
         self.repo.update_user_inventory(user_id, item.db_column, current_amount + add_amount)
+        if item.key == "growbot":
+            self.repo.update_user_inventory(
+                user_id,
+                "growbot_level",
+                max(1, inventory.get("growbot_level", 0)),
+            )
 
         return PurchaseResult(
             success=True,
@@ -311,8 +319,15 @@ class ShopUseCases:
         if inventory.get("water", 0) > 0:
             items.append(f"💧 **Water** x{inventory['water']}")
 
+        if inventory.get("growbot_owned", 0) > 0:
+            level = max(1, inventory.get("growbot_level", 0))
+            items.append(f"🤖 **Grow-Bot 3000** (Permanent • Level {level})")
+
         if inventory["telescope"] > 0:
             items.append("📷 **Telescope** (Permanent)")
+
+        if inventory.get("preserver_owned", 0) > 0:
+            items.append("🏭 **Preserver** (Permanent)")
 
         if inventory.get("golden_axe", 0) > 0:
             items.append(f"🪓 **Golden Axe** ({inventory['golden_axe']} uses)")

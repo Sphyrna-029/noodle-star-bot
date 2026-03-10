@@ -36,7 +36,7 @@ PET_CATALOG: dict[str, PetCatalogEntry] = {
         key="ant",
         display_name="Anthony",
         emoji="🐜",
-        price=50000,
+        price=15000,
         description="Small but relentless, always exploring.",
     ),
     "cat": PetCatalogEntry(

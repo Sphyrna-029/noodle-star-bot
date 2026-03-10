@@ -56,7 +56,7 @@ SHOP_ITEMS: Final[dict[str, ShopItem]] = {
         consumable=True,
         emoji="🧪",
         display_name="Fertilizer",
-        description="Use with `!tend <plot> fertilizer` to restore soil condition by 25.",
+        description="Use with `!tend <plot> fertilizer` to restore soil condition by 30.",
         aliases=("fertilizer", "fert"),
     ),
     "water": ShopItem(
@@ -67,6 +67,15 @@ SHOP_ITEMS: Final[dict[str, ShopItem]] = {
         display_name="Water",
         description="Use with `!tend <plot> water` to restore soil condition by 10.",
         aliases=("water",),
+    ),
+    "growbot": ShopItem(
+        price=2500,
+        db_column="growbot_owned",
+        consumable=False,
+        emoji="🤖",
+        display_name="Grow-Bot 3000",
+        description="Farm helper robot. Use `!farm growbot harvest|tend|plant` for bulk actions.",
+        aliases=("growbot", "grow-bot", "grow bot", "agri bot"),
     ),
     "bait_worm": ShopItem(
         price=33,
@@ -104,8 +113,17 @@ SHOP_ITEMS: Final[dict[str, ShopItem]] = {
         description="See the stars in a whole new way! Use `!telescope` to view a random starfield.",
         aliases=("telescope",),
     ),
+    "preserver": ShopItem(
+        price=12000,
+        db_column="preserver_owned",
+        consumable=False,
+        emoji="🏭",
+        display_name="Preserver",
+        description="Unlocks melon processing. Use `!farm preserver` and `!farm preserver upgrade`.",
+        aliases=("preserver", "processing plant", "plant"),
+    ),
     "bank_insurance": ShopItem(
-        price=250,
+        price=2000,
         db_column="bank_insurance",
         consumable=True,
         emoji="💸",

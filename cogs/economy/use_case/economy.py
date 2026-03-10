@@ -8,7 +8,7 @@ from cogs.economy.constants import (
     BANKING_DEPOSIT_COOLDOWN_MINUTES,
     BANKING_WITHDRAW_COOLDOWN_MINUTES,
 )
-from cogs.farming.constants import MAX_FARM_LEVEL, MAX_PLOTS
+from cogs.farming.constants import MAX_FARM_LEVEL, MAX_PLOTS, MAX_PRESERVER_LEVEL
 from database.repository import UserRepository
 from utils.formatters import format_time_remaining
 from ..dto import AchievementStatus, BalanceResult, EconomyStats, ProfileResult
@@ -81,7 +81,7 @@ class EconomyUseCases:
             elif key == "master_farmer":
                 condition_met = inventory.get("farm_level", 1) >= 5
             elif key == "grandmaster_farmer":
-                condition_met = inventory.get("farm_level", 1) >= MAX_FARM_LEVEL
+                condition_met = inventory.get("preserver_level", 0) >= MAX_PRESERVER_LEVEL
             elif progress_key and target is not None:
                 condition_met = progress.get(progress_key, 0) >= int(target)
 

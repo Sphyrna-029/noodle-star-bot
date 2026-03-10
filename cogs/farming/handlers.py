@@ -20,7 +20,7 @@ class FarmingCog(commands.Cog):
         self.bot = bot
         self.farming = FarmingUseCases()
 
-    @commands.command(name="farm")
+    @commands.group(name="farm", invoke_without_command=True)
     async def farm(self, ctx):
         """View your farm and planted crops."""
         status = self.farming.get_farm_status(ctx.author.id, str(ctx.author))
@@ -74,11 +74,11 @@ class FarmingCog(commands.Cog):
             cells = []
             for plot in row_plots:
                 if plot.is_empty:
-                    cells.append("🟫 ")
+                    cells.append(" . ")
                 #elif plot.is_ready:
                 #    cells.append(f"{plot.crop_emoji}✨")
                 else:
-                    cells.append(f"{plot.crop_emoji} ")
+                    cells.append(" * ")
             grid_lines.append("│" + "│".join(cells) + "│")
 
             # Bottom border
@@ -103,7 +103,7 @@ class FarmingCog(commands.Cog):
                         time_str = f"{minutes}m"
                     streak = f" • streak x{plot.same_crop_streak}" if plot.same_crop_streak > 1 else ""
                     grid_lines.append(
-                        f"Plot {plot.plot_number}: {plot.crop_name} - {time_str} remaining"
+                        f"Plot {plot.plot_number}: {plot.crop_emoji} {plot.crop_name} - {time_str} remaining"
                         f" • Soil {plot.soil_condition}%{streak}"
                     )
 
@@ -151,14 +151,59 @@ class FarmingCog(commands.Cog):
                 value=f"🌟 Level **{status.farm_level}** (MAX)",
                 inline=False,
             )
+        if status.preserver_owned:
+            preserver_next = (
+                f"⬆️ Upgrade to Preserver level **{status.preserver_level + 1}** for **{status.preserver_next_cost}⭐** with `!farm preserver upgrade`"
+                if status.preserver_next_cost is not None else
+                "🌟 Preserver is max level."
+            )
+            ready_text = (
+                f"⏳ Ready in **{status.preserver_ready_in_seconds // 3600}h {(status.preserver_ready_in_seconds % 3600) // 60}m**"
+                if status.preserver_pending_stars > 0 and status.preserver_ready_in_seconds > 0 else
+                ("✅ Ready to collect with `!farm preserver collect`" if status.preserver_pending_stars > 0 else "📦 No processed stars queued")
+            )
+            preserver_value = (
+                f"🏭 Level **{status.preserver_level}**\n"
+                f"💰 Pending: **{status.preserver_pending_stars}⭐**\n"
+                f"{ready_text}\n"
+                f"{preserver_next}"
+            )
+        else:
+            preserver_value = "🔒 Locked\nBuy **Preserver** from `!store` to unlock melon processing."
+        embed.add_field(
+            name="Preserver",
+            value=preserver_value,
+            inline=False,
+        )
+        if status.growbot_owned:
+            growbot_value = (
+                f"🤖 Level **{status.growbot_level}**\n"
+                f"Use `!farm growbot harvest`, `!farm growbot tend <fertilizer|water>`, "
+                f"or `!farm growbot plant <crop>`"
+            )
+        else:
+            growbot_value = "🔒 Locked\nBuy **Grow-Bot 3000** from `!store` to unlock farm automation."
+        embed.add_field(
+            name="GrowBot",
+            value=growbot_value,
+            inline=False,
+        )
 
         # Add footer with next plot info
         if status.can_buy_more and status.next_plot_cost:
             embed.set_footer(
-                text=f"💰 Next plot: {status.next_plot_cost}⭐ • !buyplot <number> • !upgradefarm • !harvest • !tend"
+                text=(
+                    f"💰 Next plot: {status.next_plot_cost}⭐ • !upgradefarm • !farm preserver upgrade "
+                    "• !harvest <plot> • !farm growbot harvest"
+                )
             )
         elif not status.can_buy_more:
-            embed.set_footer(text=f"🌟 Maximum plots reached ({MAX_PLOTS}) • !upgradefarm • !harvest • !tend")
+            embed.set_footer(
+                text=(
+                    f"🌟 Maximum plots reached ({MAX_PLOTS}) • !upgradefarm • !farm preserver upgrade "
+                    "• !harvest <plot> • !farm growbot harvest"
+                )
+            )
 
         await ctx.send(embed=embed)
 
@@ -306,11 +351,6 @@ class FarmingCog(commands.Cog):
             3: "Bad 12% • Normal 58% • Great 30%",
             4: "Bad 8% • Normal 56% • Great 36%",
             5: "Bad 5% • Normal 50% • Great 45%",
-            6: "Bad 5% • Normal 47% • Great 48%",
-            7: "Bad 4% • Normal 46% • Great 50%",
-            8: "Bad 4% • Normal 43% • Great 53%",
-            9: "Bad 3% • Normal 43% • Great 54%",
-            10: "Bad 2% • Normal 43% • Great 55%",
         }.get(result.new_level, "Bad ? • Normal ? • Great ?")
 
         next_cost = FARM_LEVEL_UPGRADE_COSTS.get(result.new_level + 1)
@@ -328,20 +368,190 @@ class FarmingCog(commands.Cog):
             f"{next_line}"
         )
 
-    @commands.command(name="harvest")
-    async def harvest(self, ctx, plot: str = "all"):
-        """Harvest ready crops. Usage: !harvest [plot_number|all]"""
-        # Parse plot number or "all"
-        plot_number = None
-        if plot.lower() != "all":
-            try:
-                plot_number = int(plot)
-            except ValueError:
+    @farm.group(name="preserver", invoke_without_command=True)
+    async def farm_preserver(self, ctx):
+        """View your Preserver machine status."""
+        owned, level, next_cost, pending, ready_in = self.farming.get_preserver_info(ctx.author.id, str(ctx.author))
+        if not owned:
+            await ctx.send(
+                f"🏭 {ctx.author.mention}, your Preserver is locked.\n"
+                f"Buy it once from `!store` to unlock melon processing."
+            )
+            return
+        ready_text = (
+            f"⏳ Ready in **{ready_in // 3600}h {(ready_in % 3600) // 60}m**"
+            if pending > 0 and ready_in > 0 else
+            ("✅ Ready to collect with `!farm preserver collect`" if pending > 0 else "📦 No processed stars queued")
+        )
+        next_text = (
+            f"⬆️ Next level costs **{next_cost}⭐** with `!farm preserver upgrade`"
+            if next_cost is not None else
+            "🌟 Preserver is max level."
+        )
+        await ctx.send(
+            f"🏭 {ctx.author.mention}'s Preserver\n"
+            f"Level: **{level}**\n"
+            f"Pending: **{pending}⭐**\n"
+            f"{ready_text}\n"
+            f"{next_text}"
+        )
+
+    @farm_preserver.command(name="upgrade")
+    async def farm_preserver_upgrade(self, ctx):
+        """Upgrade your Preserver machine."""
+        result = self.farming.upgrade_preserver(ctx.author.id, str(ctx.author))
+        if not result.success:
+            await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
+            return
+        await ctx.send(
+            f"✅ {ctx.author.mention}, {result.message}\n"
+            f"💸 Cost: **{result.cost}⭐**\n"
+            f"💰 New balance: **{result.new_balance}⭐**"
+        )
+
+    @farm_preserver.command(name="collect")
+    async def farm_preserver_collect(self, ctx):
+        """Collect finished stars from your Preserver."""
+        result = self.farming.collect_preserver(ctx.author.id, str(ctx.author))
+        if not result.success:
+            if result.ready_in_seconds > 0:
+                hours = result.ready_in_seconds // 3600
+                minutes = (result.ready_in_seconds % 3600) // 60
                 await ctx.send(
-                    f"❌ {ctx.author.mention}, invalid plot number!\n"
-                    f"Usage: `!harvest <plot_number>` or `!harvest all`"
+                    f"❌ {ctx.author.mention}, Preserver still processing. Ready in **{hours}h {minutes}m**."
                 )
-                return
+            else:
+                await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
+            return
+        await ctx.send(
+            f"✅ {ctx.author.mention} collected **{result.collected_stars}⭐** from the Preserver!\n"
+            f"💰 New balance: **{result.new_balance}⭐**"
+        )
+
+    @farm.group(name="growbot", invoke_without_command=True)
+    async def farm_growbot(self, ctx):
+        """View GrowBot status and commands."""
+        status = self.farming.get_farm_status(ctx.author.id, str(ctx.author))
+        if not status.growbot_owned:
+            await ctx.send(
+                f"🤖 {ctx.author.mention}, your GrowBot is locked.\n"
+                f"Buy **Grow-Bot 3000** from `!store` for **2500⭐** to unlock it."
+            )
+            return
+        await ctx.send(
+            f"🤖 {ctx.author.mention}'s GrowBot\n"
+            f"Level: **{status.growbot_level}**\n"
+            "Commands:\n"
+            "`!farm growbot harvest` — Harvest all ready crops\n"
+            "`!farm growbot tend <fertilizer|water>` — Tend multiple plots\n"
+            "`!farm growbot plant <crop> [count|plot_list]` — Plant empty plots with one crop"
+        )
+
+    @farm_growbot.command(name="harvest")
+    async def farm_growbot_harvest(self, ctx):
+        """Harvest all ready crops with GrowBot."""
+        result = self.farming.growbot_harvest(ctx.author.id, str(ctx.author))
+        if not result.success:
+            await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
+            return
+
+        lines = [f"🤖 {ctx.author.mention}'s GrowBot harvested **{len(result.harvested)}** crop(s)!"]
+        for plot_num, name, emoji, stars in result.harvested:
+            crop = get_crop_by_name(name)
+            mushroom_yield = crop.golden_mushroom_yield if crop else 0
+            if mushroom_yield > 0:
+                lines.append(f"  • Plot #{plot_num}: {emoji} {name} (+{mushroom_yield}🍄)")
+            else:
+                lines.append(f"  • Plot #{plot_num}: {emoji} {name} (+{stars}⭐)")
+
+        lines.append(f"\n💰 Total: **{result.total_stars}⭐**")
+        if result.mushrooms_earned > 0:
+            lines.append(f"🍄 Found **{result.mushrooms_earned}** Golden Mushrooms!")
+        if result.preserver_bonus_queued > 0:
+            lines.append(f"🏭 Preserver queued **{result.preserver_bonus_queued}⭐**")
+        lines.append(f"New balance: **{result.new_balance}** stars")
+        await ctx.send("\n".join(lines))
+
+    @farm_growbot.command(name="tend")
+    async def farm_growbot_tend(self, ctx, item: str = ""):
+        """Tend multiple plots with GrowBot."""
+        if not item:
+            await ctx.send(
+                f"❌ {ctx.author.mention}, usage: `!farm growbot tend <fertilizer|water>`"
+            )
+            return
+
+        result = self.farming.growbot_tend_all(ctx.author.id, str(ctx.author), item)
+        if not result.success:
+            await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
+            return
+
+        item_display = "Fertilizer" if result.item_used == "fertilizer" else "Water"
+        lines = [
+            f"🤖 {ctx.author.mention}'s GrowBot tended **{len(result.tended_plots)}** plot(s) using **{item_display}**."
+        ]
+        for plot_number, before, after in result.tended_plots:
+            lines.append(f"  • Plot #{plot_number}: {before}% → {after}%")
+        if result.skipped_full_soil:
+            skipped = ", ".join(str(plot) for plot in result.skipped_full_soil)
+            lines.append(f"⏭️ Already max soil: Plot(s) {skipped}")
+        lines.append(f"🎒 {item_display} left: **{result.remaining_items}**")
+        await ctx.send("\n".join(lines))
+
+    @farm_growbot.command(name="plant")
+    async def farm_growbot_plant(self, ctx, crop: str = "", plot_selector: str = ""):
+        """Plant one crop across all empty plots with GrowBot."""
+        if not crop:
+            await ctx.send(
+                f"❌ {ctx.author.mention}, usage: `!farm growbot plant <crop> [count|plot_list]`\n"
+                f"Examples: `!farm growbot plant wheat`, `!farm growbot plant melon 3`, `!farm growbot plant carrot 1,3,6`"
+            )
+            return
+
+        result = self.farming.growbot_plant_all(
+            ctx.author.id,
+            str(ctx.author),
+            crop,
+            plot_selector,
+        )
+        if not result.success:
+            await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
+            return
+
+        planted = ", ".join(str(plot) for plot in result.planted_plots)
+        lines = [
+            f"🤖 {ctx.author.mention}'s GrowBot planted {result.crop_emoji} **{result.crop_name}** in plot(s): {planted}",
+            f"💸 Total seed cost: **{result.total_seed_cost}⭐**",
+        ]
+        if result.skipped_occupied:
+            occupied = ", ".join(str(plot) for plot in result.skipped_occupied)
+            lines.append(f"⏭️ Skipped occupied plot(s): {occupied}")
+        lines.append(f"💰 New balance: **{result.new_balance}⭐**")
+        await ctx.send("\n".join(lines))
+
+    @commands.command(name="harvest")
+    async def harvest(self, ctx, plot: str = ""):
+        """Harvest a specific ready crop. Usage: !harvest <plot_number>"""
+        if not plot:
+            await ctx.send(
+                f"❌ {ctx.author.mention}, usage: `!harvest <plot_number>`\n"
+                f"Use `!farm growbot harvest` to harvest all ready plots."
+            )
+            return
+
+        try:
+            plot_number = int(plot)
+        except ValueError:
+            await ctx.send(
+                f"❌ {ctx.author.mention}, invalid plot number.\n"
+                f"Use `!harvest <plot_number>` or `!farm growbot harvest`."
+            )
+            return
+        if plot_number <= 0:
+            await ctx.send(
+                f"❌ {ctx.author.mention}, plot number must be at least 1."
+            )
+            return
 
         result = self.farming.harvest(ctx.author.id, str(ctx.author), plot_number)
 
@@ -375,6 +585,7 @@ class FarmingCog(commands.Cog):
                     f"🌾 {ctx.author.mention} harvested {emoji} **{name}** from Plot #{plot_num}!\n"
                     f"🎯 Quality: **{quality_label}**{weather_note}\n"
                     f"💰 Earned **{stars}⭐**\n"
+                    f"{f'🏭 Preserver queued **{result.preserver_bonus_queued}⭐**\\n' if result.preserver_bonus_queued > 0 else ''}"
                     f"New balance: **{result.new_balance}** stars"
                 )
         else:
@@ -400,6 +611,15 @@ class FarmingCog(commands.Cog):
             lines.append(f"\n💰 Total: **{result.total_stars}⭐**")
             if result.mushrooms_earned > 0:
                 lines.append(f"🍄 Found **{result.mushrooms_earned}** Golden Mushrooms!")
+            if result.preserver_bonus_queued > 0:
+                if result.preserver_ready_in_seconds > 0:
+                    hours = result.preserver_ready_in_seconds // 3600
+                    minutes = (result.preserver_ready_in_seconds % 3600) // 60
+                    lines.append(
+                        f"🏭 Preserver queued **{result.preserver_bonus_queued}⭐** (ready in {hours}h {minutes}m)"
+                    )
+                else:
+                    lines.append(f"🏭 Preserver queued **{result.preserver_bonus_queued}⭐**")
             lines.append(f"New balance: **{result.new_balance}** stars")
             await ctx.send("\n".join(lines))
 
