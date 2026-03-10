@@ -125,13 +125,12 @@ class NoodleStarBot(commands.Bot):
 
     async def on_command_error(self, ctx, error):
         """Global error handler - sends traceback to Discord for debugging."""
-        if isinstance(error, commands.CommandNotFound):
-            return
-
         # Get the original exception if it's wrapped
         original = getattr(error, "original", error)
 
         if ctx.author.id not in DEV_USER_IDS:
+            if isinstance(error, commands.CommandNotFound):
+                return
             try:
                 await ctx.send("❌ Something went wrong while running that command.")
             except Exception:
