@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd:*)",
+      "Bash(cd /c/Users/cmsal/Documents/1d_personal_projects/noodle-star-bot-sphyrna && python -c \"import config\" 2>&1)",
+      "Bash(cd /c/Users/cmsal/Documents/1d_personal_projects/noodle-star-bot-sphyrna && python -c \"from bot import NoodleStarBot; print\\('OK'\\)\" 2>&1)",
+      "Bash(cd /c/Users/cmsal/Documents/1d_personal_projects/noodle-star-bot-sphyrna && python -c \"\nimport importlib\ncogs = [\n    'cogs.alien_abduction',\n    'cogs.economy',\n    'cogs.gambling',\n    'cogs.mining',\n    'cogs.shop',\n    'cogs.moderator',\n    'cogs.fishing',\n]\nfor c in cogs:\n    try:\n        importlib.import_module\\(c\\)\n        print\\(f'OK: {c}'\\)\n    except Exception as e:\n        print\\(f'FAIL: {c} -> {e}'\\)\n\" 2>&1)",
+      "Bash(cd /c/Users/cmsal/Documents/1d_personal_projects/noodle-star-bot-sphyrna && python -c \"import cogs; print\\('OK'\\)\" 2>&1)",
+      "Bash(cd /c/Users/cmsal/Documents/1d_personal_projects/noodle-star-bot-sphyrna && python -c \"from utils.help import NoodleHelpCommand, HelpView, SubHelpView; print\\('OK'\\)\" 2>&1)",
+      "Bash(cd /c/Users/cmsal/Documents/1d_personal_projects/noodle-star-bot-sphyrna && python -c \"from bot import NoodleStarBot; print\\('Bot imports OK'\\)\" 2>&1)",
+      "Bash(cd /c/Users/cmsal/Documents/1d_personal_projects/noodle-star-bot-sphyrna && python -c \"\nimport asyncio\nfrom bot import NoodleStarBot\nbot = NoodleStarBot\\(\\)\nasync def test\\(\\):\n    await bot.setup_hook\\(\\)\n    print\\('All cogs loaded, help command ready'\\)\n    await bot.close\\(\\)\nasyncio.run\\(test\\(\\)\\)\n\" 2>&1)",
+      "Bash(cd /c/Users/cmsal/Documents/1d_personal_projects/noodle-star-bot-sphyrna && python -c \"from utils.help import NoodleHelpCommand, HelpView, SubHelpView; print\\('Imports OK'\\)\" 2>&1)",
+      "Bash(cd /c/Users/cmsal/Documents/1d_personal_projects/noodle-star-bot-sphyrna && python -c \"\nimport asyncio\nfrom bot import NoodleStarBot\nbot = NoodleStarBot\\(\\)\nasync def test\\(\\):\n    await bot.setup_hook\\(\\)\n    print\\('All cogs loaded OK'\\)\n    await bot.close\\(\\)\nasyncio.run\\(test\\(\\)\\)\n\" 2>&1)",
+      "Bash(tail:*)"
+    ]
+  }
+}
