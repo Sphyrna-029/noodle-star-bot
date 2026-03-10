@@ -4,7 +4,7 @@ import random
 
 from discord.ext import commands
 
-from cogs.space.constants import SPACE_ABDUCTION_BONUS
+from cogs.space.constants import SPACE_ABDUCTION_CHANCE
 from database.repository import UserRepository
 
 
@@ -91,11 +91,13 @@ class AlienAbductionCog(commands.Cog):
         if ctx.command and ctx.command.name in ("deposit", "withdraw"):
             return
 
-        # Space explorers have higher abduction chance
-        chance = ABDUCTION_CHANCE
+        # Space explorers have per-planet abduction chance
         inventory = self.repo.get_user_inventory(ctx.author.id)
-        if inventory.get("space_planet_level", 0) > 0:
-            chance += SPACE_ABDUCTION_BONUS
+        space_level = inventory.get("space_planet_level", 0)
+        if space_level > 0:
+            chance = SPACE_ABDUCTION_CHANCE.get(space_level, ABDUCTION_CHANCE)
+        else:
+            chance = ABDUCTION_CHANCE
 
         if random.random() > chance:
             return

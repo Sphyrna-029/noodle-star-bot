@@ -155,6 +155,8 @@ SHOP_ITEMS: Final[dict[str, ShopItem]] = {
 def _build_alias_index(items: dict[str, ShopItem]) -> dict[str, str]:
     index: dict[str, str] = {}
     for key, item in items.items():
+        # Include the internal key itself so lookups by key always work
+        index[key] = key
         for alias in item.aliases:
             norm = alias.casefold().strip()
             if not norm:

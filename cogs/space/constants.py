@@ -6,11 +6,19 @@ __all__ = [
     "SPACE_MINERAL_TABLES",
     "SPACE_PLANETS",
     "ROCKET_SHIP_COST",
-    "SPACE_ABDUCTION_BONUS",
+    "SPACE_ABDUCTION_CHANCE",
 ]
 
 ROCKET_SHIP_COST: Final[int] = 10000
-SPACE_ABDUCTION_BONUS: Final[float] = 0.02
+
+# Per-planet abduction chance (replaces base 0.05% for space players)
+SPACE_ABDUCTION_CHANCE: Final[dict[int, float]] = {
+    1: 0.0005,   # Moon:    0.05%
+    2: 0.0025,   # Mars:    0.25%
+    3: 0.005,    # Saturn:  0.50%
+    4: 0.0075,   # Uranus:  0.75%
+    5: 0.01,     # Pluto:   1.00%
+}
 
 # ---------------------------------------------------------------------------
 # Space minerals per planet (normal and gold pickaxe variants)
