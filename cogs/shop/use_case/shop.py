@@ -285,6 +285,12 @@ class ShopUseCases:
                 "growbot_level",
                 max(1, inventory.get("growbot_level", 0)),
             )
+        if item.key == "preserver":
+            self.repo.update_user_inventory(
+                user_id,
+                "preserver_level",
+                max(1, inventory.get("preserver_level", 0)),
+            )
 
         return PurchaseResult(
             success=True,

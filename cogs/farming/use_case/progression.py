@@ -76,7 +76,10 @@ class FarmProgressionMixin(FarmingUseCaseMixin):
         farm_level = self.repo.get_farm_level(user_id)
         next_farm_level_cost = FARM_LEVEL_UPGRADE_COSTS.get(farm_level + 1)
         preserver_owned = inventory.get("preserver_owned", 0) > 0
-        preserver_level = inventory.get("preserver_level", 0)
+        preserver_level_raw = int(inventory.get("preserver_level", 0) or 0)
+        preserver_level = max(1, preserver_level_raw) if preserver_owned else 0
+        if preserver_owned and preserver_level != preserver_level_raw:
+            self.repo.update_user_inventory(user_id, "preserver_level", preserver_level)
         preserver_next_cost = PRESERVER_UPGRADE_COSTS.get(preserver_level + 1) if preserver_owned else None
         preserver_pending_stars = inventory.get("preserver_pending_stars", 0)
         ready_ts = inventory.get("preserver_ready_ts", 0)

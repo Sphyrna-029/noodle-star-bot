@@ -166,6 +166,7 @@ class FarmingCog(commands.Cog):
             preserver_value = (
                 f"🏭 Level **{status.preserver_level}**\n"
                 f"💰 Pending: **{status.preserver_pending_stars}⭐**\n"
+                "🧪 Start processing with `!farm preserver start`\n"
                 f"{ready_text}\n"
                 f"{preserver_next}"
             )
@@ -395,6 +396,7 @@ class FarmingCog(commands.Cog):
             f"🏭 {ctx.author.mention}'s Preserver\n"
             f"Level: **{level}**\n"
             f"Pending: **{pending}⭐**\n"
+            "Start processing: `!farm preserver start`\n"
             f"{processing_text}\n"
             f"{ready_text}\n"
             f"{next_text}"

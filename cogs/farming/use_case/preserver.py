@@ -21,6 +21,17 @@ from .base import FarmingUseCaseMixin
 class PreserverMixin(FarmingUseCaseMixin):
     """Preserver machine status and progression."""
 
+    def _normalize_preserver_level(self, user_id: int, inventory: dict) -> int:
+        """Ensure owned preservers have a minimum level of 1."""
+        if inventory.get("preserver_owned", 0) <= 0:
+            return 0
+        raw_level = int(inventory.get("preserver_level", 0) or 0)
+        level = max(1, raw_level)
+        if level != raw_level:
+            self.repo.update_user_inventory(user_id, "preserver_level", level)
+            inventory["preserver_level"] = level
+        return level
+
     def get_preserver_info(
         self, user_id: int, username: str
     ) -> tuple[bool, int, Optional[int], int, int]:
@@ -28,7 +39,7 @@ class PreserverMixin(FarmingUseCaseMixin):
         self.repo.get_user(user_id, username)
         inventory = self.repo.get_user_inventory(user_id)
         owned = inventory.get("preserver_owned", 0) > 0
-        level = inventory.get("preserver_level", 0)
+        level = self._normalize_preserver_level(user_id, inventory)
         next_cost = PRESERVER_UPGRADE_COSTS.get(level + 1) if owned else None
         pending = inventory.get("preserver_pending_stars", 0)
         ready_ts = inventory.get("preserver_ready_ts", 0)
@@ -46,7 +57,7 @@ class PreserverMixin(FarmingUseCaseMixin):
                 message="You need to buy a Preserver from `!store` first.",
             )
 
-        current_level = inventory.get("preserver_level", 0)
+        current_level = self._normalize_preserver_level(user_id, inventory)
         if current_level >= MAX_PRESERVER_LEVEL:
             return UpgradePreserverResult(
                 success=False,
@@ -90,12 +101,7 @@ class PreserverMixin(FarmingUseCaseMixin):
                 message="You don't own a Preserver yet. Buy one from `!store`.",
             )
 
-        preserver_level = inventory.get("preserver_level", 0)
-        if preserver_level <= 0:
-            return StartPreserverResult(
-                success=False,
-                message="Your Preserver is level 0. Upgrade it with `!farm preserver upgrade` to start preserving.",
-            )
+        preserver_level = self._normalize_preserver_level(user_id, inventory)
 
         planted_crops = self.repo.get_planted_crops(user_id)
         if not planted_crops:

@@ -119,7 +119,7 @@ SHOP_ITEMS: Final[dict[str, ShopItem]] = {
         consumable=False,
         emoji="🏭",
         display_name="Preserver",
-        description="Unlocks the crop preserver. Use `!farm preserver` and `!farm preserver upgrade`.",
+        description="Unlocks the crop preserver. Use `!farm preserver`, `!farm preserver start`, and `!farm preserver upgrade`.",
         aliases=("preserver", "processing plant", "plant"),
     ),
     "bank_insurance": ShopItem(
