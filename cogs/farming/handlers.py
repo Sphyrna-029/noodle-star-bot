@@ -504,13 +504,15 @@ class FarmingCog(commands.Cog):
             if mushroom_yield > 0:
                 lines.append(f"  • Plot #{plot_num}: {emoji} {name} (+{mushroom_yield}🍄)")
             else:
-                lines.append(f"  • Plot #{plot_num}: {emoji} {name} (+{stars}⭐)")
+                lines.append(f"  • Plot #{plot_num}: {emoji} {name} (sell value: {stars}⭐)")
 
-        lines.append(f"\n💰 Total: **{result.total_stars}⭐**")
+        lines.append(f"\n**{result.items_added}** crop(s) added to inventory. Use `!sell` to sell them.")
         if result.mushrooms_earned > 0:
             lines.append(f"🍄 Found **{result.mushrooms_earned}** Golden Mushrooms!")
+        if result.inventory_full_skipped > 0:
+            lines.append(f"⚠️ Inventory full! {result.inventory_full_skipped} crop(s) left unharvested.")
 
-        lines.append(f"New balance: **{result.new_balance}** stars")
+        lines.append(f"💰 Wallet: **{result.new_balance}** stars")
         await ctx.send("\n".join(lines))
 
     @farm_growbot.command(name="tend")
@@ -611,7 +613,7 @@ class FarmingCog(commands.Cog):
                 await ctx.send(
                     f"🌾 {ctx.author.mention} harvested {emoji} **{name}** from Plot #{plot_num}!\n"
                     f"🍄 Found **{result.mushrooms_earned}** Golden Mushrooms!\n"
-                    f"New balance: **{result.new_balance}** stars"
+                    f"💰 Wallet: **{result.new_balance}** stars"
                 )
             else:
                 quality = next((q for p, q, _qm, _wm in result.quality_rolls if p == plot_num), "normal")
@@ -624,12 +626,16 @@ class FarmingCog(commands.Cog):
                 if any(p == plot_num and wm != 1.0 for p, _q, _qm, wm in result.quality_rolls):
                     weather_note = "\n🌤️ Event modifier applied."
 
-                await ctx.send(
-                    f"🌾 {ctx.author.mention} harvested {emoji} **{name}** from Plot #{plot_num}!\n"
-                    f"🎯 Quality: **{quality_label}**{weather_note}\n"
-                    f"💰 Earned **{stars}⭐**\n"
-                    f"New balance: **{result.new_balance}** stars"
-                )
+                lines_single = [
+                    f"🌾 {ctx.author.mention} harvested {emoji} **{name}** from Plot #{plot_num}!",
+                    f"🎯 Quality: **{quality_label}**{weather_note}",
+                    f"📦 Added to inventory (sell value: {stars}⭐)",
+                    f"**{result.items_added}** crop(s) added to inventory. Use `!sell` to sell them.",
+                ]
+                if result.inventory_full_skipped > 0:
+                    lines_single.append(f"⚠️ Inventory full! {result.inventory_full_skipped} crop(s) left unharvested.")
+                lines_single.append(f"💰 Wallet: **{result.new_balance}** stars")
+                await ctx.send("\n".join(lines_single))
         else:
             lines = [f"🌾 {ctx.author.mention} harvested **{len(result.harvested)}** crops!\n"]
             quality_by_plot = {
@@ -648,13 +654,15 @@ class FarmingCog(commands.Cog):
                         "normal": "Normal",
                         "great": "Great",
                     }.get(quality, "Normal")
-                    lines.append(f"  • Plot #{plot_num}: {emoji} {name} — {quality_tag} (+{stars}⭐)")
+                    lines.append(f"  • Plot #{plot_num}: {emoji} {name} — {quality_tag} (sell value: {stars}⭐)")
 
-            lines.append(f"\n💰 Total: **{result.total_stars}⭐**")
+            lines.append(f"\n**{result.items_added}** crop(s) added to inventory. Use `!sell` to sell them.")
             if result.mushrooms_earned > 0:
                 lines.append(f"🍄 Found **{result.mushrooms_earned}** Golden Mushrooms!")
+            if result.inventory_full_skipped > 0:
+                lines.append(f"⚠️ Inventory full! {result.inventory_full_skipped} crop(s) left unharvested.")
 
-            lines.append(f"New balance: **{result.new_balance}** stars")
+            lines.append(f"💰 Wallet: **{result.new_balance}** stars")
             await ctx.send("\n".join(lines))
 
     @commands.command(name="tend")

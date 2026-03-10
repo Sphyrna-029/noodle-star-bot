@@ -10,17 +10,9 @@ from database.repositories.base import BaseRepository
 class MiningRepository(BaseRepository):
     """Mining cooldown and mine level operations."""
 
-    def _ensure_inventory_row(self, cursor, user_id: int) -> None:
+    def _ensure_progression_row(self, cursor, user_id: int) -> None:
         cursor.execute(
-            """
-            INSERT INTO user_inventory (
-                user_id, gold_pickaxe, helmet, sword, raw_potato, golden_mushroom,
-                bait_worm, bait_herring, bait_sturgeon, equipped_bait, telescope,
-                mine_level, active_mine_level, active_fish_level, golden_axe, mithril_shield,
-                bank_insurance, rocket_ship, space_planet_level, active_space_planet
-            ) VALUES (?, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0)
-            ON CONFLICT(user_id) DO NOTHING
-            """,
+            "INSERT OR IGNORE INTO user_progression (user_id) VALUES (?)",
             (user_id,),
         )
 
@@ -65,9 +57,9 @@ class MiningRepository(BaseRepository):
     def get_mine_level(self, user_id: int) -> int:
         """Get user's highest unlocked mine level."""
         with self.db.get_cursor() as cursor:
-            self._ensure_inventory_row(cursor, user_id)
+            self._ensure_progression_row(cursor, user_id)
             cursor.execute(
-                "SELECT mine_level FROM user_inventory WHERE user_id = ?",
+                "SELECT mine_level FROM user_progression WHERE user_id = ?",
                 (user_id,),
             )
             row = cursor.fetchone()
@@ -78,9 +70,9 @@ class MiningRepository(BaseRepository):
     def get_active_mine_level(self, user_id: int) -> int:
         """Get user's currently selected mine level."""
         with self.db.get_cursor() as cursor:
-            self._ensure_inventory_row(cursor, user_id)
+            self._ensure_progression_row(cursor, user_id)
             cursor.execute(
-                "SELECT active_mine_level FROM user_inventory WHERE user_id = ?",
+                "SELECT active_mine_level FROM user_progression WHERE user_id = ?",
                 (user_id,),
             )
             row = cursor.fetchone()
@@ -91,27 +83,27 @@ class MiningRepository(BaseRepository):
     def set_mine_level(self, user_id: int, level: int) -> None:
         """Update user's highest unlocked mine level."""
         with self.db.get_cursor() as cursor:
-            self._ensure_inventory_row(cursor, user_id)
+            self._ensure_progression_row(cursor, user_id)
             cursor.execute(
-                "UPDATE user_inventory SET mine_level = ? WHERE user_id = ?",
+                "UPDATE user_progression SET mine_level = ? WHERE user_id = ?",
                 (level, user_id),
             )
 
     def set_active_mine_level(self, user_id: int, level: int) -> None:
         """Update user's active mine level."""
         with self.db.get_cursor() as cursor:
-            self._ensure_inventory_row(cursor, user_id)
+            self._ensure_progression_row(cursor, user_id)
             cursor.execute(
-                "UPDATE user_inventory SET active_mine_level = ? WHERE user_id = ?",
+                "UPDATE user_progression SET active_mine_level = ? WHERE user_id = ?",
                 (level, user_id),
             )
 
     def get_space_planet_level(self, user_id: int) -> int:
         """Get user's highest unlocked space planet level (0 = not in space)."""
         with self.db.get_cursor() as cursor:
-            self._ensure_inventory_row(cursor, user_id)
+            self._ensure_progression_row(cursor, user_id)
             cursor.execute(
-                "SELECT space_planet_level FROM user_inventory WHERE user_id = ?",
+                "SELECT space_planet_level FROM user_progression WHERE user_id = ?",
                 (user_id,),
             )
             row = cursor.fetchone()
@@ -122,18 +114,18 @@ class MiningRepository(BaseRepository):
     def set_space_planet_level(self, user_id: int, level: int) -> None:
         """Update user's highest unlocked space planet level."""
         with self.db.get_cursor() as cursor:
-            self._ensure_inventory_row(cursor, user_id)
+            self._ensure_progression_row(cursor, user_id)
             cursor.execute(
-                "UPDATE user_inventory SET space_planet_level = ? WHERE user_id = ?",
+                "UPDATE user_progression SET space_planet_level = ? WHERE user_id = ?",
                 (level, user_id),
             )
 
     def get_active_space_planet(self, user_id: int) -> int:
         """Get user's currently active space planet (0 = none)."""
         with self.db.get_cursor() as cursor:
-            self._ensure_inventory_row(cursor, user_id)
+            self._ensure_progression_row(cursor, user_id)
             cursor.execute(
-                "SELECT active_space_planet FROM user_inventory WHERE user_id = ?",
+                "SELECT active_space_planet FROM user_progression WHERE user_id = ?",
                 (user_id,),
             )
             row = cursor.fetchone()
@@ -144,8 +136,8 @@ class MiningRepository(BaseRepository):
     def set_active_space_planet(self, user_id: int, planet: int) -> None:
         """Update user's active space planet."""
         with self.db.get_cursor() as cursor:
-            self._ensure_inventory_row(cursor, user_id)
+            self._ensure_progression_row(cursor, user_id)
             cursor.execute(
-                "UPDATE user_inventory SET active_space_planet = ? WHERE user_id = ?",
+                "UPDATE user_progression SET active_space_planet = ? WHERE user_id = ?",
                 (planet, user_id),
             )

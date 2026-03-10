@@ -26,6 +26,9 @@ class MineResult:
     level_name: str = ""
     level_emoji: str = ""
     found_items: List[str] = field(default_factory=list)
+    item_sell_value: int = 0      # Base sell value of the mined resource
+    bag_count: int = 0            # Current items in inventory after mining
+    bag_capacity: int = 50        # Max inventory capacity
 
 
 @dataclass(slots=True)

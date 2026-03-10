@@ -85,6 +85,15 @@ class SpaceUseCases:
 
         inventory = self.repo.get_user_inventory(user_id)
 
+        # Check inventory space
+        bag_count = self.repo.get_inventory_count(user_id)
+        bag_capacity = self.repo.get_inventory_capacity(user_id)
+        if bag_count >= bag_capacity:
+            return SpaceMineResult(
+                success=False,
+                message=f"your inventory is full ({bag_count}/{bag_capacity})! Use `!sell` to make room before mining.",
+            )
+
         # Check if using golden mushroom
         using_mushroom = False
         if use_item and use_item.lower() in [
@@ -153,11 +162,14 @@ class SpaceUseCases:
 
         # Give reward
         reward = mineral.stars
-        current_stars = self.repo.get_user_stars(user_id, username)
-        new_stars = current_stars + reward
+        # Add ore to inventory instead of awarding stars
+        ore_key = mineral.name.lower().replace(" ", "_").replace("-", "_")
+        self.repo.add_item(user_id, ore_key, "ore", reward)
+        bag_count = self.repo.get_inventory_count(user_id)
+        bag_capacity = self.repo.get_inventory_capacity(user_id)
 
-        # Update stars and last mine time
-        self.repo.update_user_stars(user_id, username, new_stars)
+        current_stars = self.repo.get_user_stars(user_id, username)
+        new_stars = current_stars  # No star change from space mining
         self.repo.update_last_mine(user_id)
 
         result = SpaceMineResult(
@@ -169,6 +181,9 @@ class SpaceUseCases:
             new_balance=new_stars,
             planet_name=planet_config["name"],
             planet_emoji=planet_config["emoji"],
+            item_sell_value=reward,
+            bag_count=bag_count,
+            bag_capacity=bag_capacity,
         )
 
         # Check for disaster

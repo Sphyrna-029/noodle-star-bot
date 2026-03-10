@@ -44,7 +44,7 @@ class MiningCog(commands.Cog):
         message = (
             f"{header}\n"
             f"{ctx.author.mention} mined {result.mineral_emoji} **{result.mineral_name}**!\n"
-            f"You earned **{result.stars_earned}** noodle stars! ⭐"
+            f"Added to inventory! (sell value: **{result.stars_earned}** ⭐)\n🎒 Bag: **{result.bag_count}/{result.bag_capacity}**"
         )
 
         # Handle disaster messages using the generic hazard data
@@ -58,7 +58,7 @@ class MiningCog(commands.Cog):
         for extra in result.extra_messages:
             message += f"\n{extra}"
 
-        message += f"\nNew balance: **{result.new_balance}** stars!"
+        message += f"\n💰 Wallet: **{result.new_balance}** stars"
 
         # Item drops
         if result.found_items:

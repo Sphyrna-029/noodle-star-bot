@@ -33,6 +33,9 @@ class SpaceMineResult:
     extra_messages: List[str] = field(default_factory=list)
     planet_name: str = ""
     planet_emoji: str = ""
+    item_sell_value: int = 0
+    bag_count: int = 0
+    bag_capacity: int = 50
 
 
 @dataclass(slots=True)

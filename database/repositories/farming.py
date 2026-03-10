@@ -32,11 +32,18 @@ class FarmPlotStateRow:
 class FarmingRepository(BaseRepository):
     """Farming plot and crop operations."""
 
+    def _ensure_progression_row(self, cursor, user_id: int) -> None:
+        cursor.execute(
+            "INSERT OR IGNORE INTO user_progression (user_id) VALUES (?)",
+            (user_id,),
+        )
+
     def get_farm_level(self, user_id: int) -> int:
         """Get a user's farm level."""
         with self.db.get_cursor() as cursor:
+            self._ensure_progression_row(cursor, user_id)
             cursor.execute(
-                "SELECT farm_level FROM user_inventory WHERE user_id = ?",
+                "SELECT farm_level FROM user_progression WHERE user_id = ?",
                 (user_id,),
             )
             row = cursor.fetchone()
@@ -48,16 +55,16 @@ class FarmingRepository(BaseRepository):
         """Set a user's farm level."""
         with self.db.get_cursor() as cursor:
             cursor.execute(
-                "UPDATE user_inventory SET farm_level = ? WHERE user_id = ?",
+                "UPDATE user_progression SET farm_level = ? WHERE user_id = ?",
                 (level, user_id),
             )
 
     def get_farm_plots(self, user_id: int) -> int:
         """Get the number of farm plots a user owns."""
         with self.db.get_cursor() as cursor:
-            # Check if user has inventory row, create minimal one if not
+            self._ensure_progression_row(cursor, user_id)
             cursor.execute(
-                "SELECT farm_plots FROM user_inventory WHERE user_id = ?",
+                "SELECT farm_plots FROM user_progression WHERE user_id = ?",
                 (user_id,),
             )
             row = cursor.fetchone()
@@ -72,7 +79,7 @@ class FarmingRepository(BaseRepository):
         with self.db.get_cursor() as cursor:
             # User should already exist from buy_plot flow, just update
             cursor.execute(
-                "UPDATE user_inventory SET farm_plots = ? WHERE user_id = ?",
+                "UPDATE user_progression SET farm_plots = ? WHERE user_id = ?",
                 (count, user_id),
             )
             # Ensure plot state rows exist for all owned plots.

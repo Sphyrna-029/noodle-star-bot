@@ -1,214 +1,217 @@
-"""Inventory repository operations."""
-
+"""Inventory repository operations — legacy shim layer."""
 
 from database.repositories.base import BaseRepository
 
 
 class InventoryRepository(BaseRepository):
-    """Item inventory read/write operations."""
+    """Backward-compatible inventory operations.
 
-    _INVENTORY_COLUMNS = {
-        "gold_pickaxe",
-        "helmet",
-        "sword",
-        "raw_potato",
-        "golden_mushroom",
-        "bait_worm",
-        "bait_herring",
-        "bait_sturgeon",
-        "equipped_bait",
-        "telescope",
-        "mine_level",
-        "active_mine_level",
-        "active_fish_level",
-        "golden_axe",
-        "mithril_shield",
-        "bank_insurance",
-        "rocket_ship",
-        "space_planet_level",
-        "active_space_planet",
-        "farm_level",
-        "preserver_owned",
-        "preserver_level",
-        "preserver_pending_stars",
-        "preserver_ready_ts",
-        "fertilizer",
-        "water",
-        "growbot_owned",
-        "growbot_level",
-        "rune_fragment",
-        "fossilized_noodle",
-        "bucktail_jig",
-        "jig_active",
-        "ray_gun",
-        "star_magnet",
-        "lucky_charm",
-        "heart_of_leviathan",
+    Routes reads/writes to the appropriate new table:
+    - user_equipment for equipment items
+    - user_inventory_items for consumable resources
+    - user_progression for levels and state
+    """
+
+    _EQUIPMENT_KEYS = {
+        "helmet", "sword", "golden_axe", "mithril_shield", "bank_insurance",
+        "ray_gun", "star_magnet", "lucky_charm", "heart_of_leviathan",
+        "rune_fragment", "fossilized_noodle", "bucktail_jig",
     }
 
-    def _ensure_inventory_row(self, cursor, user_id: int) -> None:
+    _PROGRESSION_KEYS = {
+        "mine_level", "active_mine_level", "active_fish_level",
+        "space_planet_level", "active_space_planet", "farm_level",
+        "farm_plots", "first_weather_bonus", "inventory_capacity",
+        "equipped_bait", "jig_active",
+        "preserver_level", "preserver_pending_stars", "preserver_ready_ts",
+        "growbot_level",
+    }
+
+    _OWNERSHIP_MAP = {
+        "preserver_owned": "preserver",
+        "growbot_owned": "growbot",
+        "gold_pickaxe": "gold_pickaxe",
+        "telescope": "telescope",
+        "rocket_ship": "rocket_ship",
+    }
+
+    _CONSUMABLE_KEYS = {
+        "raw_potato", "golden_mushroom", "bait_worm", "bait_herring",
+        "bait_sturgeon", "fertilizer", "water",
+    }
+
+    _PROGRESSION_DEFAULTS = {
+        "mine_level": 1, "active_mine_level": 1, "active_fish_level": 1,
+        "space_planet_level": 0, "active_space_planet": 0,
+        "farm_level": 1, "farm_plots": 0, "first_weather_bonus": 0,
+        "inventory_capacity": 50, "equipped_bait": None, "jig_active": 0,
+        "preserver_level": 0, "preserver_pending_stars": 0,
+        "preserver_ready_ts": 0, "growbot_level": 0,
+    }
+
+    # Combined set for validation
+    _INVENTORY_COLUMNS = (
+        _EQUIPMENT_KEYS | _PROGRESSION_KEYS | _CONSUMABLE_KEYS
+        | set(_OWNERSHIP_MAP.keys())
+    )
+
+    def _ensure_progression_row(self, cursor, user_id: int) -> None:
         cursor.execute(
-            """
-            INSERT INTO user_inventory (
-                user_id, gold_pickaxe, helmet, sword, raw_potato, golden_mushroom,
-                bait_worm, bait_herring, bait_sturgeon, equipped_bait, telescope,
-                mine_level, active_mine_level, active_fish_level, golden_axe, mithril_shield,
-                bank_insurance, rocket_ship, space_planet_level, active_space_planet, farm_level,
-                preserver_owned,
-                preserver_level, preserver_pending_stars, preserver_ready_ts,
-                fertilizer, water,
-                rune_fragment, fossilized_noodle, bucktail_jig, jig_active,
-                ray_gun, star_magnet, lucky_charm, heart_of_leviathan
-            ) VALUES (?, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-            ON CONFLICT(user_id) DO NOTHING
-            """,
+            "INSERT OR IGNORE INTO user_progression (user_id) VALUES (?)",
             (user_id,),
         )
 
     def get_user_inventory(self, user_id: int) -> dict:
-        """Get user's inventory as a dictionary."""
+        """Get user's inventory as a dictionary. LEGACY SHIM — reads from 3 new tables."""
         with self.db.get_cursor() as cursor:
-            self._ensure_inventory_row(cursor, user_id)
+            self._ensure_progression_row(cursor, user_id)
+
+            # 1. Read equipment
             cursor.execute(
-                """
-                SELECT gold_pickaxe, helmet, sword, raw_potato, golden_mushroom,
-                       bait_worm, bait_herring, bait_sturgeon, telescope,
-                       mine_level, active_mine_level, golden_axe, mithril_shield,
-                       bank_insurance, rocket_ship, space_planet_level,
-                       active_space_planet, farm_level,
-                       preserver_owned,
-                       preserver_level, preserver_pending_stars, preserver_ready_ts,
-                       fertilizer, water,
-                       growbot_owned, growbot_level,
-                       rune_fragment, fossilized_noodle, bucktail_jig, jig_active,
-                       ray_gun, star_magnet, lucky_charm, heart_of_leviathan
-                FROM user_inventory WHERE user_id = ?
-                """,
+                "SELECT item_key, uses FROM user_equipment WHERE user_id = ?",
                 (user_id,),
             )
-            row = cursor.fetchone()
+            equip = {row["item_key"]: row["uses"] for row in cursor.fetchall()}
 
-            if row is None:
-                return {
-                    "gold_pickaxe": 0,
-                    "helmet": 0,
-                    "sword": 0,
-                    "raw_potato": 0,
-                    "golden_mushroom": 0,
-                    "bait_worm": 0,
-                    "bait_herring": 0,
-                    "bait_sturgeon": 0,
-                    "telescope": 0,
-                    "mine_level": 1,
-                    "active_mine_level": 1,
-                    "golden_axe": 0,
-                    "mithril_shield": 0,
-                    "bank_insurance": 0,
-                    "rocket_ship": 0,
-                    "space_planet_level": 0,
-                    "active_space_planet": 0,
-                    "farm_level": 1,
-                    "preserver_owned": 0,
-                    "preserver_level": 0,
-                    "preserver_pending_stars": 0,
-                    "preserver_ready_ts": 0,
-                    "fertilizer": 0,
-                    "water": 0,
-                    "growbot_owned": 0,
-                    "growbot_level": 0,
-                    "rune_fragment": 0,
-                    "fossilized_noodle": 0,
-                    "bucktail_jig": 0,
-                    "jig_active": 0,
-                    "ray_gun": 0,
-                    "star_magnet": 0,
-                    "lucky_charm": 0,
-                    "heart_of_leviathan": 0,
-                }
+            # 2. Read progression
+            cursor.execute(
+                """SELECT mine_level, active_mine_level, active_fish_level,
+                          space_planet_level, active_space_planet,
+                          farm_level, farm_plots, first_weather_bonus,
+                          inventory_capacity, equipped_bait, jig_active,
+                          preserver_level, preserver_pending_stars, preserver_ready_ts,
+                          growbot_level
+                   FROM user_progression WHERE user_id = ?""",
+                (user_id,),
+            )
+            prog_row = cursor.fetchone()
 
-            return {
-                "gold_pickaxe": row["gold_pickaxe"] or 0,
-                "helmet": row["helmet"] or 0,
-                "sword": row["sword"] or 0,
-                "raw_potato": row["raw_potato"] or 0,
-                "golden_mushroom": row["golden_mushroom"] or 0,
-                "bait_worm": row["bait_worm"] or 0,
-                "bait_herring": row["bait_herring"] or 0,
-                "bait_sturgeon": row["bait_sturgeon"] or 0,
-                "telescope": row["telescope"] or 0,
-                "mine_level": row["mine_level"] or 1,
-                "active_mine_level": row["active_mine_level"] or 1,
-                "golden_axe": row["golden_axe"] or 0,
-                "mithril_shield": row["mithril_shield"] or 0,
-                "bank_insurance": (row["bank_insurance"] if "bank_insurance" in row.keys() else 0) or 0,
-                "rocket_ship": row["rocket_ship"] or 0,
-                "space_planet_level": row["space_planet_level"] or 0,
-                "active_space_planet": row["active_space_planet"] or 0,
-                "farm_level": row["farm_level"] or 1,
-                "preserver_owned": (row["preserver_owned"] if "preserver_owned" in row.keys() else 0) or 0,
-                "preserver_level": (row["preserver_level"] if "preserver_level" in row.keys() else 0) or 0,
-                "preserver_pending_stars": (row["preserver_pending_stars"] if "preserver_pending_stars" in row.keys() else 0) or 0,
-                "preserver_ready_ts": (row["preserver_ready_ts"] if "preserver_ready_ts" in row.keys() else 0) or 0,
-                "fertilizer": (row["fertilizer"] if "fertilizer" in row.keys() else 0) or 0,
-                "water": (row["water"] if "water" in row.keys() else 0) or 0,
-                "growbot_owned": (row["growbot_owned"] if "growbot_owned" in row.keys() else 0) or 0,
-                "growbot_level": (row["growbot_level"] if "growbot_level" in row.keys() else 0) or 0,
-                "rune_fragment": row["rune_fragment"] or 0,
-                "fossilized_noodle": row["fossilized_noodle"] or 0,
-                "bucktail_jig": row["bucktail_jig"] or 0,
-                "jig_active": row["jig_active"] or 0,
-                "ray_gun": row["ray_gun"] or 0,
-                "star_magnet": row["star_magnet"] or 0,
-                "lucky_charm": row["lucky_charm"] or 0,
-                "heart_of_leviathan": row["heart_of_leviathan"] or 0,
-            }
+            # 3. Read consumable counts from inventory_items
+            cursor.execute(
+                """SELECT item_key, COUNT(*) as cnt
+                   FROM user_inventory_items WHERE user_id = ?
+                   GROUP BY item_key""",
+                (user_id,),
+            )
+            consumables = {row["item_key"]: row["cnt"] for row in cursor.fetchall()}
+
+        # Build the unified dict
+        result = {}
+
+        # Equipment items
+        for key in self._EQUIPMENT_KEYS:
+            result[key] = equip.get(key, 0)
+
+        # Ownership flags (equipment table, different key names)
+        for legacy_key, equip_key in self._OWNERSHIP_MAP.items():
+            result[legacy_key] = 1 if equip.get(equip_key, 0) > 0 else 0
+
+        # Progression values
+        if prog_row:
+            for key in self._PROGRESSION_KEYS:
+                val = prog_row[key]
+                result[key] = val if val is not None else self._PROGRESSION_DEFAULTS.get(key, 0)
+        else:
+            for key in self._PROGRESSION_KEYS:
+                result[key] = self._PROGRESSION_DEFAULTS.get(key, 0)
+
+        # Consumable counts
+        for key in self._CONSUMABLE_KEYS:
+            result[key] = consumables.get(key, 0)
+
+        return result
 
     def update_user_inventory(self, user_id: int, item: str, amount: int) -> None:
-        """Update a specific inventory item for a user."""
-        if item not in self._INVENTORY_COLUMNS:
+        """Update a specific inventory item. LEGACY SHIM — routes to correct table."""
+        if item in self._EQUIPMENT_KEYS:
+            # Equipment table: set uses directly
+            with self.db.get_cursor() as cursor:
+                if amount <= 0:
+                    cursor.execute(
+                        "DELETE FROM user_equipment WHERE user_id = ? AND item_key = ?",
+                        (user_id, item),
+                    )
+                else:
+                    cursor.execute(
+                        """INSERT INTO user_equipment (user_id, item_key, uses) VALUES (?, ?, ?)
+                           ON CONFLICT(user_id, item_key) DO UPDATE SET uses = ?""",
+                        (user_id, item, amount, amount),
+                    )
+
+        elif item in self._OWNERSHIP_MAP:
+            equip_key = self._OWNERSHIP_MAP[item]
+            with self.db.get_cursor() as cursor:
+                if amount <= 0:
+                    cursor.execute(
+                        "DELETE FROM user_equipment WHERE user_id = ? AND item_key = ?",
+                        (user_id, equip_key),
+                    )
+                else:
+                    cursor.execute(
+                        """INSERT INTO user_equipment (user_id, item_key, uses) VALUES (?, ?, ?)
+                           ON CONFLICT(user_id, item_key) DO UPDATE SET uses = ?""",
+                        (user_id, equip_key, amount, amount),
+                    )
+
+        elif item in self._PROGRESSION_KEYS:
+            with self.db.get_cursor() as cursor:
+                self._ensure_progression_row(cursor, user_id)
+                cursor.execute(
+                    f"UPDATE user_progression SET {item} = ? WHERE user_id = ?",
+                    (amount, user_id),
+                )
+
+        elif item in self._CONSUMABLE_KEYS:
+            # Consumable: sync the count by adding/removing rows
+            with self.db.get_cursor() as cursor:
+                cursor.execute(
+                    "SELECT COUNT(*) as cnt FROM user_inventory_items WHERE user_id = ? AND item_key = ?",
+                    (user_id, item),
+                )
+                current = cursor.fetchone()["cnt"]
+                delta = amount - current
+                if delta > 0:
+                    for _ in range(delta):
+                        cursor.execute(
+                            """INSERT INTO user_inventory_items
+                               (user_id, item_key, category, base_sell_value)
+                               VALUES (?, ?, 'consumable', 0)""",
+                            (user_id, item),
+                        )
+                elif delta < 0:
+                    # Remove oldest items
+                    cursor.execute(
+                        """SELECT id FROM user_inventory_items
+                           WHERE user_id = ? AND item_key = ?
+                           ORDER BY acquired_at ASC LIMIT ?""",
+                        (user_id, item, -delta),
+                    )
+                    ids = [row["id"] for row in cursor.fetchall()]
+                    if ids:
+                        placeholders = ",".join("?" * len(ids))
+                        cursor.execute(
+                            f"DELETE FROM user_inventory_items WHERE id IN ({placeholders})",
+                            ids,
+                        )
+        else:
             raise ValueError(f"Unsupported inventory column: {item}")
 
-        with self.db.get_cursor() as cursor:
-            self._ensure_inventory_row(cursor, user_id)
-            cursor.execute(
-                f"UPDATE user_inventory SET {item} = ? WHERE user_id = ?",
-                (amount, user_id),
-            )
-
     def clear_user_inventory(self, user_id: int) -> None:
-        """Remove all items from user's inventory except gold pickaxe."""
+        """Disaster wipe: clear all inventory items (resources + consumables). Equipment survives."""
         with self.db.get_cursor() as cursor:
-            self._ensure_inventory_row(cursor, user_id)
             cursor.execute(
-                """
-                UPDATE user_inventory
-                SET helmet = 0, sword = 0, raw_potato = 0, golden_mushroom = 0
-                WHERE user_id = ?
-                """,
+                "DELETE FROM user_inventory_items WHERE user_id = ?",
                 (user_id,),
             )
 
     def clear_all_items(self, user_id: int) -> None:
-        """Remove all inventory items, including tools and bait."""
+        """Alien abduction: wipe equipment AND inventory items. Progression untouched."""
         with self.db.get_cursor() as cursor:
-            self._ensure_inventory_row(cursor, user_id)
             cursor.execute(
-                """
-                UPDATE user_inventory
-                SET gold_pickaxe = 0, helmet = 0, sword = 0,
-                    raw_potato = 0, golden_mushroom = 0, telescope = 0,
-                    bait_worm = 0, bait_herring = 0, bait_sturgeon = 0,
-                    equipped_bait = NULL, golden_axe = 0, mithril_shield = 0,
-                    bank_insurance = 0, rocket_ship = 0,
-                    rune_fragment = 0, fossilized_noodle = 0,
-                    bucktail_jig = 0, jig_active = 0,
-                    ray_gun = 0, star_magnet = 0,
-                    lucky_charm = 0, heart_of_leviathan = 0,
-                    fertilizer = 0, water = 0,
-                    growbot_owned = 0, growbot_level = 0,
-                    preserver_owned = 0,
-                    preserver_pending_stars = 0, preserver_ready_ts = 0
-                WHERE user_id = ?
-                """,
+                "DELETE FROM user_equipment WHERE user_id = ?",
+                (user_id,),
+            )
+            cursor.execute(
+                "DELETE FROM user_inventory_items WHERE user_id = ?",
                 (user_id,),
             )

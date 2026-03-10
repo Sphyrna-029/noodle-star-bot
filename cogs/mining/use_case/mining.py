@@ -113,6 +113,15 @@ class MiningUseCases:
         inventory = self.repo.get_user_inventory(user_id)
         has_rune = inventory["rune_fragment"] > 0
 
+        # Check inventory space before consuming cooldown items
+        bag_count = self.repo.get_inventory_count(user_id)
+        bag_capacity = self.repo.get_inventory_capacity(user_id)
+        if bag_count >= bag_capacity:
+            return MineResult(
+                success=False,
+                message=f"your inventory is full ({bag_count}/{bag_capacity})! Use `!sell` to make room before mining.",
+            )
+
         # Check if using golden mushroom
         using_mushroom = False
         if use_item and use_item.lower() in [
@@ -220,18 +229,21 @@ class MiningUseCases:
         # Select random mineral based on weights
         mineral = random.choices(minerals, weights=[m.weight for m in minerals])[0]
 
-        # Give reward (star magnet boosts by 15%)
+        # Calculate reward value (Star Magnet still boosts the stored sell value)
         reward = mineral.stars
         star_magnet_uses = inventory["star_magnet"]
         if star_magnet_uses > 0 and reward > 0:
             reward = math.ceil(reward * 1.15)
             self.repo.update_user_inventory(user_id, "star_magnet", star_magnet_uses - 1)
 
-        current_stars = self.repo.get_user_stars(user_id, username)
-        new_stars = current_stars + reward
+        # Add resource to inventory instead of awarding stars directly
+        self.repo.add_item(user_id, mineral.name.lower().replace(" ", "_"), "mineral", reward)
+        bag_count = self.repo.get_inventory_count(user_id)
+        bag_capacity = self.repo.get_inventory_capacity(user_id)
 
-        # Update stars and last mine time
-        self.repo.update_user_stars(user_id, username, new_stars)
+        current_stars = self.repo.get_user_stars(user_id, username)
+        new_stars = current_stars  # No star change from mining itself
+
         self.repo.update_last_mine(user_id)
         mine_runs = self.repo.increment_achievement_progress(user_id, "mine_runs", 1)
         unlocked_mine_100 = False
@@ -250,6 +262,9 @@ class MiningUseCases:
             new_balance=new_stars,
             level_name=level_config["name"],
             level_emoji=level_config["emoji"],
+            item_sell_value=reward,
+            bag_count=bag_count,
+            bag_capacity=bag_capacity,
         )
         if unlocked_mine_100:
             result.extra_messages.append(

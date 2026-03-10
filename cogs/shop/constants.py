@@ -149,6 +149,15 @@ SHOP_ITEMS: Final[dict[str, ShopItem]] = {
         description="Launch into space and mine on 5 new planets! Requires mine level 5. Use `!launch` after buying.",
         aliases=("rocket ship", "rocket", "rocketship"),
     ),
+    "bag_upgrade": ShopItem(
+        price=1000,  # Base price, actual price varies by current capacity
+        db_column="inventory_capacity",
+        consumable=True,
+        emoji="🎒",
+        display_name="Bag Upgrade",
+        description="Increase inventory capacity by 5 slots. Price scales with current capacity.",
+        aliases=("bag upgrade", "bag", "backpack", "bag expansion"),
+    ),
 }
 
 

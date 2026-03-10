@@ -5,6 +5,8 @@ from discord.ext import commands
 
 from cogs.locations.check import require_location
 from cogs.shop.use_case import ShopUseCases
+from cogs.shop.use_case.sell import SellUseCases
+from cogs.shop.resources import get_resource
 
 
 # ---------------------------------------------------------------------------
@@ -304,6 +306,7 @@ class ShopCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.shop = ShopUseCases()
+        self.sell_uc = SellUseCases(self.shop.repo)
 
     @commands.command(name="store")
     async def store(self, ctx):
@@ -360,19 +363,138 @@ class ShopCog(commands.Cog):
         if member is None:
             member = ctx.author
 
-        items_list = self.shop.get_inventory_display(member.id)
+        data = self.shop.get_full_inventory(member.id)
+        equipment = data["equipment"]
+        items_summary = data["items_summary"]
+        bag_count = data["bag_count"]
+        bag_capacity = data["bag_capacity"]
+        progression = data["progression"]
+
+        # ── Color based on bag fullness ──
+        if bag_capacity > 0:
+            fill_pct = bag_count / bag_capacity
+        else:
+            fill_pct = 0
+        if fill_pct >= 1.0:
+            embed_color = discord.Color.red()
+        elif fill_pct >= 0.9:
+            embed_color = discord.Color.orange()
+        else:
+            embed_color = discord.Color.blue()
 
         embed = discord.Embed(
             title=f"🎒 {member.display_name}'s Inventory",
-            color=discord.Color.blue(),
+            color=embed_color,
         )
 
-        if items_list:
-            embed.description = "\n".join(items_list)
+        # ── Equipment Section ──
+        equip_lines = self._build_equipment_lines(equipment, progression)
+        if equip_lines:
+            embed.add_field(
+                name="── EQUIPMENT ──",
+                value="\n".join(equip_lines),
+                inline=False,
+            )
+
+        # ── Inventory Section ──
+        category_order = [
+            ("mineral", "⛏️ Minerals"),
+            ("fish", "🎣 Fish"),
+            ("ore", "🚀 Space Ores"),
+            ("crop", "🌾 Crops"),
+            ("consumable", "🧪 Supplies"),
+        ]
+        inv_parts = []
+        for cat_key, cat_header in category_order:
+            cat_items = items_summary.get(cat_key, [])
+            if not cat_items:
+                continue
+            item_strs = []
+            for entry in cat_items:
+                resource = get_resource(entry["item_key"])
+                if resource:
+                    emoji = resource.emoji
+                    name = resource.display_name
+                else:
+                    emoji = ""
+                    name = entry["item_key"].replace("_", " ").title()
+                quality = entry.get("quality")
+                if quality and quality != "Normal":
+                    item_strs.append(f"{emoji} {name} ({quality}) x{entry['count']}")
+                else:
+                    item_strs.append(f"{emoji} {name} x{entry['count']}")
+            inv_parts.append(f"**{cat_header}**\n{' · '.join(item_strs)}")
+
+        if inv_parts:
+            inv_header = f"── INVENTORY ({bag_count}/{bag_capacity}) ──"
+            inv_body = "\n\n".join(inv_parts)
+            inv_body += f"\n\nBag: {bag_count}/{bag_capacity} slots | Upgrade at `!store`"
+            embed.add_field(name=inv_header, value=inv_body, inline=False)
         else:
-            embed.description = "*Empty - Visit the !store to buy items!*"
+            inv_header = f"── INVENTORY ({bag_count}/{bag_capacity}) ──"
+            embed.add_field(
+                name=inv_header,
+                value=f"*Empty — gather resources or visit `!store`!*\n\nBag: {bag_count}/{bag_capacity} slots | Upgrade at `!store`",
+                inline=False,
+            )
+
+        if not equip_lines and not inv_parts:
+            embed.description = "*Nothing here yet — visit the `!store` to get started!*"
 
         await ctx.send(embed=embed)
+
+    @staticmethod
+    def _build_equipment_lines(equipment: dict, progression: dict) -> list[str]:
+        """Build formatted equipment display lines from equipment dict."""
+        # Equipment display mapping: item_key -> (emoji, display_name, format_type)
+        # format_type: "permanent", "leveled", "stackable", "uses"
+        _EQUIP_MAP = [
+            ("gold_pickaxe", "⛏️", "Gold Pickaxe", "permanent"),
+            ("telescope", "📷", "Telescope", "permanent"),
+            ("rocket_ship", "🚀", "Rocket Ship", "permanent"),
+            ("growbot", "🤖", "Grow-Bot", "leveled"),
+            ("preserver", "🏭", "Preserver", "leveled"),
+            ("helmet", "🪖", "Helmet", "stackable"),
+            ("sword", "⚔️", "Sword", "stackable"),
+            ("bank_insurance", "💸", "Insurance", "stackable"),
+            ("bucktail_jig", "🎣", "Bucktail Jig", "stackable"),
+            ("golden_axe", "🪓", "Golden Axe", "uses"),
+            ("mithril_shield", "🛡️", "Mithril Shield", "uses"),
+            ("rune_fragment", "🪨", "Rune Fragment", "uses"),
+            ("fossilized_noodle", "🍜", "Fossilized Noodle", "uses"),
+            ("ray_gun", "🔫", "Ray-Gun", "uses"),
+            ("star_magnet", "🧲", "Star Magnet", "uses"),
+            ("lucky_charm", "🍀", "Lucky Charm", "uses"),
+            ("heart_of_leviathan", "💜", "Heart of Leviathan", "uses"),
+        ]
+        _LEVEL_KEYS = {
+            "growbot": "growbot_level",
+            "preserver": "preserver_level",
+        }
+
+        parts: list[str] = []
+        for item_key, emoji, name, fmt in _EQUIP_MAP:
+            uses = equipment.get(item_key, 0)
+            if uses <= 0:
+                continue
+            if fmt == "permanent":
+                parts.append(f"{emoji} {name}")
+            elif fmt == "leveled":
+                level_key = _LEVEL_KEYS[item_key]
+                level = max(1, progression.get(level_key, 1))
+                parts.append(f"{emoji} {name} (Lv.{level})")
+            elif fmt == "stackable":
+                parts.append(f"{emoji} {name} x{uses}")
+            elif fmt == "uses":
+                parts.append(f"{emoji} {name} ({uses} uses)")
+
+        # Join into lines of up to ~3 items each for readability
+        if not parts:
+            return []
+        lines = []
+        for i in range(0, len(parts), 3):
+            lines.append(" · ".join(parts[i:i + 3]))
+        return lines
 
     @commands.command(name="telescope")
     async def telescope(self, ctx):
@@ -408,6 +530,116 @@ class ShopCog(commands.Cog):
         )
 
         await ctx.send(embed=embed)
+
+
+    @commands.command(name="sell")
+    async def sell(self, ctx, *, args: str = ""):
+        """Sell items from your inventory. Usage: !sell <item|category|all> [count]"""
+        if not args:
+            await ctx.send(
+                f"❌ {ctx.author.mention}, usage:\n"
+                f"`!sell <item_name>` — Sell all of an item\n"
+                f"`!sell <item_name> <count>` — Sell N of an item\n"
+                f"`!sell <category>` — Sell all minerals/fish/crops/ores\n"
+                f"`!sell all` — Sell everything"
+            )
+            return
+
+        # Parse optional count from end of args
+        parts = args.rsplit(maxsplit=1)
+        target = args
+        count = 0
+        if len(parts) == 2:
+            try:
+                count = int(parts[1])
+                target = parts[0]
+            except ValueError:
+                pass  # Last word isn't a number, treat whole string as target
+
+        result = self.sell_uc.sell(ctx.author.id, str(ctx.author), target, count)
+
+        if not result.success:
+            await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
+            return
+
+        # Build sell receipt embed
+        embed = discord.Embed(
+            title="💰 Sold!",
+            color=discord.Color.gold(),
+        )
+
+        # Items sold list
+        item_lines = []
+        for item_key, display_name, item_count, base_value in result.items_sold:
+            resource = get_resource(item_key)
+            emoji = resource.emoji if resource else ""
+            if item_count == 1:
+                item_lines.append(f"{emoji} **{display_name}** — {base_value}⭐")
+            else:
+                item_lines.append(f"{emoji} **{display_name}** x{item_count} — {base_value}⭐")
+
+        if len(item_lines) > 15:
+            shown = item_lines[:15]
+            shown.append(f"*...and {len(item_lines) - 15} more*")
+            item_lines = shown
+
+        embed.description = "\n".join(item_lines)
+
+        # Bonus breakdown
+        bonus_parts = []
+        if result.location_bonus_pct > 0:
+            bonus_parts.append(f"📍 {result.location_name}: +{result.location_bonus_pct}%")
+        else:
+            bonus_parts.append(f"📍 {result.location_name}: +0%")
+        if result.magnet_bonus_pct > 0:
+            bonus_parts.append(
+                f"🧲 Star Magnet: +{result.magnet_bonus_pct}% ({result.magnet_uses_left} uses left)"
+            )
+
+        if result.bonus_stars > 0:
+            bonus_parts.append(f"Bonus: +{result.bonus_stars}⭐")
+
+        embed.add_field(
+            name="Breakdown",
+            value=(
+                f"Base value: **{result.base_total}⭐**\n"
+                + "\n".join(bonus_parts)
+                + f"\n\n**Total: {result.total_stars}⭐**"
+            ),
+            inline=False,
+        )
+        embed.set_footer(text=f"New balance: {result.new_balance} stars")
+
+        await ctx.send(embed=embed)
+
+    @commands.command(name="trash")
+    async def trash(self, ctx, *, args: str = ""):
+        """Discard junk items from your inventory. Usage: !trash <item> [count]"""
+        if not args:
+            await ctx.send(
+                f"❌ {ctx.author.mention}, usage: `!trash <item_name> [count]`\n"
+                f"Discards items without earning stars (for junk like Old Boot, Seaweed, etc.)."
+            )
+            return
+
+        # Parse optional count
+        parts = args.rsplit(maxsplit=1)
+        target = args
+        count = 0
+        if len(parts) == 2:
+            try:
+                count = int(parts[1])
+                target = parts[0]
+            except ValueError:
+                pass
+
+        result = self.sell_uc.trash(ctx.author.id, str(ctx.author), target, count)
+
+        if not result.success:
+            await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
+            return
+
+        await ctx.send(f"🗑️ {ctx.author.mention}, {result.message}")
 
 
 async def setup(bot):

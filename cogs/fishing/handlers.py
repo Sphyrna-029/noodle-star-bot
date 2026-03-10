@@ -144,15 +144,17 @@ class FishingCog(commands.Cog):
         if result.stars_earned > 0:
             embed.description = (
                 f"{ctx.author.mention} caught a {result.catch_emoji} **{result.catch_name}**!\n\n"
-                f"You earned **{result.stars_earned}** noodle stars!\n"
-                f"New balance: **{result.new_balance}** stars"
+                f"Added to inventory! (sell value: **{result.stars_earned}** \u2b50)\n"
+                f"\ud83c\udf92 Bag: **{result.bag_count}/{result.bag_capacity}**\n"
+                f"\ud83d\udcb0 Wallet: **{result.new_balance}** stars"
             )
         else:
             # Junk item
             embed.description = (
                 f"{ctx.author.mention} caught a {result.catch_emoji} **{result.catch_name}**!\n\n"
                 f"*It's worthless junk... but at least you caught something!*\n"
-                f"Balance: **{result.new_balance}** stars"
+                f"\ud83c\udf92 Bag: **{result.bag_count}/{result.bag_capacity}**\n"
+                f"\ud83d\udcb0 Wallet: **{result.new_balance}** stars"
             )
 
         # Item drops
@@ -183,7 +185,7 @@ class FishingCog(commands.Cog):
             else:
                 disaster_text = result.disaster_unprotected_msg
                 if result.items_destroyed:
-                    disaster_text += f"\nNew balance: **{result.new_balance}** stars"
+                    disaster_text += f"\n\ud83d\udcb0 Wallet: **{result.new_balance}** stars"
                 embed.add_field(
                     name=result.disaster_header,
                     value=disaster_text,

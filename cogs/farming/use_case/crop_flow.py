@@ -229,6 +229,12 @@ class CropFlowMixin(FarmingUseCaseMixin):
         farm_level = self.repo.get_farm_level(user_id)
         mushrooms_earned = 0
 
+        bag_count = self.repo.get_inventory_count(user_id)
+        bag_capacity = self.repo.get_inventory_capacity(user_id)
+        available_space = bag_capacity - bag_count
+        items_added = 0
+        skipped = 0
+
         for crop_data in ready_crops:
             crop_info = get_crop_by_name(crop_data.crop_type)
             if not crop_info:
@@ -252,11 +258,18 @@ class CropFlowMixin(FarmingUseCaseMixin):
                 if weather_multiplier != 1.0:
                     weather_blessed.append((crop_info.name, crop_info.emoji, crop_info.sell_price, actual_price))
 
+                # Add crop item to inventory with baked-in sell value
+                crop_key = crop_info.name.lower().replace(" ", "_")
+                if items_added < available_space:
+                    self.repo.add_item(user_id, crop_key, "crop", actual_price, quality=quality_name)
+                    items_added += 1
+                else:
+                    skipped += 1
+                    continue  # Skip this crop but keep it planted (don't remove it)
+
             harvested.append((crop_data.plot_number, crop_info.name, crop_info.emoji, actual_price))
             total_stars += actual_price
             plots_to_clear.append(crop_data.plot_number)
-
-
 
             base_drain = SOIL_DRAIN_BY_CROP.get(crop_data.crop_type, 3)
             streak_penalty = max(0, min(3, plot_state.same_crop_streak - 1))
@@ -267,8 +280,7 @@ class CropFlowMixin(FarmingUseCaseMixin):
             self.repo.remove_crops(user_id, plots_to_clear)
 
         balance = self.repo.get_user_stars(user_id, username)
-        new_balance = balance + total_stars
-        self.repo.update_user_stars(user_id, username, new_balance)
+        new_balance = balance  # No star change from harvesting
 
         if mushrooms_earned > 0:
             inventory_after = self.repo.get_user_inventory(user_id)
@@ -279,10 +291,11 @@ class CropFlowMixin(FarmingUseCaseMixin):
             )
 
 
-        summary = f"Harvested {len(harvested)} crop(s) for **{total_stars}** stars!"
+        summary = f"Harvested {len(harvested)} crop(s)!"
         if mushrooms_earned > 0:
             summary += f" Found **{mushrooms_earned}** golden mushroom(s)!"
-
+        if skipped > 0:
+            summary += f" {skipped} crop(s) left unharvested (inventory full)."
 
         return HarvestResult(
             success=True,
@@ -295,4 +308,8 @@ class CropFlowMixin(FarmingUseCaseMixin):
             weather_blessed=weather_blessed,
             preserver_bonus_queued=0,
             preserver_ready_in_seconds=0,
+            items_added=items_added,
+            bag_count=self.repo.get_inventory_count(user_id),
+            bag_capacity=bag_capacity,
+            inventory_full_skipped=skipped,
         )

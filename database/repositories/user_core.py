@@ -15,14 +15,7 @@ class UserCoreRepository(BaseRepository):
     def _ensure_profile_rows(self, cursor, user_id: int) -> None:
         """Ensure per-user rows exist in normalized tables."""
         cursor.execute(
-            """
-            INSERT INTO user_inventory (
-                user_id, gold_pickaxe, helmet, sword, raw_potato, golden_mushroom,
-                bait_worm, bait_herring, bait_sturgeon, equipped_bait, telescope,
-                mine_level, active_mine_level, active_fish_level, golden_axe, mithril_shield
-            ) VALUES (?, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 1, 1, 1, 0, 0)
-            ON CONFLICT(user_id) DO NOTHING
-            """,
+            "INSERT OR IGNORE INTO user_progression (user_id) VALUES (?)",
             (user_id,),
         )
         now = datetime.now().isoformat()
@@ -51,16 +44,10 @@ class UserCoreRepository(BaseRepository):
                     COALESCE(ua.last_duel_amount, 0) AS last_duel_amount,
                     ua.last_duel_at,
                     ua.last_mine,
-                    COALESCE(ui.gold_pickaxe, 0) AS gold_pickaxe,
-                    COALESCE(ui.helmet, 0) AS helmet,
-                    COALESCE(ui.sword, 0) AS sword,
-                    COALESCE(ui.raw_potato, 0) AS raw_potato,
-                    COALESCE(ui.golden_mushroom, 0) AS golden_mushroom,
-                    COALESCE(ui.telescope, 0) AS telescope,
-                    COALESCE(ui.mine_level, 1) AS mine_level,
-                    COALESCE(ui.active_mine_level, 1) AS active_mine_level
+                    COALESCE(up.mine_level, 1) AS mine_level,
+                    COALESCE(up.active_mine_level, 1) AS active_mine_level
                 FROM noodle_stars ns
-                LEFT JOIN user_inventory ui ON ui.user_id = ns.user_id
+                LEFT JOIN user_progression up ON up.user_id = ns.user_id
                 LEFT JOIN user_activity ua ON ua.user_id = ns.user_id
                 WHERE ns.user_id = ?
                 """,

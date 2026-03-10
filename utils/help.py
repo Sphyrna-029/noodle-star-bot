@@ -22,8 +22,8 @@ def _main_embed() -> discord.Embed:
         description=(
             "Welcome to the **Noodle House**!\n\n"
             "**Not sure where to start?** Here's the basics:\n"
-            "1. Type `!mine` to earn your first stars\n"
-            "2. Type `!stars` to check how many you have\n"
+            "1. Type `!mine` to find minerals (they go to your inventory)\n"
+            "2. Type `!sell all` to sell your items for stars\n"
             "3. Type `!store` to see what you can buy\n"
             "4. Type `!deposit all` to keep your stars safe in the bank\n"
             "5. Use `!travel` to move between locations\n\n"
@@ -39,12 +39,12 @@ def _main_embed() -> discord.Embed:
     )
     embed.add_field(
         name="⛏️ Mining",
-        value="Dig for minerals to earn stars",
+        value="Dig for minerals, sell for stars",
         inline=True,
     )
     embed.add_field(
         name="🎣 Fishing",
-        value="Cast your line, catch fish & treasure",
+        value="Cast your line, catch fish to sell",
         inline=True,
     )
     embed.add_field(
@@ -169,17 +169,19 @@ def _mining_embed() -> discord.Embed:
         title="⛏️ Mining — How It Works",
         description=(
             "Mining is the easiest way to earn stars. "
-            "You dig into a mine and find a random mineral worth stars."
+            "You dig into a mine and find a random mineral that goes to your inventory. "
+            "Use `!sell` to convert items into stars."
         ),
         color=discord.Color.dark_gold(),
     )
     embed.add_field(
         name="Getting Started (step by step)",
         value=(
-            "**Step 1:** Type `!mine` — you'll find a mineral and earn stars\n"
-            "**Step 2:** Wait 30 minutes, then `!mine` again\n"
-            "**Step 3:** When you have 500+ stars, buy a Gold Pickaxe from `!store`\n"
-            "**Step 4:** Unlock deeper mines with `!unlock 2` for better loot"
+            "**Step 1:** Type `!mine` — you'll find a mineral (added to your inventory)\n"
+            "**Step 2:** Type `!sell all` to sell your minerals for stars\n"
+            "**Step 3:** Wait 30 minutes, then `!mine` again\n"
+            "**Step 4:** When you have 500+ stars, buy a Gold Pickaxe from `!store`\n"
+            "**Step 5:** Unlock deeper mines with `!unlock 2` for better loot"
         ),
         inline=False,
     )
@@ -249,7 +251,7 @@ def _fishing_embed() -> discord.Embed:
             "**Step 2:** Type `!fish` to cast your line\n"
             "**Step 3:** **Wait!** The bot will tell you when a fish bites\n"
             "**Step 4:** When you see **\"You feel a tug!\"**, quickly type `!pull`\n"
-            "**Step 5:** You catch a fish and earn stars! (2 min cooldown after)"
+            "**Step 5:** Your catch goes to inventory! Use `!sell` to get stars"
         ),
         inline=False,
     )
@@ -309,8 +311,8 @@ def _farming_embed() -> discord.Embed:
         title="🌾 Farming — Basics",
         description=(
             "Farming is the safest way to earn stars. "
-            "Plant crops, wait for them to grow, and harvest for profit. "
-            "No cooldowns, but soil quality now matters."
+            "Plant crops, wait for them to grow, and harvest to add them to your inventory. "
+            "Use `!sell` to convert crops to stars. No cooldowns, but soil quality matters."
         ),
         color=discord.Color.green(),
     )
@@ -625,10 +627,10 @@ def _gambling_embed() -> discord.Embed:
 
 def _shop_embed() -> discord.Embed:
     embed = discord.Embed(
-        title="🛒 Shop & Trading — How It Works",
+        title="🛒 Shop, Selling & Trading — How It Works",
         description=(
             "Buy items to help with mining and fishing, "
-            "or trade with other players."
+            "sell gathered resources for stars, or trade with other players."
         ),
         color=discord.Color.purple(),
     )
@@ -639,8 +641,25 @@ def _shop_embed() -> discord.Embed:
             "`!buy helmet` — Buy an item\n"
             "`!buy cat` — Buy a pet from the Pets category\n"
             "`!buy worm 5` — Buy 5 of something\n"
-            "`!inventory` — See what you own\n"
+            "`!buy bag` — Upgrade your inventory capacity (+5 slots)\n"
+            "`!inventory` — See your equipment and items\n"
             "`!inventory @someone` — See what someone else owns"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Selling Items",
+        value=(
+            "`!sell <item>` — Sell all of a specific item\n"
+            "`!sell <item> 5` — Sell 5 of an item\n"
+            "`!sell minerals` / `fish` / `crops` / `ores` — Sell a whole category\n"
+            "`!sell all` — Sell everything in your inventory\n"
+            "`!trash <item>` — Discard junk items (0-value fish like Old Boot)\n\n"
+            "**Location Bonuses:**\n"
+            "📍 Noodle Town: +25% sell bonus\n"
+            "📍 Non-home location: +10% bonus\n"
+            "📍 Home location: +0% (Crystal Cave for minerals, etc.)\n"
+            "🧲 Star Magnet adds +15% per sell command"
         ),
         inline=False,
     )
@@ -738,7 +757,8 @@ def _space_embed() -> discord.Embed:
         description=(
             "Space mining is the endgame! After reaching mine level 5, "
             "buy a Rocket Ship and blast off to mine on 5 planets with "
-            "bigger rewards and deadlier hazards."
+            "bigger rewards and deadlier hazards. Ores go to your inventory — "
+            "use `!sell` to cash out."
         ),
         color=discord.Color.dark_blue(),
     )

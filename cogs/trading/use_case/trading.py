@@ -247,25 +247,18 @@ class TradeUseCases:
         if offer.items:
             for item_key, qty in offer.items.items():
                 db_col = SHOP_ITEMS[item_key].db_column
-                cursor.execute(
-                    f"SELECT {db_col} FROM user_inventory WHERE user_id = ?",
-                    (from_id,),
-                )
-                row = cursor.fetchone()
-                have = row[db_col] if row and db_col in row.keys() else 0
+                # Use the repository shim to read/write (routes to correct table)
+                from_inv = self.repo.get_user_inventory(from_id)
+                have = from_inv.get(db_col, 0)
                 if have < qty:
                     item_name = SHOP_ITEMS[item_key].display_name
                     raise ValueError(
                         f"Not enough {item_name} (have {have}, need {qty})."
                     )
-                cursor.execute(
-                    f"UPDATE user_inventory SET {db_col} = ? WHERE user_id = ?",
-                    (have - qty, from_id),
-                )
-                cursor.execute(
-                    f"UPDATE user_inventory SET {db_col} = {db_col} + ? WHERE user_id = ?",
-                    (qty, to_id),
-                )
+                self.repo.update_user_inventory(from_id, db_col, have - qty)
+                to_inv = self.repo.get_user_inventory(to_id)
+                to_have = to_inv.get(db_col, 0)
+                self.repo.update_user_inventory(to_id, db_col, to_have + qty)
 
     # -------------------------------------------------------------------------
     # Public API

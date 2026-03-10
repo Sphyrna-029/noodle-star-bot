@@ -234,7 +234,7 @@ class FarmingWeatherCog(commands.Cog):
             cursor.execute(
                 f"""
                 SELECT user_id
-                FROM user_inventory
+                FROM user_progression
                 WHERE user_id IN ({placeholders})
                   AND farm_plots >= 1
                   AND COALESCE(first_weather_bonus, 0) = 0
@@ -248,7 +248,7 @@ class FarmingWeatherCog(commands.Cog):
         with self.repo.db.get_cursor() as cursor:
             cursor.execute(
                 """
-                UPDATE user_inventory
+                UPDATE user_progression
                 SET first_weather_bonus = 1
                 WHERE user_id = ?
                 """,

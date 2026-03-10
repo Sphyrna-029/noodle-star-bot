@@ -66,7 +66,8 @@ class SpaceCog(commands.Cog):
         message = (
             f"{header}\n"
             f"{ctx.author.mention} mined {result.mineral_emoji} **{result.mineral_name}**!\n"
-            f"You earned **{result.stars_earned}** noodle stars! ⭐"
+            f"Added to inventory! (sell value: **{result.stars_earned}** ⭐)\n"
+            f"🎒 Bag: **{result.bag_count}/{result.bag_capacity}**"
         )
 
         # Handle disaster messages
@@ -80,7 +81,7 @@ class SpaceCog(commands.Cog):
         for extra in result.extra_messages:
             message += f"\n{extra}"
 
-        message += f"\nNew balance: **{result.new_balance}** stars!"
+        message += f"\n💰 Wallet: **{result.new_balance}** stars"
 
         await ctx.send(message)
 

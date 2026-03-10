@@ -1,6 +1,6 @@
 """Data models for Noodle Star Bot."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 
@@ -19,12 +19,6 @@ class User:
     last_duel_amount: int = 0
     last_duel_at: Optional[datetime] = None
     last_mine: Optional[datetime] = None
-    gold_pickaxe: int = 0
-    helmet: int = 0
-    sword: int = 0
-    raw_potato: int = 0
-    golden_mushroom: int = 0
-    telescope: int = 0
     mine_level: int = 1
     active_mine_level: int = 1
 
@@ -32,17 +26,6 @@ class User:
     def total_stars(self) -> int:
         """Total stars (wallet + bank)."""
         return self.stars + self.bank
-
-    @property
-    def inventory(self) -> dict:
-        """Get inventory as a dictionary."""
-        return {
-            "gold_pickaxe": self.gold_pickaxe,
-            "helmet": self.helmet,
-            "sword": self.sword,
-            "raw_potato": self.raw_potato,
-            "golden_mushroom": self.golden_mushroom,
-        }
 
     @classmethod
     def from_row(cls, row) -> "User":
@@ -82,12 +65,6 @@ class User:
             last_duel_amount=last_duel_amount,
             last_duel_at=last_duel_at,
             last_mine=last_mine,
-            gold_pickaxe=row["gold_pickaxe"],
-            helmet=row["helmet"],
-            sword=row["sword"],
-            raw_potato=row["raw_potato"],
-            golden_mushroom=row["golden_mushroom"],
-            telescope=row["telescope"],
             mine_level=row["mine_level"] if "mine_level" in row.keys() else 1,
             active_mine_level=row["active_mine_level"] if "active_mine_level" in row.keys() else 1,
         )

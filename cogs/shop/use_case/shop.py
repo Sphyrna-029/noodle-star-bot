@@ -9,6 +9,10 @@ from cogs.shop.constants import SHOP_ITEMS, get_item_by_alias
 from database.repository import UserRepository
 from ..dto import PurchaseResult, ShopItem
 
+# Bag upgrade pricing: current_capacity -> cost to upgrade
+BAG_UPGRADE_PRICES: Dict[int, int] = {50: 1000, 55: 1500, 60: 2000, 65: 3000}
+BAG_MAX_CAPACITY = 70
+
 
 class ShopUseCases:
     """Handles all shop-related business logic."""
@@ -33,6 +37,7 @@ class ShopUseCases:
             "bank_insurance": "Utility",
             "ray_gun": "Utility",
             "rocket_ship": "Utility",
+            "bag_upgrade": "Utility",
         }
         self._category_order = ("Mining", "Farming", "Fishing", "Utility", "Pets")
 
@@ -211,6 +216,64 @@ class ShopUseCases:
                 item_name=item.display_name,
                 item_emoji=item.emoji,
                 quantity=quantity,
+            )
+
+        # ── Bag upgrade: special pricing logic ──
+        if item.key == "bag_upgrade":
+            if quantity > 1:
+                return PurchaseResult(
+                    success=False,
+                    message=f"{item.emoji} **{item.display_name}** can only be bought one at a time.",
+                    item_name=item.display_name,
+                    item_emoji=item.emoji,
+                    quantity=quantity,
+                )
+            current_capacity = self.repo.get_inventory_capacity(user_id)
+            if current_capacity >= BAG_MAX_CAPACITY:
+                return PurchaseResult(
+                    success=False,
+                    message=f"{item.emoji} Your bag is already at max capacity ({BAG_MAX_CAPACITY} slots)!",
+                    item_name=item.display_name,
+                    item_emoji=item.emoji,
+                )
+            upgrade_price = BAG_UPGRADE_PRICES.get(current_capacity)
+            if upgrade_price is None:
+                return PurchaseResult(
+                    success=False,
+                    message=f"{item.emoji} No bag upgrade available for capacity {current_capacity}.",
+                    item_name=item.display_name,
+                    item_emoji=item.emoji,
+                )
+            current_stars = self.repo.get_user_stars(user_id, username)
+            if current_stars < upgrade_price:
+                return PurchaseResult(
+                    success=False,
+                    message=(
+                        f"You need **{upgrade_price}** stars to buy {item.emoji} "
+                        f"**{item.display_name}**!\n"
+                        f"You only have **{current_stars}** stars."
+                    ),
+                    item_name=item.display_name,
+                    item_emoji=item.emoji,
+                    price=upgrade_price,
+                    quantity=1,
+                )
+            new_stars = current_stars - upgrade_price
+            self.repo.update_user_stars(user_id, username, new_stars)
+            new_capacity = current_capacity + 5
+            self.repo.set_inventory_capacity(user_id, new_capacity)
+            return PurchaseResult(
+                success=True,
+                message=(
+                    f"Purchased {item.emoji} **{item.display_name}** "
+                    f"for **{upgrade_price}** stars!\n"
+                    f"Bag capacity: {current_capacity} → **{new_capacity}** slots."
+                ),
+                item_name=item.display_name,
+                item_emoji=item.emoji,
+                price=upgrade_price,
+                quantity=1,
+                new_balance=new_stars,
             )
 
         current_stars = self.repo.get_user_stars(user_id, username)
@@ -397,3 +460,26 @@ class ShopUseCases:
             items.append(f"🐋 **Sturgeon Bait** x{inventory['bait_sturgeon']}")
 
         return items
+
+    def get_full_inventory(self, user_id: int) -> dict:
+        """Get complete inventory data for display.
+
+        Returns dict with keys:
+            equipment: {item_key: uses} from user_equipment table
+            items_summary: {category: [{item_key, count, total_value, quality}, ...]}
+            bag_count: int (current slot usage)
+            bag_capacity: int (max slots)
+            progression: dict with levels and state
+        """
+        equipment = self.repo.get_user_equipment(user_id)
+        items_summary = self.repo.get_items_summary(user_id)
+        bag_count = self.repo.get_inventory_count(user_id)
+        bag_capacity = self.repo.get_inventory_capacity(user_id)
+        progression = self.repo.get_progression(user_id)
+        return {
+            "equipment": equipment,
+            "items_summary": items_summary,
+            "bag_count": bag_count,
+            "bag_capacity": bag_capacity,
+            "progression": progression,
+        }

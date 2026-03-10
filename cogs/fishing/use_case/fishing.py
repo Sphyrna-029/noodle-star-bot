@@ -275,6 +275,16 @@ class FishingUseCases:
                 f"Buy some from the `!store` or equip different bait with `!use bait <type>`.",
             )
 
+        # Check inventory space before consuming bait
+        bag_count = self.repo.get_inventory_count(user_id)
+        bag_capacity = self.repo.get_inventory_capacity(user_id)
+        if bag_count >= bag_capacity:
+            return CastResult(
+                success=False,
+                message=f"Your inventory is full ({bag_count}/{bag_capacity})! Use `!sell` to make room before fishing.",
+                inventory_full=True,
+            )
+
         # Consume the bait
         self.repo.consume_bait(user_id, equipped_bait)
 
@@ -451,17 +461,21 @@ class FishingUseCases:
             # Read inventory for item effects
             inventory = self.repo.get_user_inventory(user_id)
 
-            # Star magnet: +15% stars boost
+            # Calculate reward value (keep Star Magnet boost)
             reward = catch["stars"]
             star_magnet_uses = inventory["star_magnet"]
             if star_magnet_uses > 0 and reward > 0:
                 reward = math.ceil(reward * 1.15)
                 self.repo.update_user_inventory(user_id, "star_magnet", star_magnet_uses - 1)
 
-            # Award stars
+            # Add catch to inventory instead of awarding stars
+            catch_key = catch["name"].lower().replace(" ", "_").replace("'", "")
+            self.repo.add_item(user_id, catch_key, "fish", reward)
+            bag_count = self.repo.get_inventory_count(user_id)
+            bag_capacity = self.repo.get_inventory_capacity(user_id)
+
             current_stars = self.repo.get_user_stars(user_id, username)
-            new_stars = current_stars + reward
-            self.repo.update_user_stars(user_id, username, new_stars)
+            new_stars = current_stars  # No star change from fishing
             fish_catches = self.repo.increment_achievement_progress(
                 user_id, "fish_catches", 1
             )
@@ -480,6 +494,9 @@ class FishingUseCases:
                 catch_rarity=catch["rarity"],
                 stars_earned=reward,
                 new_balance=new_stars,
+                item_sell_value=reward,
+                bag_count=bag_count,
+                bag_capacity=bag_capacity,
                 level_name=level_config["name"],
                 level_emoji=level_config["emoji"],
             )

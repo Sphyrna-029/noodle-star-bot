@@ -78,6 +78,10 @@ class HarvestResult:
     weather_blessed: list[tuple[str, str, int, int]] = field(default_factory=list)  # (name, emoji, base_price, actual_price) for bonus crops
     preserver_bonus_queued: int = 0
     preserver_ready_in_seconds: int = 0
+    items_added: int = 0          # Number of crop items added to inventory
+    bag_count: int = 0            # Current inventory count after harvest
+    bag_capacity: int = 50        # Max inventory capacity
+    inventory_full_skipped: int = 0  # Number of crops skipped due to full inventory
 
 
 @dataclass(slots=True)

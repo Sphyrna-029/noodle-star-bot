@@ -36,6 +36,7 @@ class CastResult:
     success: bool
     message: str
     bite_wait_seconds: int = 0
+    inventory_full: bool = False
 
 
 @dataclass(slots=True)
@@ -55,6 +56,10 @@ class PullResult:
     stars_lost: int = 0
     bank_lost: int = 0
     items_destroyed: bool = False
+    item_sell_value: int = 0
+    bag_count: int = 0
+    bag_capacity: int = 50
+    inventory_full: bool = False
     level_name: str = ""
     level_emoji: str = ""
     found_items: List[str] = field(default_factory=list)
