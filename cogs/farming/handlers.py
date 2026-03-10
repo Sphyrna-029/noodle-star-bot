@@ -163,10 +163,15 @@ class FarmingCog(commands.Cog):
                 if status.preserver_pending_stars > 0 and status.preserver_ready_in_seconds > 0 else
                 ("✅ Ready to collect with `!farm preserver collect`" if status.preserver_pending_stars > 0 else "📦 No processed stars queued")
             )
+            start_text = (
+                ""
+                if status.preserver_pending_stars > 0 and status.preserver_ready_in_seconds > 0
+                else "🧪 Start processing with `!farm preserver start`\n"
+            )
             preserver_value = (
                 f"🏭 Level **{status.preserver_level}**\n"
                 f"💰 Pending: **{status.preserver_pending_stars}⭐**\n"
-                "🧪 Start processing with `!farm preserver start`\n"
+                f"{start_text}"
                 f"{ready_text}\n"
                 f"{preserver_next}"
             )
