@@ -74,7 +74,7 @@ class MiningCog(commands.Cog):
                 if level >= 4:
                     level_config = MINE_LEVELS[level]
                     max_bank_loss = max(h.bank_loss_pct for h in level_config["hazards"])
-                    warning = f"\n⚠️ **WARNING:** This level has disasters that can take up to {int(max_bank_loss * 100)}% of your BANK! Use protection items!"
+                    warning = f"\n⚠️ **WARNING:** This level has disasters that can take up to {int(max_bank_loss * 100)}% of your BANK if a disaster hits! Use protection items!"
                     msg += warning
                 await ctx.send(f"⛏️ {ctx.author.mention}, {msg}")
             else:
@@ -93,21 +93,21 @@ class MiningCog(commands.Cog):
                 if lvl_num >= 4:
                     max_bank_loss = max(h.bank_loss_pct for h in lvl["hazards"])
                     if max_bank_loss > 0:
-                        risk_warning = f" ⚠️ Bank risk: {int(max_bank_loss * 100)}%"
+                        risk_warning = f" ⚠️ Bank risk: up to {int(max_bank_loss * 100)}% if a disaster hits"
                 lines.append(f"{lvl['emoji']} **Level {lvl_num} — {lvl['name']}** ✅{active}{risk_warning}")
             elif lvl_num == info.unlocked_level + 1:
                 risk_warning = ""
                 if lvl_num >= 4:
                     max_bank_loss = max(h.bank_loss_pct for h in lvl["hazards"])
                     if max_bank_loss > 0:
-                        risk_warning = f" ⚠️ Bank risk: {int(max_bank_loss * 100)}%"
+                        risk_warning = f" ⚠️ Bank risk: up to {int(max_bank_loss * 100)}% if a disaster hits"
                 lines.append(f"🔒 **Level {lvl_num} — {lvl['name']}** — *{lvl['cost']} stars to unlock*{risk_warning}")
             else:
                 lines.append(f"🔒 **Level {lvl_num} — {lvl['name']}** — *Locked*")
 
         lines.append(f"\nUse `!minelevel <number>` to switch levels")
         lines.append(f"Use `!unlock <number>` to unlock the next level")
-        lines.append(f"\n💡 Levels 4-5 have disasters that can affect your bank balance!")
+        lines.append(f"\n💡 Levels 4-5 can affect your bank balance if a disaster hits!")
 
         await ctx.send("\n".join(lines))
 
@@ -124,18 +124,18 @@ class MiningCog(commands.Cog):
             level_config = MINE_LEVELS[result.level]
             minerals = MINERAL_TABLES[result.level]["normal"]
             mineral_list = " ".join(f"{m.emoji} {m.name} ({m.stars}⭐)" for m in minerals)
-            
+
             message = (
                 f"🎊 {ctx.author.mention}, {result.message}\n"
                 f"Cost: **{result.cost}** stars\n\n"
                 f"**New minerals available:**\n{mineral_list}"
             )
-            
+
             # Add bank risk warning for levels 4-5
             if result.level >= 4:
                 max_bank_loss = max(h.bank_loss_pct for h in level_config["hazards"])
-                message += f"\n\n⚠️ **WARNING:** This level has disasters that can take up to {int(max_bank_loss * 100)}% of your BANK balance! Keep protection items in your inventory!"
-            
+                message += f"\n\n⚠️ **WARNING:** This level has disasters that can take up to {int(max_bank_loss * 100)}% of your BANK balance if a disaster hits! Keep protection items in your inventory!"
+
             await ctx.send(message)
         else:
             await ctx.send(f"❌ {ctx.author.mention}, {result.message}")

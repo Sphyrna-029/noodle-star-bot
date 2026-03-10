@@ -290,7 +290,7 @@ class FishingCog(commands.Cog):
                 if level >= 4:
                     level_config = FISH_LEVELS[level]
                     max_bank_loss = max(h.bank_loss_pct for h in level_config["hazards"])
-                    warning = f"\n⚠️ **WARNING:** This level has disasters that can take up to {int(max_bank_loss * 100)}% of your BANK! Use protection items!"
+                    warning = f"\n⚠️ **WARNING:** This level has disasters that can take up to {int(max_bank_loss * 100)}% of your BANK if a disaster hits! Use protection items!"
                     msg += warning
                 await ctx.send(f"🎣 {ctx.author.mention}, {msg}")
             else:
@@ -312,7 +312,7 @@ class FishingCog(commands.Cog):
                     if lvl_num >= 4:
                         max_bank_loss = max(h.bank_loss_pct for h in lvl["hazards"])
                         if max_bank_loss > 0:
-                            hazard_info += f" | Bank risk: {int(max_bank_loss * 100)}%"
+                            hazard_info += f" | Bank risk: up to {int(max_bank_loss * 100)}% if a disaster hits"
                     hazard_warning = hazard_info
                 lines.append(
                     f"{lvl['emoji']} **Level {lvl_num} — {lvl['name']}** ✅{active}{hazard_warning}"
@@ -324,7 +324,7 @@ class FishingCog(commands.Cog):
 
         lines.append("\nUse `!fishlevel <number>` to switch levels")
         lines.append("Fishing levels share unlocks with mining — use `!unlock <number>` to unlock new levels")
-        lines.append("\n💡 Levels 4-5 have disasters that can affect your bank balance!")
+        lines.append("\n💡 Levels 4-5 can affect your bank balance if a disaster hits!")
 
         await ctx.send("\n".join(lines))
 

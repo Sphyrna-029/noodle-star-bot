@@ -125,12 +125,17 @@ class NoodleStarBot(commands.Bot):
 
     async def on_command_error(self, ctx, error):
         """Global error handler - sends traceback to Discord for debugging."""
-        # Only show detailed errors to specific users (devs)
-        if ctx.author.id not in DEV_USER_IDS:
-            return
-
         # Get the original exception if it's wrapped
         original = getattr(error, "original", error)
+
+        if ctx.author.id not in DEV_USER_IDS:
+            if isinstance(error, commands.CommandNotFound):
+                return
+            try:
+                await ctx.send("❌ Something went wrong while running that command.")
+            except Exception:
+                pass
+            return
 
         # Format the traceback
         tb_lines = traceback.format_exception(type(original), original, original.__traceback__)
@@ -143,10 +148,10 @@ class NoodleStarBot(commands.Bot):
         # Send to user's DMs (private)
         try:
             await ctx.author.send(
-                f"❌ **Error in `{ctx.command}` (from {ctx.guild.name if ctx.guild else 'DM'}):**\n```python\n{tb_text}\n```"
+                f"❌ **Error in `{ctx.command or 'unknown_command'}` (from {ctx.guild.name if ctx.guild else 'DM'}):**\n```python\n{tb_text}\n```"
             )
         except discord.Forbidden:
             # Can't DM user, fall back to channel
             await ctx.send(
-                f"❌ **Error in `{ctx.command}`:**\n```python\n{tb_text}\n```"
+                f"❌ **Error in `{ctx.command or 'unknown_command'}`:**\n```python\n{tb_text}\n```"
             )

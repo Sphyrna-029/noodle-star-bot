@@ -265,3 +265,21 @@ class FarmingRepository(BaseRepository):
                 f"DELETE FROM planted_crops WHERE user_id = ? AND plot_number IN ({placeholders})",
                 (user_id, *plot_numbers),
             )
+
+    def force_ready_all_crops(self, user_id: int, ready_at: Optional[datetime] = None) -> int:
+        """Force all currently growing crops for a user to be ready now.
+
+        Returns the number of crops that were still growing and got updated.
+        """
+        target_ready_at = ready_at or datetime.now()
+        target_iso = target_ready_at.isoformat()
+        with self.db.get_cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE planted_crops
+                SET ready_at = ?
+                WHERE user_id = ? AND ready_at > ?
+                """,
+                (target_iso, user_id, target_iso),
+            )
+            return max(0, cursor.rowcount or 0)

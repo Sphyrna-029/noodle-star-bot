@@ -122,8 +122,8 @@ def _mining_embed() -> discord.Embed:
             "⛏️ **Lv1 Surface Mine** — Free! 10% disaster chance\n"
             "🕳️ **Lv2 Caverns** — Costs 1,500 stars to unlock, 12% disaster\n"
             "🪨 **Lv3 Deep Tunnels** — Costs 3,000 stars, 14% disaster\n"
-            "🌋 **Lv4 Molten Core** — Costs 4,000 stars, 16% disaster, **can lose bank stars!**\n"
-            "🌑 **Lv5 The Abyss** — Costs 5,000 stars, 20% disaster, **can lose bank stars!**\n\n"
+            "🌋 **Lv4 Molten Core** — Costs 4,000 stars, 16% disaster, **bank risk if a disaster hits**\n"
+            "🌑 **Lv5 The Abyss** — Costs 5,000 stars, 20% disaster, **bank risk if a disaster hits**\n\n"
             "You must unlock levels in order (1 → 2 → 3 → 4 → 5)."
         ),
         inline=False,
@@ -146,7 +146,7 @@ def _mining_embed() -> discord.Embed:
         value=(
             "• The Gold Pickaxe (500 stars, one-time buy) makes rare minerals appear more often\n"
             "• Raw Potatoes are only 2 stars — great for mining more often on a budget\n"
-            "• At Lv4-5, buy Bank Insurance (250 stars) to protect your bank\n"
+            "• At Lv4-5, buy Bank Insurance to protect your bank if a disaster hits\n"
             "• `!deposit all` your stars before risky mines!"
         ),
         inline=False,
@@ -205,8 +205,8 @@ def _fishing_embed() -> discord.Embed:
             "🎣 **Lv1 Calm Pond** — Safe, no dangers\n"
             "🏞️ **Lv2 River Rapids** — 8% disaster, better catches\n"
             "🪸 **Lv3 Coral Reef** — 10% disaster, even better catches\n"
-            "🚢 **Lv4 Shipwreck Depths** — 12% disaster, **can lose bank stars!**\n"
-            "🌊 **Lv5 The Abyss Trench** — 14% disaster, **can lose bank stars!**\n\n"
+            "🚢 **Lv4 Shipwreck Depths** — 12% disaster, **bank risk if a disaster hits**\n"
+            "🌊 **Lv5 The Abyss Trench** — 14% disaster, **bank risk if a disaster hits**\n\n"
             "Fishing levels unlock through mining (`!unlock`)."
         ),
         inline=False,
@@ -242,7 +242,7 @@ def _farming_embed() -> discord.Embed:
             "**Step 2:** Type `!buyplot 1` to buy your first plot (300 stars)\n"
             "**Step 3:** Type `!plant wheat 1` to plant wheat in plot 1\n"
             "**Step 4:** Wait 1 hour (check progress with `!farm`)\n"
-            "**Step 5:** Type `!harvest` to collect your stars\n"
+            "**Step 5:** Type `!harvest 1` (or `!farm growbot harvest`) to collect stars\n"
             "**Step 6:** Use `!tend <plot> <fertilizer|water>` when soil gets low"
         ),
         inline=False,
@@ -251,13 +251,22 @@ def _farming_embed() -> discord.Embed:
         name="All Farming Commands",
         value=(
             "`!farm` — See your farm (what's planted, growth timers)\n"
+            "`!farm growbot` — View GrowBot status and automation commands\n"
+            "`!farm growbot harvest` — Harvest all ready crops (requires GrowBot)\n"
+            "`!farm growbot tend water` — Tend many plots in one command (requires GrowBot)\n"
+            "`!farm growbot plant wheat` — Plant all empty plots (requires GrowBot)\n"
+            "`!farm growbot plant melon 3` — Plant first 3 eligible empty plots\n"
+            "`!farm growbot plant carrot 1,3,6` — Plant specific plots\n"
+            "`!farm preserver` — View Preserver status\n"
+            "`!farm preserver upgrade` — Upgrade Preserver\n"
+            "`!farm preserver start` — Start preserving ready melons\n"
+            "`!farm preserver collect` — Collect Preserver stars\n"
             "`!farmlevel` — Check your farm level and next upgrade cost\n"
             "`!upgradefarm` — Upgrade farm level (improves harvest quality odds)\n"
             "`!buyplot` — See all plots and prices\n"
             "`!buyplot 1` — Buy a specific plot\n"
             "`!plant wheat 1` — Plant a crop in a plot\n"
-            "`!harvest` — Harvest ALL ready crops at once\n"
-            "`!harvest 1` — Harvest just one plot\n"
+            "`!harvest 1` — Harvest one specific plot\n"
             "`!tend 1 fertilizer` — Restore soil on a plot using a tending item\n"
             "`!crops` — See all available crops and stats"
         ),
@@ -292,7 +301,7 @@ def _farming_embed() -> discord.Embed:
             "• Each plot has soil condition shown in `!farm`\n"
             "• Repeatedly planting the same crop in one plot increases soil drain\n"
             "• Lower soil condition reduces harvest value and worsens quality odds\n"
-            "• Use `!tend <plot> fertilizer` (+25 soil) or `!tend <plot> water` (+10 soil)\n"
+            "• Use `!tend <plot> fertilizer` (+30 soil) or `!tend <plot> water` (+10 soil)\n"
             "• Buy tending items in `!store` (Farming category)"
         ),
         inline=False,
@@ -300,7 +309,9 @@ def _farming_embed() -> discord.Embed:
     embed.add_field(
         name="Good to Know",
         value=(
-            "• Farm level now goes up to 10, and bad quality is always possible\n"
+            "• Farm level caps at 5, and bad quality is always possible\n"
+            "• Preserver is bought once from `!store`, then upgraded separately\n"
+            "• Preserver is the late-game farming progression (melon processing bonuses)\n"
             "• Harvest value swings with quality, weather events, and soil condition\n"
             "• Replanting the same crop repeatedly on one plot drains soil faster\n"
             "• Buy 🧪 Fertilizer and 💧 Water from `!store` to tend plots\n"
@@ -514,7 +525,7 @@ def _shop_embed() -> discord.Embed:
             "3. ⛏️ **Gold Pickaxe** (500 stars) — One-time buy, "
             "permanently boosts mining luck.\n"
             "4. 🥔 **Raw Potato** (2 stars) — Cheapest way to mine more often.\n"
-            "5. 💸 **Bank Insurance** (250 stars) — Must-have for Lv4-5 "
+            "5. 💸 **Bank Insurance** — Must-have for Lv4-5 "
             "mining/fishing."
         ),
         inline=False,
@@ -755,7 +766,7 @@ def _items_embed() -> discord.Embed:
             "Consumed on use. Can fail at higher levels!\n"
             "⚔️ **Sword** (75 stars) — Blocks 1 goblin/troll/pirate disaster. "
             "Consumed on use. Can fail at higher levels!\n"
-            "💸 **Bank Insurance** (250 stars, 10 uses) — Protects your bank from "
+            "💸 **Bank Insurance** (2000 stars, 1 use) — Protects your bank from "
             "Lv4-5 disasters that drain banked stars"
         ),
         inline=False,

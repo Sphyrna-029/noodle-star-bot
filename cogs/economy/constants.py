@@ -83,9 +83,9 @@ ACHIEVEMENT_DEFS = (
     },
     {
         "key": "grandmaster_farmer",
-        "name": "Grandmaster Farmer",
-        "emoji": "🌟",
-        "description": "Upgrade your farm to max level.",
+        "name": "Preserver Engineer",
+        "emoji": "🏭",
+        "description": "Upgrade your Preserver to max level.",
     },
     {
         "key": "sun_blessed",

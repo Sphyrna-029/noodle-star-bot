@@ -31,6 +31,12 @@ __all__ = [
     "SOIL_MULTIPLIER_BY_THRESHOLD",
     "SOIL_BAD_WEIGHT_BY_THRESHOLD",
     "TEND_ITEM_SOIL_RESTORE",
+    "MAX_PRESERVER_LEVEL",
+    "PRESERVER_UPGRADE_COSTS",
+    "PRESERVER_BONUS_BY_LEVEL",
+    "PRESERVER_PROCESSING_HOURS_BY_LEVEL",
+    "MAX_GROWBOT_LEVEL",
+    "GROWBOT_PLOT_CAPACITY_BY_LEVEL",
     "get_crop_by_name",
 ]
 
@@ -110,17 +116,12 @@ MAX_PLOTS: Final[int] = 6
 # Farm Progression
 # ---------------------------------------------------------------------------
 # Costs are keyed by target level (e.g. upgrading 1->2 uses key 2).
-MAX_FARM_LEVEL: Final[int] = 10
+MAX_FARM_LEVEL: Final[int] = 5
 FARM_LEVEL_UPGRADE_COSTS: Final[dict[int, int]] = {
     2: 1200,
     3: 2800,
     4: 5200,
     5: 9000,
-    6: 15000,
-    7: 24000,
-    8: 36000,
-    9: 52000,
-    10: 72000,
 }
 
 # Harvest quality bonuses.
@@ -138,11 +139,6 @@ QUALITY_WEIGHTS_BY_LEVEL: Final[dict[int, tuple[tuple[str, int], ...]]] = {
     3: (("bad", 12), ("normal", 58), ("great", 30)),
     4: (("bad", 8), ("normal", 56), ("great", 36)),
     5: (("bad", 5), ("normal", 50), ("great", 45)),
-    6: (("bad", 5), ("normal", 47), ("great", 48)),
-    7: (("bad", 4), ("normal", 46), ("great", 50)),
-    8: (("bad", 4), ("normal", 43), ("great", 53)),
-    9: (("bad", 3), ("normal", 43), ("great", 54)),
-    10: (("bad", 2), ("normal", 43), ("great", 55)),
 }
 
 # ---------------------------------------------------------------------------
@@ -179,6 +175,45 @@ SOIL_BAD_WEIGHT_BY_THRESHOLD: Final[tuple[tuple[int, int], ...]] = (
 TEND_ITEM_SOIL_RESTORE: Final[dict[str, int]] = {
     "fertilizer": 30,
     "water": 10,
+}
+
+# ---------------------------------------------------------------------------
+# Preserver (single processing machine)
+# ---------------------------------------------------------------------------
+MAX_PRESERVER_LEVEL: Final[int] = 5
+PRESERVER_UPGRADE_COSTS: Final[dict[int, int]] = {
+    1: 15000,
+    2: 24000,
+    3: 36000,
+    4: 52000,
+    5: 72000,
+}
+
+# Bonus stars queued for processing from melon harvests by preserver level.
+PRESERVER_BONUS_BY_LEVEL: Final[dict[int, float]] = {
+    1: 0.20,
+    2: 0.35,
+    3: 0.50,
+    4: 0.70,
+    5: 1.00,
+}
+
+PRESERVER_PROCESSING_HOURS_BY_LEVEL: Final[dict[int, int]] = {
+    1: 6,
+    2: 5,
+    3: 4,
+    4: 3,
+    5: 1,
+}
+
+# ---------------------------------------------------------------------------
+# GrowBot (farm automation helper)
+# ---------------------------------------------------------------------------
+# Capacity is keyed by GrowBot level. Level 1 already supports all current plots.
+# Keeping this map now allows future upgrades without command rewrites.
+MAX_GROWBOT_LEVEL: Final[int] = 5
+GROWBOT_PLOT_CAPACITY_BY_LEVEL: Final[dict[int, int]] = {
+    1: MAX_PLOTS,
 }
 
 

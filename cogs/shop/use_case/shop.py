@@ -24,6 +24,8 @@ class ShopUseCases:
             "raw_potato": "Mining",
             "fertilizer": "Farming",
             "water": "Farming",
+            "growbot": "Farming",
+            "preserver": "Farming",
             "bait_worm": "Fishing",
             "bait_herring": "Fishing",
             "bait_sturgeon": "Fishing",
@@ -77,7 +79,21 @@ class ShopUseCases:
         return {category: items for category, items in grouped.items() if items}
 
     def get_item(self, item_name: str) -> Optional[ShopItem]:
-        """Get a shop item by name or alias."""
+        """Get a shop item by name, key, or alias."""
+        # Direct key lookup first (used by button-based purchases)
+        if item_name in SHOP_ITEMS:
+            key = item_name
+            shop_item = SHOP_ITEMS[key]
+            return ShopItem(
+                key=key,
+                price=shop_item.price,
+                db_column=shop_item.db_column,
+                consumable=shop_item.consumable,
+                emoji=shop_item.emoji,
+                display_name=shop_item.display_name,
+                description=shop_item.description,
+                category=self._item_categories.get(key, "Other"),
+            )
         match = get_item_by_alias(item_name)
         if match is not None:
             key, shop_item = match
@@ -263,6 +279,18 @@ class ShopUseCases:
         # Ray-gun grants 3 uses per purchase
         add_amount = quantity * 3 if item.key == "ray_gun" else quantity
         self.repo.update_user_inventory(user_id, item.db_column, current_amount + add_amount)
+        if item.key == "growbot":
+            self.repo.update_user_inventory(
+                user_id,
+                "growbot_level",
+                max(1, inventory.get("growbot_level", 0)),
+            )
+        if item.key == "preserver":
+            self.repo.update_user_inventory(
+                user_id,
+                "preserver_level",
+                max(1, inventory.get("preserver_level", 0)),
+            )
 
         return PurchaseResult(
             success=True,
@@ -311,8 +339,15 @@ class ShopUseCases:
         if inventory.get("water", 0) > 0:
             items.append(f"💧 **Water** x{inventory['water']}")
 
+        if inventory.get("growbot_owned", 0) > 0:
+            level = max(1, inventory.get("growbot_level", 0))
+            items.append(f"🤖 **Grow-Bot 3000** (Permanent • Level {level})")
+
         if inventory["telescope"] > 0:
             items.append("📷 **Telescope** (Permanent)")
+
+        if inventory.get("preserver_owned", 0) > 0:
+            items.append("🏭 **Preserver** (Permanent)")
 
         if inventory.get("golden_axe", 0) > 0:
             items.append(f"🪓 **Golden Axe** ({inventory['golden_axe']} uses)")
