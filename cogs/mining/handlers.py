@@ -2,6 +2,7 @@
 
 from discord.ext import commands
 
+from cogs.locations.check import require_location
 from cogs.mining.constants import MINE_LEVELS, MINERAL_TABLES
 from cogs.mining.use_case import MiningUseCases
 
@@ -16,6 +17,8 @@ class MiningCog(commands.Cog):
     @commands.command(name="mine")
     async def mine(self, ctx, use_item: str = ''):
         """Mine for minerals to earn noodle stars!"""
+        if not await require_location(ctx, "crystal_cave"):
+            return
         result = self.mining.mine(ctx.author.id, str(ctx.author), use_item)
 
         if not result.success:

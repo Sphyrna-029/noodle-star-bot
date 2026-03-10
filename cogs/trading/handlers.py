@@ -3,6 +3,7 @@
 import discord
 from discord.ext import commands
 
+from cogs.locations.check import require_location
 from cogs.trading.use_case import TradeUseCases, TRADE_COUNTDOWN_SECONDS
 from cogs.trading.dto import TradeState
 
@@ -70,6 +71,8 @@ class TradingCog(commands.Cog):
     @commands.command(name="trade")
     async def trade(self, ctx, *, args: str = ""):
         """Trade stars and items with another player. Use `!trade help` for details."""
+        if not await require_location(ctx, "noodle_town"):
+            return
         parts = args.split() if args else []
 
         if not parts:

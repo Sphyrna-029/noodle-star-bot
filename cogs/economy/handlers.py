@@ -5,6 +5,7 @@ from datetime import datetime
 import discord
 from discord.ext import commands
 
+from cogs.locations.check import require_location
 from cogs.economy.use_case import EconomyUseCases
 
 
@@ -114,6 +115,8 @@ class EconomyCog(commands.Cog):
     @commands.command(name="deposit")
     async def deposit(self, ctx, amount: str = ''):
         """Deposit noodle stars into your bank for safekeeping."""
+        if not await require_location(ctx, "noodle_town"):
+            return
         if amount == '':
             await ctx.send(
                 f"❌ {ctx.author.mention}, please specify an amount to deposit! "
@@ -137,6 +140,8 @@ class EconomyCog(commands.Cog):
     @commands.command(name="withdraw")
     async def withdraw(self, ctx, amount: str = ''):
         """Withdraw noodle stars from your bank."""
+        if not await require_location(ctx, "noodle_town"):
+            return
         if amount == '':
             await ctx.send(
                 f"❌ {ctx.author.mention}, please specify an amount to withdraw! "

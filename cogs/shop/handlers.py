@@ -3,6 +3,7 @@
 import discord
 from discord.ext import commands
 
+from cogs.locations.check import require_location
 from cogs.shop.use_case import ShopUseCases
 
 
@@ -307,6 +308,8 @@ class ShopCog(commands.Cog):
     @commands.command(name="store")
     async def store(self, ctx):
         """View items available for purchase"""
+        if not await require_location(ctx, "noodle_town"):
+            return
         items_by_category = self.shop.get_items_by_category()
         if not items_by_category:
             await ctx.send("❌ The store is currently empty.")
@@ -320,6 +323,8 @@ class ShopCog(commands.Cog):
     @commands.command(name="buy")
     async def buy(self, ctx, *, item_name: str = ''):
         """Buy an item from the store (usage: !buy <item> [quantity])."""
+        if not await require_location(ctx, "noodle_town"):
+            return
         if item_name is None:
             await ctx.send(
                 f"❌ {ctx.author.mention}, please specify an item to buy! "

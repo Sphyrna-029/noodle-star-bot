@@ -1,0 +1,134 @@
+"""Location and travel commands cog."""
+
+import discord
+from discord.ext import commands
+
+from cogs.locations.constants import LOCATIONS
+from cogs.locations.use_case import LocationUseCases
+
+
+class TravelButton(discord.ui.Button):
+    """Button for traveling to a specific location."""
+
+    def __init__(self, location_key: str, disabled: bool = False):
+        loc = LOCATIONS[location_key]
+        super().__init__(
+            label=loc.name,
+            emoji=loc.emoji,
+            style=discord.ButtonStyle.primary if not disabled else discord.ButtonStyle.secondary,
+            disabled=disabled,
+            row=0 if location_key in ("noodle_town", "crystal_cave", "starfish_bay") else 1,
+        )
+        self.location_key = location_key
+
+    async def callback(self, interaction: discord.Interaction):
+        view = self.view
+        if not isinstance(view, TravelView):
+            await interaction.response.send_message(
+                "This menu has expired. Use `!travel` to open a new one.",
+                ephemeral=True,
+            )
+            return
+
+        if interaction.user.id != view.author_id:
+            await interaction.response.send_message(
+                "This isn't your travel menu! Use `!travel` to open your own.",
+                ephemeral=True,
+            )
+            return
+
+        location_uc = LocationUseCases()
+        result = location_uc.travel(interaction.user.id, self.location_key)
+
+        if not result.success:
+            await interaction.response.edit_message(
+                embed=_build_error_embed(result.message),
+                view=view,
+            )
+            return
+
+        # Rebuild view with updated location
+        new_view = TravelView(view.author_id, self.location_key)
+        loc = LOCATIONS[self.location_key]
+        embed = discord.Embed(
+            title=f"🚶 Traveled to {loc.name} {loc.emoji}",
+            description=f"{loc.description}\n\nSelect another destination or close this menu.",
+            color=discord.Color.green(),
+        )
+        embed.set_footer(text=f"📍 You are now at {loc.name}")
+        await interaction.response.edit_message(embed=embed, view=new_view)
+
+
+class TravelView(discord.ui.View):
+    """Button-based travel menu showing all locations."""
+
+    def __init__(self, author_id: int, current_location: str, timeout: float = 60):
+        super().__init__(timeout=timeout)
+        self.author_id = author_id
+        self.current_location = current_location
+
+        for loc_key in LOCATIONS:
+            is_current = loc_key == current_location
+            self.add_item(TravelButton(loc_key, disabled=is_current))
+
+
+def _build_travel_embed(current_location: str) -> discord.Embed:
+    loc = LOCATIONS[current_location]
+    embed = discord.Embed(
+        title="🗺️ World Map",
+        description=f"📍 Current Location: **{loc.name}** {loc.emoji}\n\nSelect a destination to travel.",
+        color=discord.Color.blue(),
+    )
+
+    lines = []
+    for loc_data in LOCATIONS.values():
+        marker = " ◀️ *you are here*" if loc_data.key == current_location else ""
+        lines.append(f"{loc_data.emoji} **{loc_data.name}** — {loc_data.description}{marker}")
+
+    embed.add_field(name="Locations", value="\n".join(lines), inline=False)
+    return embed
+
+
+def _build_error_embed(message: str) -> discord.Embed:
+    return discord.Embed(
+        title="❌ Can't Travel",
+        description=message,
+        color=discord.Color.red(),
+    )
+
+
+class LocationsCog(commands.Cog):
+    """Commands for traveling between locations."""
+
+    def __init__(self, bot):
+        self.bot = bot
+        self.locations = LocationUseCases()
+
+    @commands.command(name="travel", aliases=["t"])
+    async def travel(self, ctx):
+        """Open the travel menu to move between locations."""
+        current = self.locations.get_location(ctx.author.id)
+        view = TravelView(ctx.author.id, current)
+        embed = _build_travel_embed(current)
+        await ctx.send(embed=embed, view=view)
+
+    @commands.command(name="where")
+    async def where(self, ctx, member: discord.Member = None):
+        """Check your current location (or another player's)."""
+        target = member or ctx.author
+        current = self.locations.get_location(target.id)
+        loc = LOCATIONS.get(current)
+
+        if loc is None:
+            await ctx.send(f"📍 {target.mention} is somewhere unknown...")
+            return
+
+        if target.id == ctx.author.id:
+            await ctx.send(f"📍 {ctx.author.mention}, you are at **{loc.name}** {loc.emoji}")
+        else:
+            await ctx.send(f"📍 {target.display_name} is at **{loc.name}** {loc.emoji}")
+
+
+async def setup(bot):
+    """Setup function for loading the cog."""
+    await bot.add_cog(LocationsCog(bot))

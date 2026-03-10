@@ -3,6 +3,7 @@
 import discord
 from discord.ext import commands
 
+from cogs.locations.check import require_location
 from cogs.farming.constants import (
     FARM_LEVEL_UPGRADE_COSTS,
     MAX_FARM_LEVEL,
@@ -276,6 +277,8 @@ class FarmingCog(commands.Cog):
     @commands.command(name="plant")
     async def plant(self, ctx, crop: str = "", plot: int = 0):
         """Plant a crop in a specific plot. Usage: !plant <crop> <plot_number>"""
+        if not await require_location(ctx, "fusilli_farms"):
+            return
         if not crop:
             await ctx.send(
                 f"❌ {ctx.author.mention}, please specify a crop and plot number!\n"
@@ -566,6 +569,8 @@ class FarmingCog(commands.Cog):
     @commands.command(name="harvest")
     async def harvest(self, ctx, plot: str = ""):
         """Harvest a specific ready crop. Usage: !harvest <plot_number>"""
+        if not await require_location(ctx, "fusilli_farms"):
+            return
         if not plot:
             await ctx.send(
                 f"❌ {ctx.author.mention}, usage: `!harvest <plot_number>`\n"
@@ -651,6 +656,8 @@ class FarmingCog(commands.Cog):
     @commands.command(name="tend")
     async def tend(self, ctx, plot: int = 0, item: str = ""):
         """Tend a farm plot with fertilizer/water. Usage: !tend <plot_number> <item>"""
+        if not await require_location(ctx, "fusilli_farms"):
+            return
         if plot <= 0 or not item:
             await ctx.send(
                 f"❌ {ctx.author.mention}, usage: `!tend <plot_number> <fertilizer|water>`"

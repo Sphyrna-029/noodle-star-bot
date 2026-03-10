@@ -4,6 +4,7 @@ import asyncio
 
 from discord.ext import commands
 
+from cogs.locations.check import require_location
 from cogs.space.constants import SPACE_MINERAL_TABLES, SPACE_PLANETS
 from cogs.space.use_case import SpaceUseCases
 
@@ -18,6 +19,8 @@ class SpaceCog(commands.Cog):
     @commands.command(name="launch")
     async def launch(self, ctx):
         """Launch into space with your rocket ship!"""
+        if not await require_location(ctx, "starport_ziti"):
+            return
         result = self.space.launch(ctx.author.id, str(ctx.author))
 
         if not result.success:
@@ -44,6 +47,8 @@ class SpaceCog(commands.Cog):
     @commands.command(name="spacemine")
     async def spacemine(self, ctx, use_item: str = ''):
         """Mine for space ores on your active planet!"""
+        if not await require_location(ctx, "starport_ziti"):
+            return
         result = self.space.mine(ctx.author.id, str(ctx.author), use_item)
 
         if not result.success:

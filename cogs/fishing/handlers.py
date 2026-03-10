@@ -6,6 +6,7 @@ from discord.ext import commands
 from cogs.fishing.constants import FISH_LEVELS, FISHING_BAIT_TIERS, FISHING_COOLDOWN
 from cogs.fishing.use_case import FishingUseCases
 from cogs.fishing.dto import FishingState
+from cogs.locations.check import require_location
 
 
 class FishingCog(commands.Cog):
@@ -77,6 +78,8 @@ class FishingCog(commands.Cog):
 
         Usage: `!fish` or `!fish <bait>` to equip bait then cast.
         """
+        if not await require_location(ctx, "starfish_bay"):
+            return
         # If a bait type was provided, ensure user is not already fishing first
         if bait:
             session = self.fishing.get_session(ctx.author.id)
@@ -114,6 +117,8 @@ class FishingCog(commands.Cog):
     @commands.command(name="pull")
     async def pull(self, ctx):
         """Pull your fishing line when you feel a tug!"""
+        if not await require_location(ctx, "starfish_bay"):
+            return
         result = self.fishing.pull_line(ctx.author.id, str(ctx.author))
 
         if not result.success:
