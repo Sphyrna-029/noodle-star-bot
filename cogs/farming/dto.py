@@ -129,6 +129,18 @@ class CollectPreserverResult:
 
 
 @dataclass(slots=True)
+class StartPreserverResult:
+    """Result of starting a Preserver processing batch."""
+
+    success: bool
+    message: str
+    preserved: list[tuple[int, str, str, int]] = field(default_factory=list)  # (plot, name, emoji, queued_stars)
+    total_queued: int = 0
+    pending_stars: int = 0
+    ready_in_seconds: int = 0
+
+
+@dataclass(slots=True)
 class CropsInfo:
     """Information about available crops."""
 

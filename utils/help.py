@@ -259,6 +259,7 @@ def _farming_embed() -> discord.Embed:
             "`!farm growbot plant carrot 1,3,6` — Plant specific plots\n"
             "`!farm preserver` — View Preserver status\n"
             "`!farm preserver upgrade` — Upgrade Preserver\n"
+            "`!farm preserver start` — Start preserving ready melons\n"
             "`!farm preserver collect` — Collect Preserver stars\n"
             "`!farmlevel` — Check your farm level and next upgrade cost\n"
             "`!upgradefarm` — Upgrade farm level (improves harvest quality odds)\n"

@@ -114,12 +114,12 @@ SHOP_ITEMS: Final[dict[str, ShopItem]] = {
         aliases=("telescope",),
     ),
     "preserver": ShopItem(
-        price=12000,
+        price=15000,
         db_column="preserver_owned",
         consumable=False,
         emoji="🏭",
         display_name="Preserver",
-        description="Unlocks melon processing. Use `!farm preserver` and `!farm preserver upgrade`.",
+        description="Unlocks the crop preserver. Use `!farm preserver` and `!farm preserver upgrade`.",
         aliases=("preserver", "processing plant", "plant"),
     ),
     "bank_insurance": ShopItem(

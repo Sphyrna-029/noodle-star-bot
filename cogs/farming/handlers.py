@@ -8,6 +8,7 @@ from cogs.farming.constants import (
     MAX_FARM_LEVEL,
     MAX_PLOTS,
     PLOT_COSTS,
+    PRESERVER_PROCESSING_HOURS_BY_LEVEL,
     get_crop_by_name,
 )
 from cogs.farming.use_case import FarmingUseCases
@@ -375,9 +376,11 @@ class FarmingCog(commands.Cog):
         if not owned:
             await ctx.send(
                 f"🏭 {ctx.author.mention}, your Preserver is locked.\n"
-                f"Buy it once from `!store` to unlock melon processing."
+                f"Buy it once from `!store` to unlock crop processing and preserving."
             )
             return
+        processing_hours = PRESERVER_PROCESSING_HOURS_BY_LEVEL.get(level, 6)
+        processing_text = f"⏱️ Processing time: **{processing_hours}h**"
         ready_text = (
             f"⏳ Ready in **{ready_in // 3600}h {(ready_in % 3600) // 60}m**"
             if pending > 0 and ready_in > 0 else
@@ -392,6 +395,7 @@ class FarmingCog(commands.Cog):
             f"🏭 {ctx.author.mention}'s Preserver\n"
             f"Level: **{level}**\n"
             f"Pending: **{pending}⭐**\n"
+            f"{processing_text}\n"
             f"{ready_text}\n"
             f"{next_text}"
         )
@@ -408,6 +412,26 @@ class FarmingCog(commands.Cog):
             f"💸 Cost: **{result.cost}⭐**\n"
             f"💰 New balance: **{result.new_balance}⭐**"
         )
+
+    @farm_preserver.command(name="start")
+    async def farm_preserver_start(self, ctx):
+        """Start Preserver processing for ready preservable crops."""
+        result = self.farming.start_preserver(ctx.author.id, str(ctx.author))
+        if not result.success:
+            await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
+            return
+
+        lines = [
+            f"🏭 {ctx.author.mention} started the Preserver!",
+            f"🍉 Preserved **{len(result.preserved)}** crop(s)",
+            f"💰 Queued: **{result.total_queued}⭐**",
+            f"📦 Pending total: **{result.pending_stars}⭐**",
+        ]
+        if result.ready_in_seconds > 0:
+            hours = result.ready_in_seconds // 3600
+            minutes = (result.ready_in_seconds % 3600) // 60
+            lines.append(f"⏳ Ready in **{hours}h {minutes}m**")
+        await ctx.send("\n".join(lines))
 
     @farm_preserver.command(name="collect")
     async def farm_preserver_collect(self, ctx):
@@ -467,8 +491,7 @@ class FarmingCog(commands.Cog):
         lines.append(f"\n💰 Total: **{result.total_stars}⭐**")
         if result.mushrooms_earned > 0:
             lines.append(f"🍄 Found **{result.mushrooms_earned}** Golden Mushrooms!")
-        if result.preserver_bonus_queued > 0:
-            lines.append(f"🏭 Preserver queued **{result.preserver_bonus_queued}⭐**")
+
         lines.append(f"New balance: **{result.new_balance}** stars")
         await ctx.send("\n".join(lines))
 
@@ -585,7 +608,6 @@ class FarmingCog(commands.Cog):
                     f"🌾 {ctx.author.mention} harvested {emoji} **{name}** from Plot #{plot_num}!\n"
                     f"🎯 Quality: **{quality_label}**{weather_note}\n"
                     f"💰 Earned **{stars}⭐**\n"
-                    f"{f'🏭 Preserver queued **{result.preserver_bonus_queued}⭐**\\n' if result.preserver_bonus_queued > 0 else ''}"
                     f"New balance: **{result.new_balance}** stars"
                 )
         else:
@@ -611,15 +633,7 @@ class FarmingCog(commands.Cog):
             lines.append(f"\n💰 Total: **{result.total_stars}⭐**")
             if result.mushrooms_earned > 0:
                 lines.append(f"🍄 Found **{result.mushrooms_earned}** Golden Mushrooms!")
-            if result.preserver_bonus_queued > 0:
-                if result.preserver_ready_in_seconds > 0:
-                    hours = result.preserver_ready_in_seconds // 3600
-                    minutes = (result.preserver_ready_in_seconds % 3600) // 60
-                    lines.append(
-                        f"🏭 Preserver queued **{result.preserver_bonus_queued}⭐** (ready in {hours}h {minutes}m)"
-                    )
-                else:
-                    lines.append(f"🏭 Preserver queued **{result.preserver_bonus_queued}⭐**")
+
             lines.append(f"New balance: **{result.new_balance}** stars")
             await ctx.send("\n".join(lines))
 

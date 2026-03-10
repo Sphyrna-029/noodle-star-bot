@@ -9,6 +9,7 @@ from discord.ext import commands
 from config.bot import DEV_USER_IDS
 from cogs.economy.use_case import EconomyUseCases
 from cogs.events.farming_weather import WEATHER_EVENT_CHANCE, FarmingWeatherCog
+from cogs.farming.use_case import FarmingUseCases
 
 
 class DevCog(commands.Cog):
@@ -17,6 +18,7 @@ class DevCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.economy = EconomyUseCases()
+        self.farming = FarmingUseCases()
 
     async def cog_check(self, ctx):
         """Restrict all dev commands to explicit developer IDs."""
@@ -25,7 +27,10 @@ class DevCog(commands.Cog):
     @commands.group(name="dev", hidden=True, invoke_without_command=True)
     async def dev_group(self, ctx):
         """Developer command group."""
-        await self._send_private(ctx, "🛠️ Dev commands: `weathertest`, `staractivity`")
+        await self._send_private(
+            ctx,
+            "🛠️ Dev commands: `weathertest`, `staractivity`, `growallcrops`, `finishpreserver`",
+        )
 
     @dev_group.command(name="weathertest", hidden=True)
     async def weather_test(self, ctx):
@@ -103,6 +108,44 @@ class DevCog(commands.Cog):
             f"(net {net_total:+}, vol {volume_total})"
         )
         await self._send_private(ctx, "\n".join([header, totals, *lines]))
+
+    @dev_group.command(name="growallcrops", hidden=True)
+    async def grow_all_crops(self, ctx, member: discord.Member = None):
+        """Force all currently growing crops to be immediately harvest-ready."""
+        target = member or ctx.author
+        grown_count = self.farming.force_grow_all_crops(target.id)
+        if grown_count == 0:
+            await self._send_private(
+                ctx,
+                f"ℹ️ No actively growing crops found for {target.mention}.",
+            )
+            return
+        await self._send_private(
+            ctx,
+            f"✅ Forced **{grown_count}** crop(s) to be ready now for {target.mention}.",
+        )
+
+    @dev_group.command(name="finishpreserver", hidden=True)
+    async def finish_preserver(self, ctx, member: discord.Member = None):
+        """Force an active Preserver batch to complete processing immediately."""
+        target = member or ctx.author
+        finished, pending_stars = self.farming.force_finish_preserver(target.id)
+        if not finished:
+            await self._send_private(
+                ctx,
+                (
+                    f"ℹ️ No active Preserver processing found for {target.mention}. "
+                    f"Pending queue: **{pending_stars}⭐**."
+                ),
+            )
+            return
+        await self._send_private(
+            ctx,
+            (
+                f"✅ Preserver processing finished immediately for {target.mention}. "
+                "Run `!farm preserver collect` to claim the queued stars."
+            ),
+        )
 
     async def _send_private(self, ctx, message: str):
         """Send dev command output privately to the caller via DM."""

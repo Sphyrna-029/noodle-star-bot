@@ -5,8 +5,16 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from cogs.farming.constants import MAX_PRESERVER_LEVEL, PRESERVER_UPGRADE_COSTS
-from cogs.farming.dto import CollectPreserverResult, UpgradePreserverResult
+from cogs.farming.constants import (
+    MAX_PRESERVER_LEVEL,
+    PRESERVER_BONUS_BY_LEVEL,
+    PRESERVER_PROCESSING_HOURS_BY_LEVEL,
+    PRESERVER_UPGRADE_COSTS,
+    SOIL_DRAIN_BY_CROP,
+    SOIL_MAX_CONDITION,
+    get_crop_by_name,
+)
+from cogs.farming.dto import CollectPreserverResult, StartPreserverResult, UpgradePreserverResult
 from .base import FarmingUseCaseMixin
 
 
@@ -70,6 +78,107 @@ class PreserverMixin(FarmingUseCaseMixin):
             new_level=next_level,
             cost=cost,
             new_balance=new_balance,
+        )
+
+    def start_preserver(self, user_id: int, username: str) -> StartPreserverResult:
+        """Start Preserver processing by consuming ready preservable crops."""
+        self.repo.get_user(user_id, username)
+        inventory = self.repo.get_user_inventory(user_id)
+        if inventory.get("preserver_owned", 0) <= 0:
+            return StartPreserverResult(
+                success=False,
+                message="You don't own a Preserver yet. Buy one from `!store`.",
+            )
+
+        preserver_level = inventory.get("preserver_level", 0)
+        if preserver_level <= 0:
+            return StartPreserverResult(
+                success=False,
+                message="Your Preserver is level 0. Upgrade it with `!farm preserver upgrade` to start preserving.",
+            )
+
+        planted_crops = self.repo.get_planted_crops(user_id)
+        if not planted_crops:
+            return StartPreserverResult(
+                success=False,
+                message="You don't have any crops planted yet.",
+            )
+
+        now = datetime.now()
+        ready_preservable = [
+            crop
+            for crop in planted_crops
+            if now >= crop.ready_at and crop.crop_type == "melon"
+        ]
+        if not ready_preservable:
+            return StartPreserverResult(
+                success=False,
+                message="No ready crops can be preserved right now. Only 🍉 Melons are preservable.",
+            )
+
+        farm_level = self.repo.get_farm_level(user_id)
+        preserver_pending = inventory.get("preserver_pending_stars", 0)
+        preserver_ready_ts = inventory.get("preserver_ready_ts", 0)
+        now_ts = int(now.timestamp())
+
+        preserved: list[tuple[int, str, str, int]] = []
+        total_queued = 0
+        plots_to_clear: list[int] = []
+
+        for crop_data in ready_preservable:
+            crop_info = get_crop_by_name(crop_data.crop_type)
+            if not crop_info:
+                continue
+
+            plot_state = self.repo.get_plot_state(user_id, crop_data.plot_number)
+            soil_condition = max(0, min(SOIL_MAX_CONDITION, plot_state.soil_condition))
+            soil_mult = self._soil_multiplier(soil_condition)
+
+            _quality_name, quality_multiplier = self._roll_quality(farm_level, soil_condition)
+            weather_multiplier = crop_data.weather_bonus
+            combined_multiplier = 1.0 + (quality_multiplier - 1.0) + (weather_multiplier - 1.0)
+            actual_price = max(0, int(crop_info.sell_price * combined_multiplier * soil_mult))
+            if actual_price <= 0:
+                continue
+
+            bonus_rate = PRESERVER_BONUS_BY_LEVEL.get(preserver_level, 0.0)
+            queued_bonus = int(actual_price * bonus_rate)
+            queued_total = actual_price + queued_bonus
+            if queued_total <= 0:
+                continue
+
+            preserved.append((crop_data.plot_number, crop_info.name, crop_info.emoji, queued_total))
+            total_queued += queued_total
+            preserver_pending += queued_total
+            plots_to_clear.append(crop_data.plot_number)
+
+            base_drain = SOIL_DRAIN_BY_CROP.get(crop_data.crop_type, 3)
+            streak_penalty = max(0, min(3, plot_state.same_crop_streak - 1))
+            new_soil = max(0, soil_condition - (base_drain + streak_penalty))
+            self.repo.set_plot_soil_condition(user_id, crop_data.plot_number, new_soil)
+
+        if not plots_to_clear:
+            return StartPreserverResult(
+                success=False,
+                message="No ready crops produced preservable stars. Try again later.",
+            )
+
+        self.repo.remove_crops(user_id, plots_to_clear)
+        if preserver_ready_ts <= now_ts:
+            processing_hours = PRESERVER_PROCESSING_HOURS_BY_LEVEL.get(preserver_level, 6)
+            preserver_ready_ts = now_ts + (processing_hours * 3600)
+
+        self.repo.update_user_inventory(user_id, "preserver_pending_stars", preserver_pending)
+        self.repo.update_user_inventory(user_id, "preserver_ready_ts", preserver_ready_ts)
+
+        ready_in = max(0, int(preserver_ready_ts) - now_ts) if preserver_ready_ts else 0
+        return StartPreserverResult(
+            success=True,
+            message=f"Preserver started with **{len(preserved)}** crop(s).",
+            preserved=preserved,
+            total_queued=total_queued,
+            pending_stars=preserver_pending,
+            ready_in_seconds=ready_in,
         )
 
     def collect_preserver(self, user_id: int, username: str) -> CollectPreserverResult:

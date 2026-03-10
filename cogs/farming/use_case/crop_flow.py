@@ -11,8 +11,6 @@ from cogs.farming.constants import (
     MAX_FARM_LEVEL,
     MAX_PLOTS,
     PLOT_COSTS,
-    PRESERVER_BONUS_BY_LEVEL,
-    PRESERVER_PROCESSING_HOURS,
     QUALITY_MULTIPLIERS,
     QUALITY_WEIGHTS_BY_LEVEL,
     SOIL_BAD_WEIGHT_BY_THRESHOLD,
@@ -230,12 +228,6 @@ class CropFlowMixin(FarmingUseCaseMixin):
         quality_rolls = []
         farm_level = self.repo.get_farm_level(user_id)
         mushrooms_earned = 0
-        inventory = self.repo.get_user_inventory(user_id)
-        preserver_level = inventory.get("preserver_level", 0)
-        preserver_pending = inventory.get("preserver_pending_stars", 0)
-        preserver_ready_ts = inventory.get("preserver_ready_ts", 0)
-        now_ts = int(now.timestamp())
-        preserver_bonus_queued = 0
 
         for crop_data in ready_crops:
             crop_info = get_crop_by_name(crop_data.crop_type)
@@ -264,19 +256,7 @@ class CropFlowMixin(FarmingUseCaseMixin):
             total_stars += actual_price
             plots_to_clear.append(crop_data.plot_number)
 
-            if (
-                crop_data.crop_type == "melon"
-                and inventory.get("preserver_owned", 0) > 0
-                and preserver_level > 0
-                and actual_price > 0
-            ):
-                bonus_rate = PRESERVER_BONUS_BY_LEVEL.get(preserver_level, 0.0)
-                queued_bonus = int(actual_price * bonus_rate)
-                if queued_bonus > 0:
-                    preserver_bonus_queued += queued_bonus
-                    preserver_pending += queued_bonus
-                    if preserver_ready_ts <= now_ts:
-                        preserver_ready_ts = now_ts + (PRESERVER_PROCESSING_HOURS * 3600)
+
 
             base_drain = SOIL_DRAIN_BY_CROP.get(crop_data.crop_type, 3)
             streak_penalty = max(0, min(3, plot_state.same_crop_streak - 1))
@@ -297,15 +277,12 @@ class CropFlowMixin(FarmingUseCaseMixin):
                 "golden_mushroom",
                 inventory_after.get("golden_mushroom", 0) + mushrooms_earned,
             )
-        if preserver_bonus_queued > 0:
-            self.repo.update_user_inventory(user_id, "preserver_pending_stars", preserver_pending)
-            self.repo.update_user_inventory(user_id, "preserver_ready_ts", preserver_ready_ts)
+
 
         summary = f"Harvested {len(harvested)} crop(s) for **{total_stars}** stars!"
         if mushrooms_earned > 0:
             summary += f" Found **{mushrooms_earned}** golden mushroom(s)!"
-        if preserver_bonus_queued > 0:
-            summary += f" Preserver queued **{preserver_bonus_queued}** bonus star(s)."
+
 
         return HarvestResult(
             success=True,
@@ -316,6 +293,6 @@ class CropFlowMixin(FarmingUseCaseMixin):
             mushrooms_earned=mushrooms_earned,
             quality_rolls=quality_rolls,
             weather_blessed=weather_blessed,
-            preserver_bonus_queued=preserver_bonus_queued,
-            preserver_ready_in_seconds=max(0, preserver_ready_ts - now_ts) if preserver_bonus_queued > 0 else 0,
+            preserver_bonus_queued=0,
+            preserver_ready_in_seconds=0,
         )
