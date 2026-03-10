@@ -78,6 +78,23 @@ class MigrationManager:
                     # Skip files that don't match the naming convention
                     continue
 
+        # Prevent duplicate version numbers (e.g. v025_x + v025_y), which can
+        # cause missing schema changes or schema_version PK collisions.
+        versions_seen = {}
+        duplicates = []
+        for version, _, module in migrations:
+            module_name = getattr(module, "__name__", str(module))
+            if version in versions_seen:
+                duplicates.append((version, versions_seen[version], module_name))
+            else:
+                versions_seen[version] = module_name
+        if duplicates:
+            duplicate_text = ", ".join(
+                f"v{version:03d} ({first} vs {second})"
+                for version, first, second in duplicates
+            )
+            raise RuntimeError(f"Duplicate migration versions detected: {duplicate_text}")
+
         # Sort by version number
         migrations.sort(key=lambda x: x[0])
         return migrations
