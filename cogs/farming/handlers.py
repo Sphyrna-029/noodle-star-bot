@@ -76,10 +76,10 @@ class FarmingCog(commands.Cog):
             for plot in row_plots:
                 if plot.is_empty:
                     cells.append(" . ")
-                #elif plot.is_ready:
-                #    cells.append(f"{plot.crop_emoji}✨")
+                elif plot.is_ready:
+                    cells.append(f"{plot.crop_emoji}✨")
                 else:
-                    cells.append(" * ")
+                    cells.append(f" {plot.crop_emoji} ")
             grid_lines.append("│" + "│".join(cells) + "│")
 
             # Bottom border
@@ -92,8 +92,12 @@ class FarmingCog(commands.Cog):
             for plot in row_plots:
                 if plot.is_empty:
                     grid_lines.append(f"Plot {plot.plot_number}: Empty • Soil {plot.soil_condition}%")
-                #elif plot.is_ready:
-                #    grid_lines.append(f"Plot {plot.plot_number}: {plot.crop_name} - ✨ READY!")
+                elif plot.is_ready:
+                    streak = f" • streak x{plot.same_crop_streak}" if plot.same_crop_streak > 1 else ""
+                    grid_lines.append(
+                        f"Plot {plot.plot_number}: {plot.crop_emoji} {plot.crop_name} - ✨ READY!"
+                        f" • Soil {plot.soil_condition}%{streak}"
+                    )
                 else:
                     seconds = plot.time_remaining_seconds
                     hours = seconds // 3600
