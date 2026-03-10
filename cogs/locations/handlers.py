@@ -104,13 +104,50 @@ class LocationsCog(commands.Cog):
         self.bot = bot
         self.locations = LocationUseCases()
 
+    _TRAVEL_ALIASES: dict[str, str] = {
+        # Noodle Town
+        "town": "noodle_town", "noodle": "noodle_town", "noodle_town": "noodle_town",
+        "noodletown": "noodle_town", "home": "noodle_town", "shop": "noodle_town",
+        "store": "noodle_town", "bank": "noodle_town", "gamble": "noodle_town",
+        # Crystal Cave
+        "mine": "crystal_cave", "mining": "crystal_cave", "cave": "crystal_cave",
+        "crystal": "crystal_cave", "crystal_cave": "crystal_cave",
+        # Starfish Bay
+        "fish": "starfish_bay", "fishing": "starfish_bay", "bay": "starfish_bay",
+        "starfish": "starfish_bay", "starfish_bay": "starfish_bay",
+        # Fusilli Farms
+        "farm": "fusilli_farms", "farming": "fusilli_farms", "farms": "fusilli_farms",
+        "fusilli": "fusilli_farms", "fusilli_farms": "fusilli_farms",
+        # Starport Ziti
+        "space": "starport_ziti", "spacemine": "starport_ziti", "starport": "starport_ziti",
+        "ziti": "starport_ziti", "starport_ziti": "starport_ziti", "launch": "starport_ziti",
+    }
+
     @commands.command(name="travel", aliases=["t"])
-    async def travel(self, ctx):
-        """Open the travel menu to move between locations."""
-        current = self.locations.get_location(ctx.author.id)
-        view = TravelView(ctx.author.id, current)
-        embed = _build_travel_embed(current)
-        await ctx.send(embed=embed, view=view)
+    async def travel(self, ctx, *, destination: str = ""):
+        """Travel to a location. Usage: !t <place> or !travel for the menu."""
+        if not destination:
+            current = self.locations.get_location(ctx.author.id)
+            view = TravelView(ctx.author.id, current)
+            embed = _build_travel_embed(current)
+            await ctx.send(embed=embed, view=view)
+            return
+
+        loc_key = self._TRAVEL_ALIASES.get(destination.strip().lower())
+        if loc_key is None:
+            await ctx.send(
+                f"❌ {ctx.author.mention}, unknown destination **{destination}**.\n"
+                f"Try: `town`, `mine`, `fish`, `farm`, `space` — or just `!t` for the menu."
+            )
+            return
+
+        result = self.locations.travel(ctx.author.id, loc_key)
+        if not result.success:
+            await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
+            return
+
+        loc = LOCATIONS[loc_key]
+        await ctx.send(f"🚶 {ctx.author.mention} traveled to **{loc.name}** {loc.emoji}")
 
     @commands.command(name="where")
     async def where(self, ctx, member: discord.Member = None):
