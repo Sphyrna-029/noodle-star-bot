@@ -11,7 +11,7 @@ from database.repository import UserRepository
 
 
 # Weather event chance: 5% per day (per event)
-WEATHER_EVENT_CHANCE = 0.05
+WEATHER_EVENT_CHANCE = 0.10
 
 # Channel ID for weather announcements
 ANNOUNCEMENT_CHANNEL_ID = 1464375861800210688 # noodle-house chan in ZGAF
