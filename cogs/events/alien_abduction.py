@@ -10,6 +10,19 @@ from database.repository import UserRepository
 
 ABDUCTION_CHANCE = 0.0005 # ~%2 per day
 
+PROTECTED_INVENTORY_ITEMS = {
+    # Permanent purchases/unlocks should never be stolen by random events.
+    "gold_pickaxe",
+    "telescope",
+    "rocket_ship",
+    "growbot_owned",
+    "growbot_level",
+    "preserver_owned",
+    "preserver_level",
+    "preserver_pending_stars",
+    "preserver_ready_ts",
+}
+
 ABDUCTION_MESSAGES = [
     (
         "🛸 **ALIEN ABDUCTION!** 🛸\n\n"
@@ -134,8 +147,19 @@ class AlienAbductionCog(commands.Cog):
         # Wipe wallet stars (set to 0)
         self.repo.update_user_stars(ctx.author.id, str(ctx.author), 0)
 
-        # Wipe all inventory items (aliens take EVERYTHING)
+        # Preserve permanent progression/unlock items before abduction wipe.
+        protected_snapshot = {
+            item: inventory.get(item, 0)
+            for item in PROTECTED_INVENTORY_ITEMS
+            if inventory.get(item, 0) > 0
+        }
+
+        # Wipe all inventory items (aliens take stealable items)
         self.repo.clear_all_items(ctx.author.id)
+
+        # Restore protected items that random abductions are not allowed to steal.
+        for item, amount in protected_snapshot.items():
+            self.repo.update_user_inventory(ctx.author.id, item, amount)
 
         # Pick a random abduction message
         message = random.choice(ABDUCTION_MESSAGES).format(
