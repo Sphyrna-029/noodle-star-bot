@@ -222,6 +222,8 @@ class FarmingCog(commands.Cog):
     @commands.command(name="buyplot")
     async def buyplot(self, ctx, plot_number: int = 0):
         """Buy a new farm plot. Usage: !buyplot <plot_number>"""
+        if not await require_location(ctx, "fusilli_farms", "noodle_town"):
+            return
         # If no plot number specified, show plot status
         if plot_number == 0:
             status = self.farming.get_farm_status(ctx.author.id, str(ctx.author))
@@ -354,6 +356,8 @@ class FarmingCog(commands.Cog):
     @commands.command(name="upgradefarm", aliases=["farmupgrade"])
     async def upgradefarm(self, ctx):
         """Upgrade your farm level to improve harvest quality odds."""
+        if not await require_location(ctx, "fusilli_farms", "noodle_town"):
+            return
         result = self.farming.upgrade_farm_level(ctx.author.id, str(ctx.author))
         if not result.success:
             await ctx.send(f"❌ {ctx.author.mention}, {result.message}")

@@ -140,6 +140,8 @@ class SpaceCog(commands.Cog):
     @commands.command(name="unlockplanet")
     async def unlockplanet(self, ctx, planet: int = 0):
         """Unlock a new space planet. Usage: !unlockplanet <planet>"""
+        if not await require_location(ctx, "starport_ziti", "noodle_town"):
+            return
         if planet == 0:
             await ctx.send(f"❌ {ctx.author.mention}, please specify a planet to unlock! Usage: `!unlockplanet <number>`")
             return

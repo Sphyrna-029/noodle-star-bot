@@ -117,6 +117,8 @@ class MiningCog(commands.Cog):
     @commands.command(name="unlock")
     async def unlock(self, ctx, level: int = 0):
         """Unlock a new mine level. Usage: !unlock <level>"""
+        if not await require_location(ctx, "crystal_cave", "noodle_town"):
+            return
         if level is None:
             await ctx.send(f"❌ {ctx.author.mention}, please specify a level to unlock! Usage: `!unlock <level>`")
             return
