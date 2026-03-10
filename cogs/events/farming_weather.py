@@ -1,7 +1,7 @@
 """Farming weather events - daily random beneficial weather for active farms."""
 
 import random
-from datetime import datetime, time
+from datetime import datetime, timedelta
 
 import discord
 from discord.ext import commands, tasks
@@ -59,16 +59,65 @@ class FarmingWeatherCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.repo = UserRepository()
+        self._next_weather_check_at: datetime | None = None
+        self._daily_weather_times: list[datetime] = []
+        self._schedule_next_weather_check()
         self.daily_weather_check.start()
 
     def cog_unload(self):
         """Stop the task when cog is unloaded."""
         self.daily_weather_check.cancel()
 
-    @tasks.loop(time=time(hour=0, minute=0))  # Run at midnight
+    def _schedule_next_weather_check(self) -> None:
+        """Pick a random time for the next daily weather check."""
+        now = datetime.now()
+
+        if not self._daily_weather_times or all(
+            target <= now for target in self._daily_weather_times
+        ):
+            target_day = now.date()
+            self._daily_weather_times = self._generate_daily_weather_times(target_day)
+            if all(target <= now for target in self._daily_weather_times):
+                target_day = (now + timedelta(days=1)).date()
+                self._daily_weather_times = self._generate_daily_weather_times(target_day)
+
+        self._next_weather_check_at = next(
+            (target for target in self._daily_weather_times if target > now),
+            None,
+        )
+
+    def _generate_daily_weather_times(self, target_day) -> list[datetime]:
+        return [
+            datetime(
+                year=target_day.year,
+                month=target_day.month,
+                day=target_day.day,
+                hour=random.randint(0, 23),
+                minute=random.randint(0, 59),
+                second=random.randint(0, 59),
+            )
+        ]
+
+    def _advance_weather_schedule(self) -> None:
+        now = datetime.now()
+        self._daily_weather_times = [
+            target for target in self._daily_weather_times if target > now
+        ]
+        self._schedule_next_weather_check()
+
+    @tasks.loop(minutes=1)
     async def daily_weather_check(self):
         """Check daily if weather events should occur for users with active farms."""
+        if self._next_weather_check_at is None:
+            self._schedule_next_weather_check()
+            return
+
+        now = datetime.now()
+        if now < self._next_weather_check_at:
+            return
+
         await self.run_weather_check()
+        self._advance_weather_schedule()
 
     async def run_weather_check(
         self,
@@ -435,7 +484,7 @@ class FarmingWeatherCog(commands.Cog):
     async def before_daily_check(self):
         """Wait until bot is ready before starting the task."""
         await self.bot.wait_until_ready()
-        print("Farming weather system initialized - will check daily at midnight.")
+        print("Farming weather system initialized - will check daily at a random time.")
 
 
 async def setup(bot):
