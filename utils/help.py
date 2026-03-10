@@ -227,7 +227,7 @@ def _fishing_embed() -> discord.Embed:
 
 def _farming_embed() -> discord.Embed:
     embed = discord.Embed(
-        title="🌾 Farming — How It Works",
+        title="🌾 Farming — Basics",
         description=(
             "Farming is the safest way to earn stars. "
             "Plant crops, wait for them to grow, and harvest for profit. "
@@ -248,19 +248,9 @@ def _farming_embed() -> discord.Embed:
         inline=False,
     )
     embed.add_field(
-        name="All Farming Commands",
+        name="Core Farming Commands",
         value=(
             "`!farm` — See your farm (what's planted, growth timers)\n"
-            "`!farm growbot` — View GrowBot status and automation commands\n"
-            "`!farm growbot harvest` — Harvest all ready crops (requires GrowBot)\n"
-            "`!farm growbot tend water` — Tend many plots in one command (requires GrowBot)\n"
-            "`!farm growbot plant wheat` — Plant all empty plots (requires GrowBot)\n"
-            "`!farm growbot plant melon 3` — Plant first 3 eligible empty plots\n"
-            "`!farm growbot plant carrot 1,3,6` — Plant specific plots\n"
-            "`!farm preserver` — View Preserver status\n"
-            "`!farm preserver upgrade` — Upgrade Preserver\n"
-            "`!farm preserver start` — Start preserving ready melons\n"
-            "`!farm preserver collect` — Collect Preserver stars\n"
             "`!farmlevel` — Check your farm level and next upgrade cost\n"
             "`!upgradefarm` — Upgrade farm level (improves harvest quality odds)\n"
             "`!buyplot` — See all plots and prices\n"
@@ -273,6 +263,25 @@ def _farming_embed() -> discord.Embed:
         inline=False,
     )
     embed.add_field(
+        name="Plot Prices (one-time purchase)",
+        value=(
+            "Plot 1: 300 • Plot 2: 400 • Plot 3: 500\n"
+            "Plot 4: 600 • Plot 5: 700 • Plot 6: 800\n"
+            "Must buy in order. Max 6 plots total."
+        ),
+        inline=False,
+    )
+    embed.set_footer(text="Use the buttons below to switch between Basics, Crops & Soil, and Machinery.")
+    return embed
+
+
+def _farming_crops_embed() -> discord.Embed:
+    embed = discord.Embed(
+        title="🌾 Farming — Crops & Soil",
+        description="Crop choice, soil quality, and rotations have a big effect on farming profit.",
+        color=discord.Color.green(),
+    )
+    embed.add_field(
         name="Crops — What to Plant",
         value=(
             "🌾 **Wheat** — Pay 15, get 40 back (1 hour) — *Check every hour*\n"
@@ -281,17 +290,7 @@ def _farming_embed() -> discord.Embed:
             "🍅 **Tomato** — Pay 120, get 440 back (8 hours) — *Plant before bed/work*\n"
             "🍉 **Melon** — Pay 240, get 960 back (16 hours) — *Check once a day*\n"
             "🍄 **Mushroom** — Pay 300, harvest in 24 hours for 5 Golden Mushrooms\n\n"
-            "**Longer crops = more profit per hour.** "
-            "Pick based on how often you check Discord!"
-        ),
-        inline=False,
-    )
-    embed.add_field(
-        name="Plot Prices (one-time purchase)",
-        value=(
-            "Plot 1: 300 • Plot 2: 400 • Plot 3: 500\n"
-            "Plot 4: 600 • Plot 5: 700 • Plot 6: 800\n"
-            "Must buy in order. Max 6 plots total."
+            "**Longer crops = more profit per hour.** Pick based on how often you check Discord."
         ),
         inline=False,
     )
@@ -302,7 +301,7 @@ def _farming_embed() -> discord.Embed:
             "• Repeatedly planting the same crop in one plot increases soil drain\n"
             "• Lower soil condition reduces harvest value and worsens quality odds\n"
             "• Use `!tend <plot> fertilizer` (+30 soil) or `!tend <plot> water` (+10 soil)\n"
-            "• Buy tending items in `!store` (Farming category)"
+            "• Buy tending items in `!store` under the Farming category"
         ),
         inline=False,
     )
@@ -310,15 +309,55 @@ def _farming_embed() -> discord.Embed:
         name="Good to Know",
         value=(
             "• Farm level caps at 5, and bad quality is always possible\n"
-            "• Preserver is bought once from `!store`, then upgraded separately\n"
-            "• Preserver is the late-game farming progression (melon processing bonuses)\n"
             "• Harvest value swings with quality, weather events, and soil condition\n"
             "• Replanting the same crop repeatedly on one plot drains soil faster\n"
-            "• Buy 🧪 Fertilizer and 💧 Water from `!store` to tend plots\n"
-            "• No cooldowns — plant and harvest as often as your crops are ready\n"
-            "• 🍄 Mushroom crops are the source of Golden Mushrooms for instant mining\n"
-            "• Hidden daily weather events can buff or nerf harvest value\n"
-            "• A plot must be empty to plant in it (harvest first)"
+            "• No cooldowns: plant and harvest as often as crops are ready\n"
+            "• Mushroom crops are the source of Golden Mushrooms for instant mining\n"
+            "• A plot must be empty before you plant into it"
+        ),
+        inline=False,
+    )
+    embed.set_footer(text="Machinery covers Preserver and GrowBot automation.")
+    return embed
+
+
+def _farming_machinery_embed() -> discord.Embed:
+    embed = discord.Embed(
+        title="🌾 Farming — Machinery",
+        description="Preserver and GrowBot are the farming automation and late-game progression systems.",
+        color=discord.Color.green(),
+    )
+    embed.add_field(
+        name="GrowBot",
+        value=(
+            "`!farm growbot` — View GrowBot status and commands\n"
+            "`!farm growbot harvest` — Harvest all ready crops\n"
+            "`!farm growbot tend water` — Tend many plots in one command\n"
+            "`!farm growbot plant wheat` — Plant all eligible empty plots\n"
+            "`!farm growbot plant melon 3` — Plant first 3 eligible empty plots\n"
+            "`!farm growbot plant carrot 1,3,6` — Plant specific plots\n\n"
+            "Buy GrowBot from `!store` to unlock farm automation."
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Preserver",
+        value=(
+            "`!farm preserver` — View Preserver status\n"
+            "`!farm preserver upgrade` — Upgrade Preserver\n"
+            "`!farm preserver collect` — Collect processed stars\n\n"
+            "Preserver is bought once from `!store`, then upgraded separately. "
+            "It is the late-game farming progression and focuses on melon processing bonuses."
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Machinery Notes",
+        value=(
+            "• GrowBot is for bulk harvest, tending, and planting\n"
+            "• Preserver adds delayed bonus stars from melon harvests\n"
+            "• Both systems still depend on your farm layout, soil, and crop timing\n"
+            "• Use `!farm` regularly to see pending Preserver rewards and automation status"
         ),
         inline=False,
     )
@@ -874,7 +913,7 @@ class HelpView(discord.ui.View):
 
     @discord.ui.button(label="Farming", style=discord.ButtonStyle.secondary, emoji="🌾", row=0)
     async def farming_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = SubHelpView(self.author_id)
+        view = FarmingHelpView(self.author_id)
         await interaction.response.edit_message(embed=_farming_embed(), view=view)
 
     @discord.ui.button(label="Pets", style=discord.ButtonStyle.secondary, emoji="🐾", row=1)
@@ -950,7 +989,7 @@ class SubHelpView(discord.ui.View):
 
     @discord.ui.button(label="Farming", style=discord.ButtonStyle.secondary, emoji="🌾", row=1)
     async def farming_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = SubHelpView(self.author_id)
+        view = FarmingHelpView(self.author_id)
         await interaction.response.edit_message(embed=_farming_embed(), view=view)
 
     @discord.ui.button(label="Pets", style=discord.ButtonStyle.secondary, emoji="🐾", row=1)
@@ -987,6 +1026,52 @@ class SubHelpView(discord.ui.View):
     async def items_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = SubHelpView(self.author_id)
         await interaction.response.edit_message(embed=_items_embed(), view=view)
+
+
+class FarmingHelpView(discord.ui.View):
+    """Dedicated farming help navigation."""
+
+    def __init__(self, author_id: int):
+        super().__init__(timeout=180)
+        self.author_id = author_id
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message(
+                "This isn't your help menu! Type `!help` to open your own.",
+                ephemeral=True,
+            )
+            return False
+        return True
+
+    async def on_timeout(self) -> None:
+        for item in self.children:
+            item.disabled = True  # type: ignore[union-attr]
+
+    @discord.ui.button(label="Back to Menu", style=discord.ButtonStyle.danger, emoji="◀️", row=0)
+    async def back_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = HelpView(self.author_id)
+        await interaction.response.edit_message(embed=_main_embed(), view=view)
+
+    @discord.ui.button(label="Basics", style=discord.ButtonStyle.success, emoji="🌾", row=1)
+    async def basics_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = FarmingHelpView(self.author_id)
+        await interaction.response.edit_message(embed=_farming_embed(), view=view)
+
+    @discord.ui.button(label="Crops & Soil", style=discord.ButtonStyle.secondary, emoji="🥕", row=1)
+    async def crops_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = FarmingHelpView(self.author_id)
+        await interaction.response.edit_message(embed=_farming_crops_embed(), view=view)
+
+    @discord.ui.button(label="Machinery", style=discord.ButtonStyle.secondary, emoji="⚙️", row=1)
+    async def machinery_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = FarmingHelpView(self.author_id)
+        await interaction.response.edit_message(embed=_farming_machinery_embed(), view=view)
+
+    @discord.ui.button(label="Other Categories", style=discord.ButtonStyle.secondary, emoji="📚", row=2)
+    async def categories_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = SubHelpView(self.author_id)
+        await interaction.response.edit_message(embed=_farming_embed(), view=view)
 
 
 # ---------------------------------------------------------------------------
@@ -1082,12 +1167,18 @@ class NoodleHelpCommand(commands.HelpCommand):
             chunks.append(current)
         return chunks
 
-    async def _safe_send_embed(self, embed: discord.Embed, *, fallback_text: str) -> None:
+    async def _safe_send_embed(
+        self,
+        embed: discord.Embed,
+        *,
+        fallback_text: str,
+        view: Optional[discord.ui.View] = None,
+    ) -> None:
         ctx = self.context
         if ctx is None:
             return
         try:
-            await ctx.send(embed=embed)
+            await ctx.send(embed=embed, view=view)
         except (discord.Forbidden, discord.HTTPException):
             await ctx.send(fallback_text[:1900])
 
@@ -1098,7 +1189,11 @@ class NoodleHelpCommand(commands.HelpCommand):
         if ctx is None:
             return
         view = HelpView(ctx.author.id)
-        await ctx.send(embed=_main_embed(), view=view)
+        await self._safe_send_embed(
+            _main_embed(),
+            fallback_text="Type `!help <category>` or `!help <command>` for help.",
+            view=view,
+        )
 
     # --- !help <category_name> -> resolve cog names --------------------------
 
@@ -1110,12 +1205,14 @@ class NoodleHelpCommand(commands.HelpCommand):
                 category_builder = _CATEGORY_HELP_BUILDERS.get(normalized.lower())
                 if category_builder is not None:
                     self.context = ctx
+                    view = FarmingHelpView(ctx.author.id) if normalized.lower() == "farming" else None
                     await self._safe_send_embed(
                         category_builder(),
                         fallback_text=(
                             "This help page is best viewed as an embed. "
                             "Type `!help` to open the interactive menu."
                         ),
+                        view=view,
                     )
                     return
                 cog = self._find_cog_by_help_name(normalized)
@@ -1165,12 +1262,14 @@ class NoodleHelpCommand(commands.HelpCommand):
         cleaned = self._clean_cog_name(cog).lower()
         category_builder = _CATEGORY_HELP_BUILDERS.get(cleaned)
         if category_builder is not None:
+            view = FarmingHelpView(self.context.author.id) if cleaned == "farming" and self.context is not None else None
             await self._safe_send_embed(
                 category_builder(),
                 fallback_text=(
                     "This help page is best viewed as an embed. "
                     "Type `!help` to open the interactive menu."
                 ),
+                view=view,
             )
             return
 
