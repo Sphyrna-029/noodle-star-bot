@@ -391,8 +391,9 @@ class CombatCog(commands.Cog):
         if not fish_name:
             # Show healable fish list
             lines = []
-            for name, hp in sorted(FISH_HEAL_VALUES.items(), key=lambda x: x[1]):
-                lines.append(f"**{name}** → +{hp} HP")
+            for key, hp in sorted(FISH_HEAL_VALUES.items(), key=lambda x: x[1]):
+                display = key.replace("_", " ").title()
+                lines.append(f"**{display}** → +{hp} HP")
             embed = discord.Embed(
                 title="🍽️ Healing Fish",
                 description="Use `!eat <fish name>` to restore HP.\n\n" + "\n".join(lines),
@@ -415,8 +416,9 @@ class CombatCog(commands.Cog):
         """Drink a stamina item. Usage: !drink <item name>"""
         if not item_name:
             lines = []
-            for name, stam in sorted(STAMINA_RECOVERY.items(), key=lambda x: x[1]):
-                lines.append(f"**{name}** → +{stam} stamina")
+            for key, stam in sorted(STAMINA_RECOVERY.items(), key=lambda x: x[1]):
+                display = key.replace("_", " ").title()
+                lines.append(f"**{display}** → +{stam} stamina")
             embed = discord.Embed(
                 title="🧪 Stamina Recovery Items",
                 description="Use `!drink <item name>` to restore stamina.\n\n" + "\n".join(lines),
@@ -567,7 +569,9 @@ class CombatCog(commands.Cog):
             description=info.description,
             color=discord.Color.green() if info.can_craft else discord.Color.red(),
         )
-        ingredients_text = "\n".join(f"• **{name}** x{count}" for name, count in info.ingredients)
+        ingredients_text = "\n".join(
+            f"• **{name.replace('_', ' ').title()}** x{count}" for name, count in info.ingredients
+        )
         embed.add_field(
             name="Ingredients",
             value=ingredients_text,

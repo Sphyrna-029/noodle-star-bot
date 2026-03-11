@@ -39,7 +39,8 @@ class CraftingUseCases:
         for ingredient_key, required_count in recipe.ingredients:
             available = len(item_counts.get(ingredient_key, []))
             if available < required_count:
-                missing.append(f"**{ingredient_key}** ({available}/{required_count})")
+                display_name = ingredient_key.replace("_", " ").title()
+                missing.append(f"**{display_name}** ({available}/{required_count})")
 
         if missing:
             return CraftResult(

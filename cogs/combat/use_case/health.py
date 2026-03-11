@@ -74,7 +74,9 @@ class HealthUseCases:
 
     def eat_fish(self, user_id: int, fish_name: str) -> EatResult:
         """Consume a fish from inventory to restore HP."""
-        heal = FISH_HEAL_VALUES.get(fish_name)
+        # Normalize user input to stored key format (lowercase, underscores)
+        fish_key = fish_name.lower().replace(" ", "_").replace("'", "")
+        heal = FISH_HEAL_VALUES.get(fish_key)
         if heal is None:
             return EatResult(
                 success=False,
@@ -85,14 +87,15 @@ class HealthUseCases:
         items = self.repo.get_inventory_items(user_id)
         fish_row = None
         for item in items:
-            if item["item_key"] == fish_name:
+            if item["item_key"] == fish_key:
                 fish_row = item
                 break
 
         if not fish_row:
+            display = fish_key.replace("_", " ").title()
             return EatResult(
                 success=False,
-                message=f"You don't have any **{fish_name}** in your inventory!",
+                message=f"You don't have any **{display}** in your inventory!",
             )
 
         stats = self._apply_regen(user_id)
@@ -113,9 +116,10 @@ class HealthUseCases:
         actual_heal = new_hp - old_hp
         self.repo.update_hp(user_id, new_hp, max_hp)
 
+        display = fish_key.replace("_", " ").title()
         return EatResult(
             success=True,
-            message=f"You ate **{fish_name}** and restored **{actual_heal} HP**!",
+            message=f"You ate **{display}** and restored **{actual_heal} HP**!",
             hp_restored=actual_heal,
             current_hp=new_hp,
             max_hp=max_hp,
@@ -123,7 +127,9 @@ class HealthUseCases:
 
     def drink(self, user_id: int, item_name: str) -> DrinkResult:
         """Consume a stamina item from inventory to restore stamina."""
-        recovery = STAMINA_RECOVERY.get(item_name)
+        # Normalize user input to stored key format (lowercase, underscores)
+        item_key = item_name.lower().replace(" ", "_").replace("'", "")
+        recovery = STAMINA_RECOVERY.get(item_key)
         if recovery is None:
             return DrinkResult(
                 success=False,
@@ -134,14 +140,15 @@ class HealthUseCases:
         items = self.repo.get_inventory_items(user_id)
         item_row = None
         for item in items:
-            if item["item_key"] == item_name:
+            if item["item_key"] == item_key:
                 item_row = item
                 break
 
         if not item_row:
+            display = item_key.replace("_", " ").title()
             return DrinkResult(
                 success=False,
-                message=f"You don't have any **{item_name}** in your inventory!",
+                message=f"You don't have any **{display}** in your inventory!",
             )
 
         stats = self._apply_regen(user_id)
@@ -162,9 +169,10 @@ class HealthUseCases:
         actual = new_stam - old_stam
         self.repo.update_stamina(user_id, new_stam)
 
+        display = item_key.replace("_", " ").title()
         return DrinkResult(
             success=True,
-            message=f"You consumed **{item_name}** and restored **{actual} stamina**!",
+            message=f"You consumed **{display}** and restored **{actual} stamina**!",
             stamina_restored=actual,
             current_stamina=new_stam,
             max_stamina=max_stam,

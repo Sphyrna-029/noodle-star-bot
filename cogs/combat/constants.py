@@ -367,34 +367,34 @@ DEATH_PENALTIES: Final[dict[int, dict]] = {
 # ---------------------------------------------------------------------------
 
 FISH_HEAL_VALUES: Final[dict[str, int]] = {
-    # Level 1 fish
-    "Small Fish": 8,
-    "Crab": 10,
-    "Shrimp": 12,
-    "Salmon": 20,
-    "Tuna": 25,
-    "Lobster": 30,
-    "Octopus": 35,
+    # Level 1 fish (keys match stored inventory format)
+    "small_fish": 8,
+    "crab": 10,
+    "shrimp": 12,
+    "salmon": 20,
+    "tuna": 25,
+    "lobster": 30,
+    "octopus": 35,
     # Level 2 fish
-    "Trout": 12,
-    "Catfish": 15,
-    "Bass": 18,
-    "River Salmon": 25,
-    "Sturgeon": 30,
-    "Snapping Turtle": 35,
-    "Giant Catfish": 40,
+    "trout": 12,
+    "catfish": 15,
+    "bass": 18,
+    "river_salmon": 25,
+    "sturgeon": 30,
+    "snapping_turtle": 35,
+    "giant_catfish": 40,
     # Level 3 fish
-    "Clownfish": 10,
-    "Parrotfish": 18,
-    "Sea Urchin": 20,
-    "Moray Eel": 22,
-    "Reef Shark": 35,
+    "clownfish": 10,
+    "parrotfish": 18,
+    "sea_urchin": 20,
+    "moray_eel": 22,
+    "reef_shark": 35,
     # Level 4 fish
-    "Anglerfish": 15,
-    "Barracuda": 25,
-    "Swordfish": 30,
+    "anglerfish": 15,
+    "barracuda": 25,
+    "swordfish": 30,
     # Level 5 fish
-    "Abyssal Crab": 20,
+    "abyssal_crab": 20,
 }
 
 # ---------------------------------------------------------------------------
@@ -402,16 +402,16 @@ FISH_HEAL_VALUES: Final[dict[str, int]] = {
 # ---------------------------------------------------------------------------
 
 STAMINA_RECOVERY: Final[dict[str, int]] = {
-    # Junk fish that restore stamina
-    "Seaweed": 5,
-    "Driftwood": 4,
-    "Starfish": 6,
-    "Rusty Anchor": 8,
-    "Sea Sponge": 5,
-    "Void Coral": 10,
-    "Bioluminescent Jelly": 12,
-    "Barnacle Cluster": 6,
-    "Old Boot": 3,
+    # Junk fish that restore stamina (keys match stored inventory format)
+    "seaweed": 5,
+    "driftwood": 4,
+    "starfish": 6,
+    "rusty_anchor": 8,
+    "sea_sponge": 5,
+    "void_coral": 10,
+    "bioluminescent_jelly": 12,
+    "barnacle_cluster": 6,
+    "old_boot": 3,
     # Crafted potions
     "minor_stamina_brew": 15,
     "stamina_tonic": 25,
@@ -454,125 +454,125 @@ CRAFT_RECIPES: Final[dict[str, CraftRecipe]] = {
     # ── Tier 2 weapons/shields/armor ──────────────────────────
     "iron_sword": CraftRecipe(
         result_key="iron_sword", result_name="Iron Sword", result_emoji="⚔️",
-        ingredients=(("Iron", 3), ("Coal", 2)),
+        ingredients=(("iron", 3), ("coal", 2)),
         description="Forge an iron sword from mined iron and coal.",
     ),
     "iron_shield": CraftRecipe(
         result_key="iron_shield", result_name="Iron Shield", result_emoji="🛡️",
-        ingredients=(("Iron", 4), ("Stone", 2)),
+        ingredients=(("iron", 4), ("stone", 2)),
         description="Hammer iron over stone to form a sturdy shield.",
     ),
     "chainmail": CraftRecipe(
         result_key="chainmail", result_name="Chainmail Armor", result_emoji="⛓️",
-        ingredients=(("Iron", 5), ("Copper", 3)),
+        ingredients=(("iron", 5), ("copper", 3)),
         description="Link iron rings with copper fasteners.",
     ),
     "silver_rapier": CraftRecipe(
         result_key="silver_rapier", result_name="Silver Rapier", result_emoji="🤺",
-        ingredients=(("Silver", 3), ("Gold", 1)),
+        ingredients=(("silver", 3), ("gold", 1)),
         description="A silver blade with a gold-plated guard.",
     ),
     "studded_buckler": CraftRecipe(
         result_key="studded_buckler", result_name="Studded Buckler", result_emoji="🔰",
-        ingredients=(("Iron", 3), ("Copper", 2), ("Stone", 1)),
+        ingredients=(("iron", 3), ("copper", 2), ("stone", 1)),
         description="A compact shield reinforced with iron studs.",
     ),
 
     # ── Tier 3 ────────────────────────────────────────────────
     "platinum_blade": CraftRecipe(
         result_key="platinum_blade", result_name="Platinum Blade", result_emoji="✨",
-        ingredients=(("Platinum", 4), ("Silver", 2), ("golden_fish", 1)),
+        ingredients=(("platinum", 4), ("silver", 2), ("golden_fish", 1)),
         description="A gleaming platinum sword tempered with golden fish oil.",
     ),
     "emerald_aegis": CraftRecipe(
         result_key="emerald_aegis", result_name="Emerald Aegis", result_emoji="💚",
-        ingredients=(("Emerald", 3), ("Mithril", 2)),
+        ingredients=(("emerald", 3), ("mithril", 2)),
         description="An emerald-infused shield reinforced with mithril.",
     ),
     "mithril_plate": CraftRecipe(
         result_key="mithril_plate", result_name="Mithril Plate", result_emoji="🔵",
-        ingredients=(("Mithril", 5), ("Titanium", 2)),
+        ingredients=(("mithril", 5), ("titanium", 2)),
         description="Lightweight mithril armor plating.",
     ),
     "sapphire_lance": CraftRecipe(
         result_key="sapphire_lance", result_name="Sapphire Lance", result_emoji="💙",
-        ingredients=(("Sapphire", 3), ("Platinum", 2), ("river_dragon", 1)),
+        ingredients=(("sapphire", 3), ("platinum", 2), ("river_dragon", 1)),
         description="A lance tipped with sapphire, imbued with river dragon essence.",
     ),
     "ruby_guardian": CraftRecipe(
         result_key="ruby_guardian", result_name="Ruby Guardian", result_emoji="❤️",
-        ingredients=(("Ruby", 3), ("Emerald", 1), ("mermaids_pearl", 1)),
+        ingredients=(("ruby", 3), ("emerald", 1), ("mermaids_pearl", 1)),
         description="A ruby shield enchanted with mermaid's pearl magic.",
     ),
 
     # ── Tier 4 ────────────────────────────────────────────────
     "star_fragment_blade": CraftRecipe(
         result_key="star_fragment_blade", result_name="Star Fragment Blade", result_emoji="🌟",
-        ingredients=(("Star Fragment", 3), ("Amethyst", 2), ("neptunes_trident", 1)),
+        ingredients=(("star_fragment", 3), ("amethyst", 2), ("neptunes_trident", 1)),
         description="A blade forged from star fragments and Neptune's power.",
     ),
     "opal_fortress": CraftRecipe(
         result_key="opal_fortress", result_name="Opal Fortress", result_emoji="🌈",
-        ingredients=(("Opal", 4), ("Dragonstone", 2)),
+        ingredients=(("opal", 4), ("dragonstone", 2)),
         description="A fortress-like shield of shimmering opal.",
     ),
     "adamantium_mail": CraftRecipe(
         result_key="adamantium_mail", result_name="Adamantium Mail", result_emoji="⛓️",
-        ingredients=(("Adamantium", 5), ("Titanium", 3), ("diamond_anchor", 1)),
+        ingredients=(("adamantium", 5), ("titanium", 3), ("diamond_anchor", 1)),
         description="Nearly indestructible mail forged from adamantium.",
     ),
     "dragonstone_axe": CraftRecipe(
         result_key="dragonstone_axe", result_name="Dragonstone Axe", result_emoji="🪓",
-        ingredients=(("Dragonstone", 4), ("Obsidian", 3), ("leviathan_scale", 1)),
+        ingredients=(("dragonstone", 4), ("obsidian", 3), ("leviathan_scale", 1)),
         description="A massive axe with a dragonstone edge and leviathan handle.",
     ),
     "void_crystal_ward": CraftRecipe(
         result_key="void_crystal_ward", result_name="Void Crystal Ward", result_emoji="🔮",
-        ingredients=(("Void Crystal", 3), ("Darkite", 2), ("poseidons_eye", 1)),
+        ingredients=(("void_crystal", 3), ("darkite", 2), ("poseidons_eye", 1)),
         description="A shield infused with void energy and deep sea power.",
     ),
     "titanium_cuirass": CraftRecipe(
         result_key="titanium_cuirass", result_name="Titanium Cuirass", result_emoji="⚪",
-        ingredients=(("Titanium", 5), ("Mithril", 2), ("phantom_captain", 1)),
+        ingredients=(("titanium", 5), ("mithril", 2), ("phantom_captain", 1)),
         description="Precision body armor haunted by a phantom captain's spirit.",
     ),
 
     # ── Tier 5 ────────────────────────────────────────────────
     "noodle_gem_katana": CraftRecipe(
         result_key="noodle_gem_katana", result_name="Noodle Gem Katana", result_emoji="🍜",
-        ingredients=(("Noodle Gem", 2), ("Star Fragment", 3), ("world_serpent_fang", 1)),
+        ingredients=(("noodle_gem", 2), ("star_fragment", 3), ("world_serpent_fang", 1)),
         description="The ultimate weapon — a katana of pure Noodle Gem.",
     ),
     "eternity_bulwark": CraftRecipe(
         result_key="eternity_bulwark", result_name="Eternity Bulwark", result_emoji="👑",
-        ingredients=(("Eternity Gem", 2), ("Void Crystal", 3), ("heart_of_abyss", 1)),
+        ingredients=(("eternity_gem", 2), ("void_crystal", 3), ("heart_of_abyss", 1)),
         description="A shield forged from eternity, bound with abyssal power.",
     ),
     "darkite_warplate": CraftRecipe(
         result_key="darkite_warplate", result_name="Darkite Warplate", result_emoji="🌑",
-        ingredients=(("Darkite", 5), ("Adamantium", 3), ("pearl_of_deep", 1)),
+        ingredients=(("darkite", 5), ("adamantium", 3), ("pearl_of_deep", 1)),
         description="Armor so dark it seems to consume light itself.",
     ),
     "void_reaper": CraftRecipe(
         result_key="void_reaper", result_name="Void Reaper", result_emoji="⚛️",
-        ingredients=(("Dark Matter", 3), ("Noodle Gem", 1), ("davy_jones_chest", 1)),
+        ingredients=(("dark_matter", 3), ("noodle_gem", 1), ("davy_jones_chest", 1)),
         description="A terrifying scythe forged from Dark Matter and cursed treasure.",
     ),
 
     # ── Stamina potions ───────────────────────────────────────
     "minor_stamina_brew": CraftRecipe(
         result_key="minor_stamina_brew", result_name="Minor Stamina Brew", result_emoji="🧪",
-        ingredients=(("Seaweed", 3), ("Coal", 1)),
+        ingredients=(("seaweed", 3), ("coal", 1)),
         description="A simple brew that restores a little stamina.",
     ),
     "stamina_tonic": CraftRecipe(
         result_key="stamina_tonic", result_name="Stamina Tonic", result_emoji="🧴",
-        ingredients=(("Bioluminescent Jelly", 2), ("Tin", 1), ("golden_seahorse", 1)),
+        ingredients=(("bioluminescent_jelly", 2), ("tin", 1), ("golden_seahorse", 1)),
         description="A potent tonic that restores a good deal of stamina.",
     ),
     "void_energy_flask": CraftRecipe(
         result_key="void_energy_flask", result_name="Void Energy Flask", result_emoji="⚗️",
-        ingredients=(("Void Coral", 3), ("Dark Matter", 1), ("coral_golem", 1)),
+        ingredients=(("void_coral", 3), ("dark_matter", 1), ("coral_golem", 1)),
         description="Pure concentrated void energy. Full stamina restoration.",
     ),
 }

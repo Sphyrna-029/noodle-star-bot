@@ -479,8 +479,8 @@ class FishingCog(commands.Cog):
                 f"Available: `bait`, `jig`"
             )
 
-    @commands.command(name="equip")
-    async def equip(self, ctx, item_type: str = '', item_name: str = ''):
+    @commands.command(name="equipbait", aliases=["eb"])
+    async def equip_bait(self, ctx, item_type: str = '', item_name: str = ''):
         """Alias for !use. Equip bait for fishing."""
         await self.use_item(ctx, item_type, item_name)
 
