@@ -10,6 +10,7 @@ from cogs.combat.constants import (
     COMBAT_ITEMS, CRAFT_RECIPES, DEATH_PENALTIES, DUNGEON_LEVELS,
     FISH_HEAL_VALUES, MOBS_BY_LEVEL, STAMINA_RECOVERY,
 )
+from cogs.shop.resources import get_resource
 from cogs.combat.dto import BattleState, BattleTurn
 from cogs.combat.use_case.combat import CombatUseCases
 from cogs.combat.use_case.crafting import CraftingUseCases
@@ -755,7 +756,7 @@ class CombatCog(commands.Cog):
         for r in recipe_list:
             key = _find_recipe_key(r.name)
             ingredients = " + ".join(
-                f"{name.replace('_', ' ').title()} x{count}"
+                f"{_ingredient_emoji(name)}{name.replace('_', ' ').title()} x{count}"
                 for name, count in r.ingredients
             )
 
@@ -887,6 +888,12 @@ def _find_recipe_key(name: str) -> str | None:
         if recipe.result_name == name:
             return key
     return None
+
+
+def _ingredient_emoji(item_key: str) -> str:
+    """Return the emoji for an ingredient key, with trailing space."""
+    res = get_resource(item_key)
+    return f"{res.emoji} " if res else ""
 
 
 # ---------------------------------------------------------------------------

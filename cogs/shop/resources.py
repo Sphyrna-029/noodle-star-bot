@@ -149,7 +149,7 @@ _r("pirates_hoard", "Pirate's Hoard", "💰", "fish")
 _r("phantom_captain", "Phantom Captain", "👻", "fish")
 _r("diamond_anchor", "Diamond Anchor", "💎", "fish")
 _r("cursed_gold", "Cursed Gold", "🏴‍☠️", "fish")
-_r("davys_jones_chest", "Davy Jones' Chest", "📦", "fish")
+_r("davy_jones_chest", "Davy Jones' Chest", "📦", "fish")
 # Level 5 - The Abyss Trench
 _r("void_coral", "Void Coral", "🖤", "fish")
 _r("bioluminescent_jelly", "Bioluminescent Jelly", "🪼", "fish")
