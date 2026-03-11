@@ -95,33 +95,23 @@ class AlienAbductionCog(commands.Cog):
         if random.random() > chance:
             return
 
-        # Get the user's current data
-        user = self.repo.get_user(ctx.author.id, str(ctx.author))
-        stars_lost = user.stars
-
         # Check if user has anything worth stealing
+        user = self.repo.get_user(ctx.author.id, str(ctx.author))
         inventory = self.repo.get_user_inventory(ctx.author.id)
         equipment = self.repo.get_user_equipment(ctx.author.id)
         bag_count = self.repo.get_inventory_count(ctx.author.id)
-        if stars_lost == 0 and bag_count == 0 and not equipment:
+        if user.stars == 0 and bag_count == 0 and not equipment:
             return
         ray_gun_uses = inventory.get("ray_gun", 0)
 
+        from cogs.combat.use_case.combat import CombatUseCases
+        from cogs.combat.handlers import BattleView, is_in_battle
+
+        if is_in_battle(ctx.author.id):
+            return
+
         if ray_gun_uses > 0:
             # ── Ray-gun: interactive combat with +75 ATK both sides ──
-            self.repo.update_user_inventory(ctx.author.id, "ray_gun", ray_gun_uses - 1)
-            remaining = ray_gun_uses - 1
-
-            intro = random.choice(RAYGUN_INTRO_MESSAGES).format(
-                mention=ctx.author.mention,
-                atk_bonus=ALIEN_ATK_BONUS,
-                remaining=remaining,
-            )
-            await ctx.send(intro)
-
-            from cogs.combat.use_case.combat import CombatUseCases
-            from cogs.combat.handlers import BattleView
-
             combat_uc = CombatUseCases()
             penalty = AMBUSH_DEFEAT_PENALTIES["alien"][0]
             battle, error = combat_uc.start_ambush(
@@ -135,24 +125,40 @@ class AlienAbductionCog(commands.Cog):
                 atk_bonus=ALIEN_ATK_BONUS,
             )
             if battle:
+                # Consume ray-gun only after confirming fight can start
+                self.repo.update_user_inventory(ctx.author.id, "ray_gun", ray_gun_uses - 1)
+                remaining = ray_gun_uses - 1
+
+                intro = random.choice(RAYGUN_INTRO_MESSAGES).format(
+                    mention=ctx.author.mention,
+                    atk_bonus=ALIEN_ATK_BONUS,
+                    remaining=remaining,
+                )
+                await ctx.send(intro)
+
                 battle_view = BattleView(battle, combat_uc, ctx.author.id, str(ctx.author))
                 embed = battle_view._create_embed()
                 msg = await ctx.send(embed=embed, view=battle_view)
                 battle_view.message = msg
             elif error:
-                # Too weak to fight — auto-lose
-                await self._apply_auto_loss(ctx, stars_lost)
+                # Too weak to fight — auto-lose (ray-gun NOT consumed)
+                await self._apply_auto_loss(ctx)
             return
 
         # ── No ray-gun: auto-lose ──
-        await self._apply_auto_loss(ctx, stars_lost)
+        await self._apply_auto_loss(ctx)
 
-    async def _apply_auto_loss(self, ctx, stars_lost: int):
+    async def _apply_auto_loss(self, ctx):
         """Apply alien defeat penalties without combat (no ray-gun or too weak)."""
         from cogs.combat.use_case.combat import CombatUseCases
         from cogs.combat.dto import BattleState, AmbushContext
+        from cogs.combat.constants import BASE_HP, BASE_STAMINA
 
+        combat_uc = CombatUseCases()
         penalty = AMBUSH_DEFEAT_PENALTIES["alien"][0]
+
+        # Read actual player stats to avoid corrupting stamina
+        stats = combat_uc.repo.get_combat_stats(ctx.author.id)
 
         # Build a minimal BattleState so resolve_defeat can apply penalties
         ambush_ctx = AmbushContext(
@@ -166,10 +172,10 @@ class AlienAbductionCog(commands.Cog):
             mob_name=ALIEN_MOB.name,
             mob_emoji=ALIEN_MOB.emoji,
             dungeon_level=0,
-            player_hp=0,
-            player_max_hp=100,
-            player_stamina=0,
-            player_max_stamina=100,
+            player_hp=1,
+            player_max_hp=stats["max_hp"] or BASE_HP,
+            player_stamina=stats["current_stamina"] or BASE_STAMINA,
+            player_max_stamina=stats["max_stamina"] or BASE_STAMINA,
             player_attack=0,
             player_defense=0,
             mob_hp=ALIEN_MOB.hp,
@@ -183,12 +189,12 @@ class AlienAbductionCog(commands.Cog):
             ambush=ambush_ctx,
         )
 
-        combat_uc = CombatUseCases()
         result = combat_uc.resolve_defeat(ctx.author.id, str(ctx.author), battle)
 
+        # Use actual stars_lost from resolve_defeat (not stale pre-combat value)
         message = random.choice(NO_RAYGUN_MESSAGES).format(
             mention=ctx.author.mention,
-            stars_lost=stars_lost,
+            stars_lost=result.stars_lost,
         )
         if result.bank_loss > 0:
             message += f"\n🏦 The aliens also raided your bank for **{result.bank_loss}** stars!"

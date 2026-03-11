@@ -13,7 +13,7 @@ class InventoryRepository(BaseRepository):
     """
 
     _EQUIPMENT_KEYS = {
-        "helmet", "sword", "golden_axe", "mithril_shield", "bank_insurance",
+        "bank_insurance",
         "ray_gun", "star_magnet", "lucky_charm", "heart_of_leviathan",
         "rune_fragment", "fossilized_noodle", "bucktail_jig",
     }
@@ -38,6 +38,8 @@ class InventoryRepository(BaseRepository):
         "wooden_shield": "wooden_shield",
         "leather_vest": "leather_vest",
         "iron_dagger": "iron_dagger",
+        "golden_axe": "golden_axe",
+        "mithril_shield": "mithril_shield",
     }
 
     _CONSUMABLE_KEYS = {

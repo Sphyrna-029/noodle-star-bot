@@ -16,10 +16,10 @@ STAMINA_REGEN_PER_MINUTE: Final[int] = 1
 DAMAGE_FLOOR: Final[float] = 0.20  # minimum damage multiplier at 0 stamina
 
 # ---------------------------------------------------------------------------
-# Combat items — 24 total across 5 tiers
+# Combat items — 26 total across 5 tiers
 # Tier 1: Store-bought (4 items)
 # Tier 2: Crafted (5 items)
-# Tier 3: Crafted (5 items)
+# Tier 3: Crafted (5 items) + 2 drop-only (golden_axe, mithril_shield)
 # Tier 4: Crafted (6 items)
 # Tier 5: Crafted (4 items)
 # ---------------------------------------------------------------------------
@@ -99,6 +99,16 @@ COMBAT_ITEMS: Final[dict[str, CombatItem]] = {
         key="ruby_guardian", name="Ruby Guardian", emoji="❤️",
         slot="shield", tier=3, attack=4, defense=16, hp_bonus=15,
         stamina_cost=0, description="A ruby-encrusted shield that pulses with warmth.",
+    ),
+    "golden_axe": CombatItem(
+        key="golden_axe", name="Golden Axe", emoji="🪓",
+        slot="weapon", tier=3, attack=20, defense=2, hp_bonus=0,
+        stamina_cost=9, description="A legendary golden axe found in the wild. Devastating cleave.",
+    ),
+    "mithril_shield": CombatItem(
+        key="mithril_shield", name="Mithril Shield", emoji="🛡️",
+        slot="shield", tier=3, attack=0, defense=20, hp_bonus=10,
+        stamina_cost=0, description="A rare mithril shield found in the wild. Nearly unbreakable.",
     ),
 
     # ── Tier 4: Crafted ───────────────────────────────────────
@@ -439,10 +449,10 @@ FISH_CRAFT_MATERIALS: Final[dict[str, str]] = {
     "Leviathan Scale": "leviathan_scale",
     "Poseidon's Eye": "poseidons_eye",
     "World Serpent Fang": "world_serpent_fang",
-    "Heart of the Abyss": "heart_of_abyss",
+    "Heart of the Abyss": "heart_of_the_abyss",
     "Ancient Artifact": "ancient_artifact",
     "River Spirit Gem": "river_spirit_gem",
-    "Pearl of the Deep": "pearl_of_deep",
+    "Pearl of the Deep": "pearl_of_the_deep",
     "Davy Jones' Chest": "davy_jones_chest",
 }
 
@@ -545,12 +555,12 @@ CRAFT_RECIPES: Final[dict[str, CraftRecipe]] = {
     ),
     "eternity_bulwark": CraftRecipe(
         result_key="eternity_bulwark", result_name="Eternity Bulwark", result_emoji="👑",
-        ingredients=(("eternity_gem", 2), ("void_crystal", 3), ("heart_of_abyss", 1)),
+        ingredients=(("eternity_gem", 2), ("void_crystal", 3), ("heart_of_the_abyss", 1)),
         description="A shield forged from eternity, bound with abyssal power.",
     ),
     "darkite_warplate": CraftRecipe(
         result_key="darkite_warplate", result_name="Darkite Warplate", result_emoji="🌑",
-        ingredients=(("darkite", 5), ("adamantium", 3), ("pearl_of_deep", 1)),
+        ingredients=(("darkite", 5), ("adamantium", 3), ("pearl_of_the_deep", 1)),
         description="Armor so dark it seems to consume light itself.",
     ),
     "void_reaper": CraftRecipe(

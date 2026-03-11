@@ -78,30 +78,31 @@ class SpaceCog(commands.Cog):
         if result.ambush_mob_key:
             from cogs.combat.ambush_constants import SPACE_AMBUSH_MOBS, AMBUSH_DEFEAT_PENALTIES, AMBUSH_FLEE_LOCKOUT
             from cogs.combat.use_case.combat import CombatUseCases
-            from cogs.combat.handlers import BattleView
+            from cogs.combat.handlers import BattleView, is_in_battle
 
-            mobs = SPACE_AMBUSH_MOBS.get(result.ambush_level, [])
-            mob = next((m for m in mobs if m.key == result.ambush_mob_key), None)
-            if mob:
-                combat_uc = CombatUseCases()
-                penalty = AMBUSH_DEFEAT_PENALTIES["space"][result.ambush_level]
-                flee_lockout = AMBUSH_FLEE_LOCKOUT[result.ambush_level]
-                battle, error = combat_uc.start_ambush(
-                    user_id=ctx.author.id,
-                    username=str(ctx.author),
-                    mob=mob,
-                    activity="space",
-                    activity_level=result.ambush_level,
-                    penalty=penalty,
-                    flee_lockout_turns=flee_lockout,
-                )
-                if battle:
-                    battle_view = BattleView(battle, combat_uc, ctx.author.id, str(ctx.author))
-                    embed = battle_view._create_embed()
-                    msg = await ctx.send(embed=embed, view=battle_view)
-                    battle_view.message = msg
-                elif error:
-                    await ctx.send(f"⚠️ {ctx.author.mention}, a {result.ambush_mob_emoji} **{result.ambush_mob_name}** ambushed you but you were too weak to fight! {error}")
+            if not is_in_battle(ctx.author.id):
+                mobs = SPACE_AMBUSH_MOBS.get(result.ambush_level, [])
+                mob = next((m for m in mobs if m.key == result.ambush_mob_key), None)
+                if mob:
+                    combat_uc = CombatUseCases()
+                    penalty = AMBUSH_DEFEAT_PENALTIES["space"][result.ambush_level]
+                    flee_lockout = AMBUSH_FLEE_LOCKOUT[result.ambush_level]
+                    battle, error = combat_uc.start_ambush(
+                        user_id=ctx.author.id,
+                        username=str(ctx.author),
+                        mob=mob,
+                        activity="space",
+                        activity_level=result.ambush_level,
+                        penalty=penalty,
+                        flee_lockout_turns=flee_lockout,
+                    )
+                    if battle:
+                        battle_view = BattleView(battle, combat_uc, ctx.author.id, str(ctx.author))
+                        embed = battle_view._create_embed()
+                        msg = await ctx.send(embed=embed, view=battle_view)
+                        battle_view.message = msg
+                    elif error:
+                        await ctx.send(f"⚠️ {ctx.author.mention}, a {result.ambush_mob_emoji} **{result.ambush_mob_name}** ambushed you but you were too weak to fight! {error}")
 
     @commands.command(name="planets")
     async def planets(self, ctx, planet: int = 0):

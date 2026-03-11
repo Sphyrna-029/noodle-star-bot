@@ -23,6 +23,11 @@ class HealthUseCases:
         now = datetime.utcnow()
         changed = False
 
+        # Initialize timestamps for first-time users so regen can start
+        if stats["current_hp"] is not None and stats["hp_updated_at"] is None:
+            self.repo.update_hp(user_id, stats["current_hp"])
+            stats["hp_updated_at"] = now.isoformat()
+
         # HP regen
         if stats["current_hp"] < stats["max_hp"] and stats["hp_updated_at"]:
             last = datetime.fromisoformat(stats["hp_updated_at"])
@@ -31,6 +36,11 @@ class HealthUseCases:
             if regen > 0:
                 stats["current_hp"] = min(stats["max_hp"], stats["current_hp"] + regen)
                 changed = True
+
+        # Initialize timestamps for first-time users so regen can start
+        if stats["current_stamina"] is not None and stats["stamina_updated_at"] is None:
+            self.repo.update_stamina(user_id, stats["current_stamina"])
+            stats["stamina_updated_at"] = now.isoformat()
 
         # Stamina regen
         if stats["current_stamina"] < stats["max_stamina"] and stats["stamina_updated_at"]:

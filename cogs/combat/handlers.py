@@ -57,6 +57,14 @@ class _DeathConfirmView(discord.ui.View):
 # Battle View — interactive fight UI
 # ---------------------------------------------------------------------------
 
+_active_battles: set[int] = set()
+
+
+def is_in_battle(user_id: int) -> bool:
+    """Check if a user is currently in an active battle."""
+    return user_id in _active_battles
+
+
 class BattleView(discord.ui.View):
     """Interactive combat view with Attack/Defend/Flee buttons."""
 
@@ -69,12 +77,18 @@ class BattleView(discord.ui.View):
         self.username = username
         self.message = None
         self._finish_lock = asyncio.Lock()
+        _active_battles.add(author_id)
         # Initialize flee lockout state
         self._update_flee_button()
 
     def _disable_buttons(self) -> None:
         for item in self.children:
             item.disabled = True
+
+    def _finish_battle(self) -> None:
+        """Clean up when battle ends — remove from active set and disable buttons."""
+        _active_battles.discard(self.author_id)
+        self._disable_buttons()
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id != self.author_id:
@@ -142,9 +156,10 @@ class BattleView(discord.ui.View):
             )
 
         if not b.finished:
-            if b.ambush and b.turn < b.ambush.flee_lockout_turns:
-                remaining = b.ambush.flee_lockout_turns - b.turn
-                embed.set_footer(text=f"⚔️ Attack | 🛡️ Defend | 🏃 Flee (locked for {remaining} turns)")
+            rounds_done = b.turn // 2
+            if b.ambush and rounds_done < b.ambush.flee_lockout_turns:
+                remaining = b.ambush.flee_lockout_turns - rounds_done
+                embed.set_footer(text=f"⚔️ Attack | 🛡️ Defend | 🏃 Flee (locked for {remaining} rounds)")
             else:
                 embed.set_footer(text="⚔️ Attack | 🛡️ Defend | 🏃 Flee")
 
@@ -153,8 +168,9 @@ class BattleView(discord.ui.View):
     def _update_flee_button(self) -> None:
         """Enable/disable the Flee button based on lockout."""
         b = self.battle
-        if b.ambush and b.turn < b.ambush.flee_lockout_turns:
-            remaining = b.ambush.flee_lockout_turns - b.turn
+        rounds_done = b.turn // 2
+        if b.ambush and rounds_done < b.ambush.flee_lockout_turns:
+            remaining = b.ambush.flee_lockout_turns - rounds_done
             self.flee_button.label = f"Flee ({remaining})"
             self.flee_button.disabled = True
         else:
@@ -173,7 +189,7 @@ class BattleView(discord.ui.View):
             result = self.combat_uc.resolve_defeat(
                 self.author_id, self.username, self.battle
             )
-            self._disable_buttons()
+            self._finish_battle()
             embed = self._create_embed()
 
             # Add defeat info
@@ -212,7 +228,7 @@ class BattleView(discord.ui.View):
                     result = self.combat_uc.resolve_victory(
                         self.author_id, self.username, self.battle
                     )
-                    self._disable_buttons()
+                    self._finish_battle()
                     embed = self._create_embed()
                     victory_text = result.message
                     if result.combat_level_up:
@@ -271,7 +287,7 @@ class BattleView(discord.ui.View):
 
                 if escaped:
                     self.battle.finished = True
-                    self._disable_buttons()
+                    self._finish_battle()
 
                     # Save current HP/stamina (no death penalty)
                     self.combat_uc.repo.update_hp(self.author_id, self.battle.player_hp)
@@ -310,16 +326,28 @@ class BattleView(discord.ui.View):
 
     async def on_timeout(self) -> None:
         self.battle.finished = True
-        self._disable_buttons()
-        # Save state on timeout
-        self.combat_uc.repo.update_hp(self.author_id, self.battle.player_hp)
-        self.combat_uc.repo.update_stamina(self.author_id, self.battle.player_stamina)
+        self.battle.player_won = False
+        self._finish_battle()
+        # Apply defeat penalties — player abandoned the fight
+        result = self.combat_uc.resolve_defeat(
+            self.author_id, self.username, self.battle
+        )
         if self.message:
             try:
                 embed = self._create_embed()
+                penalty_lines = []
+                if result.stars_lost > 0:
+                    penalty_lines.append(f"💫 Stars lost: **{result.stars_lost}**")
+                if result.bank_loss > 0:
+                    penalty_lines.append(f"🏦 Bank loss: **{result.bank_loss}**")
+                if result.items_lost:
+                    penalty_lines.append(f"📦 Items lost: **{len(result.items_lost)}**")
+                if result.equipment_lost:
+                    penalty_lines.append(f"🔧 Equipment lost: {', '.join(result.equipment_lost)}")
                 embed.add_field(
-                    name="⏰ TIMED OUT",
-                    value="The fight timed out. You retreated automatically.",
+                    name="⏰ TIMED OUT — DEFEAT",
+                    value="You abandoned the fight and were defeated!\n"
+                          + ("\n".join(penalty_lines) if penalty_lines else ""),
                     inline=False,
                 )
                 await self.message.edit(embed=embed, view=self)
@@ -353,6 +381,10 @@ class CombatCog(commands.Cog):
     async def fight(self, ctx):
         """Fight a random mob in the Noodle Colosseum!"""
         if not await require_location(ctx, "noodle_colosseum"):
+            return
+
+        if is_in_battle(ctx.author.id):
+            await ctx.send(f"❌ {ctx.author.mention}, you're already in a fight! Finish it first.")
             return
 
         battle, error = self.combat_uc.start_fight(ctx.author.id, str(ctx.author))

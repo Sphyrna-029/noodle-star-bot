@@ -47,39 +47,37 @@ Each feature lives in `cogs/<domain>/` with this structure:
 - `database/migrations/versions/` - Sequential migrations (v001-v023+)
 - `utils/help.py` - Interactive button-based help menu with category embeds
 
-### Protection System
+### Combat & Ambush System
 
-- **Helmet** - Blocks helmet-type hazards (collapse, flood, meteor, solar flare)
-- **Sword** - Blocks sword-type hazards (goblin, troll, pirate, black hole, void entity)
-- **Golden Axe** - Multi-use sword protection (never fails)
-- **Mithril Shield** - Multi-use helmet protection (never fails)
-- Basic helmet/sword have `protection_fail_chance` that scales with level difficulty
-- Each level/planet has unique `helmet_fail_msg` and `sword_fail_msg` in constants
-- Siren and Leviathan hazards (`requires_special`) ignore basic helmet/sword
+- Disasters replaced with interactive **combat ambush encounters** in mining, fishing, and space mining
+- Ambush chance per level, halved by Lucky Charm
+- Turn-based combat with Attack/Defend/Flee buttons via `discord.ui.View`
+- Combat gear: 26 items across 5 tiers (4 store-bought, 20 crafted, 2 drop-only)
+- **Golden Axe** (Tier 3 weapon) and **Mithril Shield** (Tier 3 shield) are permanent drop-only combat items from fishing/treasure
+- Legacy helmet/sword items removed — existing users converted to iron_shield/iron_sword via migration v034
 
 ### Rare Effect Items
 
-Dropped from mining/fishing, survive disasters (`clear_user_inventory` preserves them):
+Dropped from mining/fishing, survive combat defeats (`clear_user_inventory` preserves them):
 - Rune Fragment (30 uses) - Halves mining cooldowns
 - Fossilized Noodle (30 uses) - 1 min mining cooldown
 - Bucktail Jig - 20% legendary fishing chance on next cast
-- Ray-Gun (3 uses, also in shop for 5,000 stars) - Alien abduction item protection
-- Star Magnet (20 uses) - +15% stars on mining/fishing
-- Lucky Charm (50 uses) - 50% disaster chance reduction (multiplicative)
-- Heart of Leviathan (1 use) - Full bank protection from one disaster
+- Ray-Gun (3 uses, also in shop for 5,000 stars) - Lets you fight the alien during abduction (+75 ATK both sides)
+- Star Magnet (20 uses) - +15% stars on mining/fishing/space mining
+- Lucky Charm (50 uses) - 50% ambush chance reduction (multiplicative)
+- Heart of Leviathan (1 use) - Full bank protection from one combat defeat
 
 ### Difficulty Progression
 
 Mine L1-5 -> Fish L1-5 -> Space P1-5 (15 levels total)
 
-Protection fail chances scale: 0% (L1) up to 50% (Space P5)
+Ambush chance scales by level/planet (halved by Lucky Charm).
 
 ### Database
 
-SQLite with manual migration system. New columns require:
-1. Migration file in `database/migrations/versions/`
-2. Column added to `_INVENTORY_COLUMNS` in `database/repositories/inventory.py`
-3. Column in `_ensure_inventory_row` INSERT and `get_user_inventory` SELECT
+SQLite with manual migration system. Migrations in `database/migrations/versions/` (v001-v034+).
+Inventory uses 3-table split: `user_equipment`, `user_inventory_items`, `user_progression`.
+Routing managed by `_EQUIPMENT_KEYS`, `_OWNERSHIP_MAP`, `_PROGRESSION_KEYS`, `_CONSUMABLE_KEYS` in `database/repositories/inventory.py`.
 
 ### Help Menu
 
@@ -91,7 +89,7 @@ SQLite with manual migration system. New columns require:
 ### Conventions
 
 - Shop items defined in `cogs/shop/constants.py` as `ShopItem` dataclasses with aliases
-- Consumable items stack; permanent items (gold_pickaxe, telescope, rocket_ship) don't
-- `clear_user_inventory` wipes basic items on disaster; `clear_all_items` wipes everything (alien abduction)
+- Consumable items stack; permanent items (gold_pickaxe, telescope, rocket_ship, combat gear) don't
+- `clear_user_inventory` wipes inventory items (resources); `clear_all_items` wipes equipment AND inventory (alien abduction)
 - Alien abductions are exempt from `deposit` and `withdraw` commands
 - Help menu in `utils/help.py` uses discord.ui.View buttons with embed pages

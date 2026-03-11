@@ -16,6 +16,7 @@ class PullButtonView(discord.ui.View):
         super().__init__(timeout=timeout)
         self.user_id = user_id
         self.fishing_uc = fishing_uc
+        self.message = None
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id != self.user_id:
@@ -81,34 +82,40 @@ class PullButtonView(discord.ui.View):
         if result.ambush_mob_key:
             from cogs.combat.ambush_constants import FISHING_AMBUSH_MOBS, AMBUSH_DEFEAT_PENALTIES, AMBUSH_FLEE_LOCKOUT
             from cogs.combat.use_case.combat import CombatUseCases
-            from cogs.combat.handlers import BattleView
+            from cogs.combat.handlers import BattleView, is_in_battle
 
-            mobs = FISHING_AMBUSH_MOBS.get(result.ambush_level, [])
-            mob = next((m for m in mobs if m.key == result.ambush_mob_key), None)
-            if mob:
-                combat_uc = CombatUseCases()
-                penalty = AMBUSH_DEFEAT_PENALTIES["fishing"][result.ambush_level]
-                flee_lockout = AMBUSH_FLEE_LOCKOUT[result.ambush_level]
-                battle, error = combat_uc.start_ambush(
-                    user_id=interaction.user.id,
-                    username=str(interaction.user),
-                    mob=mob,
-                    activity="fishing",
-                    activity_level=result.ambush_level,
-                    penalty=penalty,
-                    flee_lockout_turns=flee_lockout,
-                )
-                if battle:
-                    battle_view = BattleView(battle, combat_uc, interaction.user.id, str(interaction.user))
-                    embed = battle_view._create_embed()
-                    msg = await interaction.followup.send(embed=embed, view=battle_view)
-                    battle_view.message = msg
-                elif error:
-                    await interaction.followup.send(f"⚠️ {interaction.user.mention}, a {result.ambush_mob_emoji} **{result.ambush_mob_name}** ambushed you but you were too weak to fight! {error}")
+            if not is_in_battle(interaction.user.id):
+                mobs = FISHING_AMBUSH_MOBS.get(result.ambush_level, [])
+                mob = next((m for m in mobs if m.key == result.ambush_mob_key), None)
+                if mob:
+                    combat_uc = CombatUseCases()
+                    penalty = AMBUSH_DEFEAT_PENALTIES["fishing"][result.ambush_level]
+                    flee_lockout = AMBUSH_FLEE_LOCKOUT[result.ambush_level]
+                    battle, error = combat_uc.start_ambush(
+                        user_id=interaction.user.id,
+                        username=str(interaction.user),
+                        mob=mob,
+                        activity="fishing",
+                        activity_level=result.ambush_level,
+                        penalty=penalty,
+                        flee_lockout_turns=flee_lockout,
+                    )
+                    if battle:
+                        battle_view = BattleView(battle, combat_uc, interaction.user.id, str(interaction.user))
+                        embed = battle_view._create_embed()
+                        msg = await interaction.followup.send(embed=embed, view=battle_view)
+                        battle_view.message = msg
+                    elif error:
+                        await interaction.followup.send(f"⚠️ {interaction.user.mention}, a {result.ambush_mob_emoji} **{result.ambush_mob_name}** ambushed you but you were too weak to fight! {error}")
 
     async def on_timeout(self) -> None:
         for child in self.children:
             child.disabled = True
+        if self.message:
+            try:
+                await self.message.edit(view=self)
+            except Exception:
+                pass
 
 
 class FishingCog(commands.Cog):
@@ -164,11 +171,15 @@ class FishingCog(commands.Cog):
         # Send to channel if available, otherwise DM the user
         try:
             if channel is not None:
-                await channel.send(msg, view=view)
+                sent_msg = await channel.send(msg, view=view)
+                if view:
+                    view.message = sent_msg
             else:
                 # Fallback to DM
                 try:
-                    await user.send(msg, view=view)
+                    sent_msg = await user.send(msg, view=view)
+                    if view:
+                        view.message = sent_msg
                 except Exception:
                     # If DM fails, give up silently
                     return
@@ -283,30 +294,31 @@ class FishingCog(commands.Cog):
         if result.ambush_mob_key:
             from cogs.combat.ambush_constants import FISHING_AMBUSH_MOBS, AMBUSH_DEFEAT_PENALTIES, AMBUSH_FLEE_LOCKOUT
             from cogs.combat.use_case.combat import CombatUseCases
-            from cogs.combat.handlers import BattleView
+            from cogs.combat.handlers import BattleView, is_in_battle
 
-            mobs = FISHING_AMBUSH_MOBS.get(result.ambush_level, [])
-            mob = next((m for m in mobs if m.key == result.ambush_mob_key), None)
-            if mob:
-                combat_uc = CombatUseCases()
-                penalty = AMBUSH_DEFEAT_PENALTIES["fishing"][result.ambush_level]
-                flee_lockout = AMBUSH_FLEE_LOCKOUT[result.ambush_level]
-                battle, error = combat_uc.start_ambush(
-                    user_id=ctx.author.id,
-                    username=str(ctx.author),
-                    mob=mob,
-                    activity="fishing",
-                    activity_level=result.ambush_level,
-                    penalty=penalty,
-                    flee_lockout_turns=flee_lockout,
-                )
-                if battle:
-                    battle_view = BattleView(battle, combat_uc, ctx.author.id, str(ctx.author))
-                    embed = battle_view._create_embed()
-                    msg = await ctx.send(embed=embed, view=battle_view)
-                    battle_view.message = msg
-                elif error:
-                    await ctx.send(f"⚠️ {ctx.author.mention}, a {result.ambush_mob_emoji} **{result.ambush_mob_name}** ambushed you but you were too weak to fight! {error}")
+            if not is_in_battle(ctx.author.id):
+                mobs = FISHING_AMBUSH_MOBS.get(result.ambush_level, [])
+                mob = next((m for m in mobs if m.key == result.ambush_mob_key), None)
+                if mob:
+                    combat_uc = CombatUseCases()
+                    penalty = AMBUSH_DEFEAT_PENALTIES["fishing"][result.ambush_level]
+                    flee_lockout = AMBUSH_FLEE_LOCKOUT[result.ambush_level]
+                    battle, error = combat_uc.start_ambush(
+                        user_id=ctx.author.id,
+                        username=str(ctx.author),
+                        mob=mob,
+                        activity="fishing",
+                        activity_level=result.ambush_level,
+                        penalty=penalty,
+                        flee_lockout_turns=flee_lockout,
+                    )
+                    if battle:
+                        battle_view = BattleView(battle, combat_uc, ctx.author.id, str(ctx.author))
+                        embed = battle_view._create_embed()
+                        msg = await ctx.send(embed=embed, view=battle_view)
+                        battle_view.message = msg
+                    elif error:
+                        await ctx.send(f"⚠️ {ctx.author.mention}, a {result.ambush_mob_emoji} **{result.ambush_mob_name}** ambushed you but you were too weak to fight! {error}")
 
     @commands.command(name="fishing")
     async def fishing_status(self, ctx):
@@ -370,7 +382,8 @@ class FishingCog(commands.Cog):
                     ctx.author.id, self.fishing,
                     timeout=status.time_until_expires or 60,
                 )
-                await ctx.send(embed=embed, view=pull_view)
+                pull_msg = await ctx.send(embed=embed, view=pull_view)
+                pull_view.message = pull_msg
                 return
 
             embed.color = discord.Color.orange()
@@ -505,11 +518,6 @@ class FishingCog(commands.Cog):
                 f"❌ {ctx.author.mention}, unknown item type `{item_type}`!\n"
                 f"Available: `bait`, `jig`"
             )
-
-    @commands.command(name="equipbait", aliases=["eb"])
-    async def equip_bait(self, ctx, item_type: str = '', item_name: str = ''):
-        """Alias for !use. Equip bait for fishing."""
-        await self.use_item(ctx, item_type, item_name)
 
     @commands.command(name="baitshop")
     async def bait_shop(self, ctx):

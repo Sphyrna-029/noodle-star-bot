@@ -53,8 +53,6 @@ class TreasureUseCases:
         self._event_callback: Optional[Callable] = None
         self._user_reclaim_cooldowns: dict[int, datetime] = {}
         self._common_drop_table = (
-            ("helmet", "🪖", "Mining Helmet", 1),
-            ("sword", "⚔️", "Sword", 1),
             ("raw_potato", "🥔", "Raw Potato", 3),
             ("bait_worm", "🪱", "Worm Bait", 3),
             ("bait_herring", "🐟", "Herring Bait", 2),
@@ -62,13 +60,17 @@ class TreasureUseCases:
             ("bank_insurance", "💸", "Bank Insurance", 1),
         )
         self._rare_drop_table = (
-            ("golden_axe", "🪓", "Golden Axe", 25),
-            ("mithril_shield", "🛡️", "Mithril Shield", 5),
             ("rune_fragment", "🪨", "Rune Fragment", 10),
             ("fossilized_noodle", "🍜", "Fossilized Noodle", 10),
             ("star_magnet", "🧲", "Star Magnet", 10),
             ("lucky_charm", "🍀", "Lucky Charm", 20),
+            ("ray_gun", "🔫", "Ray-Gun", 3),
             ("heart_of_leviathan", "💜", "Heart of Leviathan", 1),
+        )
+        # Permanent combat drops — handled separately in _roll_item_drop
+        self._combat_drop_table = (
+            ("golden_axe", "🪓", "Golden Axe"),
+            ("mithril_shield", "🛡️", "Mithril Shield"),
         )
 
     # --------------------------------------------------------------------- #
@@ -232,7 +234,7 @@ class TreasureUseCases:
             self.repo.update_username(user_id, username)
 
             found_items: list[str] = []
-            item_drop = self._roll_item_drop(user_id, chest)
+            item_drop = self._roll_item_drop(user_id, username, chest)
             if item_drop is not None:
                 found_items.append(item_drop)
 
@@ -407,13 +409,28 @@ class TreasureUseCases:
             "Use `!pick start` to begin."
         )
 
-    def _roll_item_drop(self, user_id: int, chest: TreasureChest) -> str | None:
+    def _roll_item_drop(self, user_id: int, username: str, chest: TreasureChest) -> str | None:
         if chest.item_drop_chance <= 0:
             return None
         if random.random() >= chest.item_drop_chance:
             return None
 
         use_rare_pool = random.random() < chest.rare_item_drop_chance
+
+        # 20% chance of a permanent combat item from rare pool
+        if use_rare_pool and random.random() < 0.20:
+            item_key, emoji, item_name = random.choice(self._combat_drop_table)
+            inventory = self.repo.get_user_inventory(user_id)
+            current = inventory.get(item_key, 0)
+            if current <= 0:
+                self.repo.update_user_inventory(user_id, item_key, 1)
+                return f"{emoji} **RARE {item_name}** — Tier 3 combat gear! Equip with `!equip {item_name.lower()}`"
+            else:
+                # Already owns — grant stars instead
+                current_stars = self.repo.get_user_stars(user_id, username)
+                self.repo.update_user_stars(user_id, username, current_stars + 250)
+                return f"{emoji} **RARE {item_name}** found but you already own one — sold for **250** stars."
+
         table = self._rare_drop_table if use_rare_pool else self._common_drop_table
         item_key, emoji, item_name, amount = random.choice(table)
 

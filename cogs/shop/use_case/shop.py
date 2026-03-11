@@ -23,8 +23,6 @@ class ShopUseCases:
         self._non_store_items = {"golden_mushroom"}
         self._item_categories = {
             "gold_pickaxe": "Mining",
-            "helmet": "Mining",
-            "sword": "Mining",
             "raw_potato": "Mining",
             "fertilizer": "Farming",
             "water": "Farming",
@@ -389,12 +387,6 @@ class ShopUseCases:
         if inventory["gold_pickaxe"] > 0:
             items.append("⛏️ **Gold Pickaxe** (Permanent)")
 
-        if inventory["helmet"] > 0:
-            items.append(f"🪖 **Mining Helmet** x{inventory['helmet']}")
-
-        if inventory["sword"] > 0:
-            items.append(f"⚔️ **Sword** x{inventory['sword']}")
-
         if inventory["raw_potato"] > 0:
             items.append(f"🥔 **Raw Potato** x{inventory['raw_potato']}")
 
@@ -418,10 +410,10 @@ class ShopUseCases:
             items.append("🏭 **Preserver** (Permanent)")
 
         if inventory.get("golden_axe", 0) > 0:
-            items.append(f"🪓 **Golden Axe** ({inventory['golden_axe']} uses)")
+            items.append("🪓 **Golden Axe** (Permanent)")
 
         if inventory.get("mithril_shield", 0) > 0:
-            items.append(f"🛡️ **Mithril Shield** ({inventory['mithril_shield']} uses)")
+            items.append("🛡️ **Mithril Shield** (Permanent)")
 
         if inventory.get("rune_fragment", 0) > 0:
             items.append(f"🪨 **Rune Fragment** ({inventory['rune_fragment']} uses)")

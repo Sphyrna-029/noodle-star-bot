@@ -1,4 +1,4 @@
-"""Mining service with cooldowns, disasters, and mine levels.
+"""Mining service with cooldowns, ambush encounters, and mine levels.
 
 Average Returns (per mine):
     Level 1 (Normal):        17.00 stars | (Gold Pickaxe): 21.50 stars
@@ -7,33 +7,21 @@ Average Returns (per mine):
     Level 4 (Normal):        63.50 stars | (Gold Pickaxe): 88.00 stars  Bank risk: 10%
     Level 5 (Normal):        93.00 stars | (Gold Pickaxe): 128.00 stars Bank risk: 25%
 
-Disaster Chances:
-    Levels 1-3: 3% chance
-    Level 4:    5% chance (Lava Flow - 10% bank loss)
-    Level 5:    8% chance (Shadow Wraith - 25% bank loss)
-
-Protection:
-    - Helmet: Protects from mine collapse and lava flow
-    - Sword: Protects from goblin raids and shadow wraith
-    - Mithril Shield: 10 uses, protects from helmet-type disasters
-    - Golden Axe: 50 uses, protects from sword-type disasters
+Ambush encounters trigger after mining with level-scaled chance (halved by Lucky Charm).
 
 Rare Effect Items (dropped from mining):
-    - Rune Fragment: 0.5% drop, 5 uses, halves all mining cooldowns
-    - Fossilized Noodle: 0.5% drop, 5 uses, 1 min cooldown (!mine noodle)
+    - Rune Fragment: 0.5% drop, 30 uses, halves all mining cooldowns
+    - Fossilized Noodle: 0.5% drop, 30 uses, 1 min cooldown (!mine noodle)
     - Golden Pickaxe: 0.2% drop, auto-sells for half if already owned
-    - Sword: 1% drop
-    - Helmet: 1% drop
 
 Shared Effect Items (from fishing drops, active in mining too):
     - Star Magnet: +15% stars on mine/fish
-    - Lucky Charm: 50% disaster reduction
-    - Heart of Leviathan: Protects bank from one disaster
+    - Lucky Charm: 50% ambush chance reduction
 """
 
 import math
 import random
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 
 from cogs.mining.constants import (
@@ -59,43 +47,6 @@ class MiningUseCases:
 
     def __init__(self, repository: Optional[UserRepository] = None):
         self.repo = repository or UserRepository()
-
-    def can_mine(self, user_id: int) -> bool:
-        """Check if user can mine (cooldown expired)."""
-        last_mine = self.repo.get_last_mine(user_id)
-        if last_mine is None:
-            return True
-
-        time_since = datetime.now() - last_mine
-        return time_since >= MINING_BASE_COOLDOWN
-
-    def get_cooldown_remaining(self, user_id: int) -> Optional[timedelta]:
-        """Get time remaining on cooldown, or None if can mine."""
-        last_mine = self.repo.get_last_mine(user_id)
-        if last_mine is None:
-            return None
-
-        time_since = datetime.now() - last_mine
-        cooldown = MINING_BASE_COOLDOWN
-
-        if time_since >= cooldown:
-            return None
-
-        return cooldown - time_since
-
-    def get_potato_cooldown_remaining(self, user_id: int) -> Optional[timedelta]:
-        """Get time remaining for potato-reduced cooldown."""
-        last_mine = self.repo.get_last_mine(user_id)
-        if last_mine is None:
-            return None
-
-        time_since = datetime.now() - last_mine
-        cooldown = MINING_POTATO_COOLDOWN
-
-        if time_since >= cooldown:
-            return None
-
-        return cooldown - time_since
 
     def mine(self, user_id: int, username: str, use_item: str = "") -> MineResult:
         """
@@ -295,9 +246,6 @@ class MiningUseCases:
                 result.ambush_mob_emoji = mob.emoji
                 result.ambush_activity = "mining"
                 result.ambush_level = active_level
-        else:
-            if used_lucky_charm:
-                self.repo.update_user_inventory(user_id, "lucky_charm", lucky_charm_uses - 1)
 
         # ---------------------------------------------------------------
         # Roll for item drops (after disaster resolution)
@@ -305,14 +253,16 @@ class MiningUseCases:
 
         # 0.5% rune fragment
         if random.random() < 0.005:
-            self.repo.update_user_inventory(user_id, "rune_fragment", 30)
+            cur_rune = self.repo.get_user_inventory(user_id)["rune_fragment"]
+            self.repo.update_user_inventory(user_id, "rune_fragment", cur_rune + 30)
             result.found_items.append(
                 "**Rune Fragment** -- Reduces mining cooldowns for 30 uses!"
             )
 
         # 0.5% fossilized noodle
         if random.random() < 0.005:
-            self.repo.update_user_inventory(user_id, "fossilized_noodle", 30)
+            cur_noodle = self.repo.get_user_inventory(user_id)["fossilized_noodle"]
+            self.repo.update_user_inventory(user_id, "fossilized_noodle", cur_noodle + 30)
             result.found_items.append(
                 "**Fossilized Noodle** -- Use `!mine noodle` for a 1 min cooldown! (30 uses)"
             )
@@ -333,22 +283,6 @@ class MiningUseCases:
                 result.found_items.append(
                     "**Gold Pickaxe** found! Permanently increases mining luck!"
                 )
-
-        # 1% sword
-        if random.random() < 0.01:
-            cur_sword = self.repo.get_user_inventory(user_id)["sword"]
-            self.repo.update_user_inventory(user_id, "sword", cur_sword + 1)
-            result.found_items.append(
-                "**Sword** found! Protects against one sword-type hazard."
-            )
-
-        # 1% helmet
-        if random.random() < 0.01:
-            cur_helmet = self.repo.get_user_inventory(user_id)["helmet"]
-            self.repo.update_user_inventory(user_id, "helmet", cur_helmet + 1)
-            result.found_items.append(
-                "**Mining Helmet** found! Protects against one helmet-type hazard."
-            )
 
         return result
 
@@ -417,32 +351,3 @@ class MiningUseCases:
         level_config = MINE_LEVELS[level]
         return True, f"Switched to **{level_config['emoji']} {level_config['name']}** (Level {level})!"
 
-    def use_potato(self, user_id: int) -> bool:
-        """
-        Use a potato for reduced cooldown.
-
-        Returns True if potato was available and used.
-        """
-        inventory = self.repo.get_user_inventory(user_id)
-        if inventory["raw_potato"] <= 0:
-            return False
-
-        self.repo.update_user_inventory(
-            user_id, "raw_potato", inventory["raw_potato"] - 1
-        )
-        return True
-
-    def use_mushroom(self, user_id: int) -> bool:
-        """
-        Use a mushroom for instant mine.
-
-        Returns True if mushroom was available and used.
-        """
-        inventory = self.repo.get_user_inventory(user_id)
-        if inventory["golden_mushroom"] <= 0:
-            return False
-
-        self.repo.update_user_inventory(
-            user_id, "golden_mushroom", inventory["golden_mushroom"] - 1
-        )
-        return True

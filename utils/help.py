@@ -678,7 +678,7 @@ def _shop_embed() -> discord.Embed:
         name="Shop Commands",
         value=(
             "`!store` — See all items and prices\n"
-            "`!buy helmet` — Buy an item\n"
+            "`!buy potato` — Buy an item\n"
             "`!buy cat` — Buy a pet from the Pets category\n"
             "`!buy worm 5` — Buy 5 of something\n"
             "`!buy bag` — Upgrade your inventory capacity (+5 slots)\n"
@@ -732,7 +732,7 @@ def _shop_embed() -> discord.Embed:
     embed.add_field(
         name="Trading With Other Players",
         value=(
-            "`!trade @Bob 100 stars for 2 helmet` — Propose a 2-way trade\n"
+            "`!trade @Bob 100 stars for 2 potato` — Propose a 2-way trade\n"
             "`!trade @Bob 50 stars` — Send a gift (they still have to accept)\n"
             "`!trade accept` — Accept a trade someone sent you\n"
             "`!trade cancel` — Cancel a trade\n\n"
@@ -882,12 +882,23 @@ def _items_embed() -> discord.Embed:
         inline=False,
     )
     embed.add_field(
+        name="⚔️ Rare Combat Gear (Drops)",
+        value=(
+            "🪓 **Golden Axe** (permanent, from fishing) — Tier 3 weapon. "
+            "*3% drop on rare/legendary catches*\n"
+            "🛡️ **Mithril Shield** (permanent, from fishing) — Tier 3 shield. "
+            "*0.4% drop on any catch*\n"
+            "Equip with `!equip golden axe` or `!equip mithril shield`"
+        ),
+        inline=False,
+    )
+    embed.add_field(
         name="✨ Rare Effect Items (Drops)",
         value=(
             "🔮 **Rune Fragment** (30 uses, from mining) — Reduces mining cooldown to 15 min "
             "(or 2m30s with a potato). *0.5% drop per mine*\n"
             "🦴 **Fossilized Noodle** (30 uses, from mining) — Reduces mining cooldown to just 1 min "
-            "(or 30s with a rune). *0.1% drop per mine*\n"
+            "(or 30s with a rune). *0.5% drop per mine*\n"
             "🎣 **Bucktail Jig** (from fishing) — Use `!use jig` to get 20% legendary "
             "catch chance on your next cast. *0.3% drop per catch*\n"
             "🔫 **Ray-Gun** (3 uses, 5,000 stars or fishing drop) — Lets you fight "
@@ -899,8 +910,8 @@ def _items_embed() -> discord.Embed:
     embed.add_field(
         name="⭐ Passive Boosts (Drops)",
         value=(
-            "🧲 **Star Magnet** (20 uses, from fishing) — +15% stars on every mine "
-            "and fishing catch. *1% drop on rare/legendary catches*\n"
+            "🧲 **Star Magnet** (20 uses, from fishing) — +15% stars on every mine, "
+            "fishing catch, and space mine. *1% drop on rare/legendary catches*\n"
             "🍀 **Lucky Charm** (50 uses, from fishing) — Cuts ambush chance in half. "
             "*0.05% drop on any catch*"
         ),

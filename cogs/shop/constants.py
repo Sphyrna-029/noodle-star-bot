@@ -14,24 +14,6 @@ SHOP_ITEMS: Final[dict[str, ShopItem]] = {
         description="Permanently increases your mining luck! Find rare minerals more often.",
         aliases=("gold pickaxe", "pickaxe"),
     ),
-    "helmet": ShopItem(
-        price=50,
-        db_column="helmet",
-        consumable=True,
-        emoji="🪖",
-        display_name="Mining Helmet",
-        description="Protects you from one mine collapse. Single use.",
-        aliases=("helmet", "mining helmet"),
-    ),
-    "sword": ShopItem(
-        price=75,
-        db_column="sword",
-        consumable=True,
-        emoji="⚔️",
-        display_name="Sword",
-        description="Protects you from one goblin attack. Single use.",
-        aliases=("sword",),
-    ),
     "raw_potato": ShopItem(
         price=2,
         db_column="raw_potato",
@@ -128,7 +110,7 @@ SHOP_ITEMS: Final[dict[str, ShopItem]] = {
         consumable=True,
         emoji="💸",
         display_name="Bank Insurance",
-        description="Protects your bank from one disaster at Level 4-5. Single use. Your wallet is still at risk!",
+        description="Protects your bank from one combat defeat at Level 4-5. Single use. Your wallet is still at risk!",
         aliases=("bank insurance", "insurance", "bank shield"),
     ),
     "ray_gun": ShopItem(
@@ -137,7 +119,7 @@ SHOP_ITEMS: Final[dict[str, ShopItem]] = {
         consumable=True,
         emoji="🔫",
         display_name="Ray-Gun",
-        description="Protects your items from alien abduction! 3 uses. Your stars are still at risk.",
+        description="Gives you a chance to fight the alien during abduction (+75 ATK both sides)! 3 uses.",
         aliases=("ray gun", "ray-gun", "raygun"),
     ),
     "rocket_ship": ShopItem(

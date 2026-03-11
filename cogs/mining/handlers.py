@@ -63,7 +63,10 @@ class MiningCog(commands.Cog):
         if result.ambush_mob_key:
             from cogs.combat.ambush_constants import MINING_AMBUSH_MOBS, AMBUSH_DEFEAT_PENALTIES, AMBUSH_FLEE_LOCKOUT
             from cogs.combat.use_case.combat import CombatUseCases
-            from cogs.combat.handlers import BattleView
+            from cogs.combat.handlers import BattleView, is_in_battle
+
+            if is_in_battle(ctx.author.id):
+                return
 
             mobs = MINING_AMBUSH_MOBS.get(result.ambush_level, [])
             mob = next((m for m in mobs if m.key == result.ambush_mob_key), None)

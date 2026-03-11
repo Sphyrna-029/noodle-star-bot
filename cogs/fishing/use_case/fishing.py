@@ -12,24 +12,15 @@ Bait Effects:
     - Herring (79 stars):  1.5x rare/legendary boost
     - Sturgeon (110 stars): 2.0x rare/legendary boost
 
-Disaster Chances:
-    Levels 1-3: 3% chance
-    Level 4:    5% chance (Siren - 10% bank loss)
-    Level 5:    8% chance (Leviathan - 20% bank loss)
-
-Protection:
-    - Helmet: Protects from kraken and siren attacks
-    - Sword: Protects from sea serpent and leviathan
-    - Mithril Shield: 10 uses, protects from helmet-type disasters
-    - Golden Axe: 50 uses, protects from sword-type disasters
+Ambush encounters trigger after catching with level-scaled chance (halved by Lucky Charm).
 
 Rare Effect Items (dropped from fishing):
-    - Golden Axe: 3% on rare/legendary catches, 50 uses
-    - Mithril Shield: 0.4% on any catch, 10 uses
+    - Golden Axe: 3% on rare/legendary catches, permanent Tier 3 weapon
+    - Mithril Shield: 0.4% on any catch, permanent Tier 3 shield
     - Bucktail Jig: 0.3% on any catch, 20% legendary on next cast
-    - Ray-Gun: 0.35% on any catch, 2 uses, alien abduction protection
+    - Ray-Gun: 0.35% on any catch, 3 uses, alien abduction combat chance
     - Star Magnet: 1% on rare/legendary, 20 uses, +15% stars
-    - Lucky Charm: 0.05% on any catch, 50 uses, 50% disaster reduction
+    - Lucky Charm: 0.05% on any catch, 50 uses, 50% ambush chance reduction
     - Heart of Leviathan: 25% on Leviathan Scale catch, 1 use, bank protection
 """
 
@@ -530,27 +521,45 @@ class FishingUseCases:
                         result.ambush_mob_emoji = mob.emoji
                         result.ambush_activity = "fishing"
                         result.ambush_level = active_level
-                else:
-                    if used_lucky_charm:
-                        self.repo.update_user_inventory(user_id, "lucky_charm", lucky_charm_uses - 1)
 
             # ---------------------------------------------------------------
             # Roll for item drops (after disaster resolution)
             # ---------------------------------------------------------------
 
-            # 3% golden axe on rare/legendary catches
+            # 3% golden axe on rare/legendary catches (permanent combat weapon)
             if catch["rarity"] in ("rare", "legendary") and random.random() < 0.03:
-                self.repo.update_user_inventory(user_id, "golden_axe", 50)
-                result.found_items.append(
-                    "**Golden Axe** found! Protects against sword-type hazards (50 uses)."
-                )
+                cur_axe = self.repo.get_user_inventory(user_id)["golden_axe"]
+                if cur_axe <= 0:
+                    self.repo.update_user_inventory(user_id, "golden_axe", 1)
+                    result.found_items.append(
+                        "🪓 **Golden Axe** found! A Tier 3 combat weapon — equip with `!equip golden axe`."
+                    )
+                else:
+                    # Already owns one — grant 250 stars instead
+                    bonus = 250
+                    new_stars = result.new_balance + bonus
+                    self.repo.update_user_stars(user_id, username, new_stars)
+                    result.new_balance = new_stars
+                    result.found_items.append(
+                        f"🪓 **Golden Axe** found! You already own one, sold for **{bonus}** stars."
+                    )
 
-            # 0.4% mithril shield on any catch
+            # 0.4% mithril shield on any catch (permanent combat shield)
             if random.random() < 0.004:
-                self.repo.update_user_inventory(user_id, "mithril_shield", 10)
-                result.found_items.append(
-                    "**Mithril Shield** found! Protects against helmet-type hazards (10 uses)."
-                )
+                cur_shield = self.repo.get_user_inventory(user_id)["mithril_shield"]
+                if cur_shield <= 0:
+                    self.repo.update_user_inventory(user_id, "mithril_shield", 1)
+                    result.found_items.append(
+                        "🛡️ **Mithril Shield** found! A Tier 3 combat shield — equip with `!equip mithril shield`."
+                    )
+                else:
+                    bonus = 250
+                    new_stars = result.new_balance + bonus
+                    self.repo.update_user_stars(user_id, username, new_stars)
+                    result.new_balance = new_stars
+                    result.found_items.append(
+                        f"🛡️ **Mithril Shield** found! You already own one, sold for **{bonus}** stars."
+                    )
 
             # 0.3% bucktail jig on any catch
             if random.random() < 0.003:
@@ -562,28 +571,32 @@ class FishingUseCases:
 
             # 0.35% ray-gun on any catch
             if random.random() < 0.0035:
-                self.repo.update_user_inventory(user_id, "ray_gun", 3)
+                cur_gun = self.repo.get_user_inventory(user_id)["ray_gun"]
+                self.repo.update_user_inventory(user_id, "ray_gun", cur_gun + 3)
                 result.found_items.append(
                     "**Ray-Gun** found! Protects your items from alien abduction (3 uses)."
                 )
 
             # 1% star magnet on rare or legendary catches
             if catch["rarity"] in ("rare", "legendary") and random.random() < 0.01:
-                self.repo.update_user_inventory(user_id, "star_magnet", 20)
+                cur_magnet = self.repo.get_user_inventory(user_id)["star_magnet"]
+                self.repo.update_user_inventory(user_id, "star_magnet", cur_magnet + 20)
                 result.found_items.append(
                     "**Star Magnet** found! +15% stars on mining and fishing (20 uses)."
                 )
 
             # 0.05% lucky charm on any catch
             if random.random() < 0.0005:
-                self.repo.update_user_inventory(user_id, "lucky_charm", 50)
+                cur_charm = self.repo.get_user_inventory(user_id)["lucky_charm"]
+                self.repo.update_user_inventory(user_id, "lucky_charm", cur_charm + 50)
                 result.found_items.append(
                     "**Lucky Charm** found! Reduces disaster chance by 50% (50 uses)."
                 )
 
             # 25% heart of leviathan on "Leviathan Scale" catch
             if catch["name"] == "Leviathan Scale" and random.random() < 0.25:
-                self.repo.update_user_inventory(user_id, "heart_of_leviathan", 1)
+                cur_heart = self.repo.get_user_inventory(user_id)["heart_of_leviathan"]
+                self.repo.update_user_inventory(user_id, "heart_of_leviathan", cur_heart + 1)
                 result.found_items.append(
                     "**Heart of Leviathan** found! Fully protects your bank from one disaster."
                 )

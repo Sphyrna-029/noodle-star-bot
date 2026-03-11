@@ -15,6 +15,7 @@ Ambush Chances (halved by lucky charm):
     Pluto:  22%
 """
 
+import math
 import random
 from datetime import datetime
 from typing import Optional
@@ -151,8 +152,13 @@ class SpaceUseCases:
         # Select random mineral based on weights
         mineral = random.choices(minerals, weights=[m.weight for m in minerals])[0]
 
-        # Give reward
+        # Give reward (Star Magnet boosts stored sell value)
         reward = mineral.stars
+        star_magnet_uses = inventory["star_magnet"]
+        if star_magnet_uses > 0 and reward > 0:
+            reward = math.ceil(reward * 1.15)
+            self.repo.update_user_inventory(user_id, "star_magnet", star_magnet_uses - 1)
+
         # Add ore to inventory instead of awarding stars
         ore_key = mineral.name.lower().replace(" ", "_").replace("-", "_")
         self.repo.add_item(user_id, ore_key, "ore", reward)
@@ -198,9 +204,6 @@ class SpaceUseCases:
                 result.ambush_mob_emoji = mob.emoji
                 result.ambush_activity = "space"
                 result.ambush_level = active_planet
-        else:
-            if used_lucky_charm:
-                self.repo.update_user_inventory(user_id, "lucky_charm", lucky_charm_uses - 1)
 
         return result
 
