@@ -57,6 +57,7 @@ class SellUseCases:
         # Ensure user exists
         self.repo.get_user_stars(user_id, username)
 
+        count = max(0, count)
         target_lower = target.strip().lower()
 
         # Handle "all"
@@ -196,6 +197,7 @@ class SellUseCases:
 
     def trash(self, user_id: int, username: str, target: str, count: int = 0) -> TrashResult:
         """Discard items from inventory without earning stars."""
+        count = max(0, count)
         self.repo.get_user_stars(user_id, username)
 
         resource = resolve_item(target)

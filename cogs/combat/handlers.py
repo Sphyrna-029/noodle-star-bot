@@ -326,34 +326,43 @@ class BattleView(discord.ui.View):
             traceback.print_exc()
 
     async def on_timeout(self) -> None:
-        self.battle.finished = True
-        self.battle.player_won = False
-        self._finish_battle()
-        # Apply defeat penalties — player abandoned the fight
-        result = self.combat_uc.resolve_defeat(
-            self.author_id, self.username, self.battle
-        )
-        if self.message:
-            try:
-                embed = self._create_embed()
-                penalty_lines = []
-                if result.stars_lost > 0:
-                    penalty_lines.append(f"💫 Stars lost: **{result.stars_lost}**")
-                if result.bank_loss > 0:
-                    penalty_lines.append(f"🏦 Bank loss: **{result.bank_loss}**")
-                if result.items_lost:
-                    penalty_lines.append(f"📦 Items lost: **{len(result.items_lost)}**")
-                if result.equipment_lost:
-                    penalty_lines.append(f"🔧 Equipment lost: {', '.join(result.equipment_lost)}")
-                embed.add_field(
-                    name="⏰ TIMED OUT — DEFEAT",
-                    value="You abandoned the fight and were defeated!\n"
-                          + ("\n".join(penalty_lines) if penalty_lines else ""),
-                    inline=False,
-                )
-                await self.message.edit(embed=embed, view=self)
-            except Exception:
-                pass
+        async with self._finish_lock:
+            if self.battle.finished:
+                # Already resolved by a button press
+                if self.message:
+                    try:
+                        await self.message.edit(view=self)
+                    except Exception:
+                        pass
+                return
+            self.battle.finished = True
+            self.battle.player_won = False
+            self._finish_battle()
+            # Apply defeat penalties — player abandoned the fight
+            result = self.combat_uc.resolve_defeat(
+                self.author_id, self.username, self.battle
+            )
+            if self.message:
+                try:
+                    embed = self._create_embed()
+                    penalty_lines = []
+                    if result.stars_lost > 0:
+                        penalty_lines.append(f"💫 Stars lost: **{result.stars_lost}**")
+                    if result.bank_loss > 0:
+                        penalty_lines.append(f"🏦 Bank loss: **{result.bank_loss}**")
+                    if result.items_lost:
+                        penalty_lines.append(f"📦 Items lost: **{len(result.items_lost)}**")
+                    if result.equipment_lost:
+                        penalty_lines.append(f"🔧 Equipment lost: {', '.join(result.equipment_lost)}")
+                    embed.add_field(
+                        name="⏰ TIMED OUT — DEFEAT",
+                        value="You abandoned the fight and were defeated!\n"
+                              + ("\n".join(penalty_lines) if penalty_lines else ""),
+                        inline=False,
+                    )
+                    await self.message.edit(embed=embed, view=self)
+                except Exception:
+                    pass
 
 
 def _progress_bar(pct: float, length: int = 10) -> str:

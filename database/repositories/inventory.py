@@ -197,8 +197,8 @@ class InventoryRepository(BaseRepository):
                     if ids:
                         placeholders = ",".join("?" * len(ids))
                         cursor.execute(
-                            f"DELETE FROM user_inventory_items WHERE id IN ({placeholders})",
-                            ids,
+                            f"DELETE FROM user_inventory_items WHERE id IN ({placeholders}) AND user_id = ?",
+                            [*ids, user_id],
                         )
         else:
             raise ValueError(f"Unsupported inventory column: {item}")

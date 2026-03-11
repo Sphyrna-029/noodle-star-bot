@@ -95,8 +95,8 @@ class InventoryItemsRepository(BaseRepository):
             if ids:
                 placeholders = ",".join("?" * len(ids))
                 cursor.execute(
-                    f"DELETE FROM user_inventory_items WHERE id IN ({placeholders})",
-                    ids,
+                    f"DELETE FROM user_inventory_items WHERE id IN ({placeholders}) AND user_id = ?",
+                    [*ids, user_id],
                 )
             return len(ids)
 

@@ -283,11 +283,9 @@ class CropFlowMixin(FarmingUseCaseMixin):
         new_balance = balance  # No star change from harvesting
 
         if mushrooms_earned > 0:
-            inventory_after = self.repo.get_user_inventory(user_id)
-            self.repo.update_user_inventory(
-                user_id,
-                "golden_mushroom",
-                inventory_after.get("golden_mushroom", 0) + mushrooms_earned,
+            self.repo.add_items(
+                user_id, "golden_mushroom", mushrooms_earned,
+                category="consumable",
             )
 
 

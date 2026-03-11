@@ -113,10 +113,10 @@ ALIEN_ATK_BONUS: Final[int] = 75
 AMBUSH_DEFEAT_PENALTIES: Final[dict[str, dict[int, dict]]] = {
     "mining": {
         1: {
-            "wallet_loss_pct": 0.75, "bank_loss_pct": 0.0,
-            "lose_all_items": True, "lose_random_items_pct": 0.0,
+            "wallet_loss_pct": 0.50, "bank_loss_pct": 0.0,
+            "lose_all_items": False, "lose_random_items_pct": 0.0,
             "lose_random_equipment": 0, "lose_all_equipment": False,
-            "description": "Lose 75% wallet + all items",
+            "description": "Lose 50% wallet",
         },
         2: {
             "wallet_loss_pct": 0.75, "bank_loss_pct": 0.0,

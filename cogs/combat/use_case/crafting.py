@@ -48,11 +48,19 @@ class CraftingUseCases:
                 message=f"Missing ingredients:\n" + "\n".join(missing),
             )
 
-        # Consume ingredients
+        # Check inventory space for consumable results (equipment goes to separate table)
+        if recipe.result_key not in COMBAT_ITEMS:
+            if not self.repo.has_space(user_id):
+                return CraftResult(
+                    success=False,
+                    message="Your inventory is full! Make room before crafting.",
+                )
+
+        # Consume ingredients (batch removal for atomicity)
+        all_ids_to_remove = []
         for ingredient_key, required_count in recipe.ingredients:
-            ids = item_counts[ingredient_key][:required_count]
-            for item_id in ids:
-                self.repo.remove_items_by_ids(user_id, [item_id])
+            all_ids_to_remove.extend(item_counts[ingredient_key][:required_count])
+        self.repo.remove_items_by_ids(user_id, all_ids_to_remove)
 
         # Grant the crafted item
         if recipe.result_key in COMBAT_ITEMS:

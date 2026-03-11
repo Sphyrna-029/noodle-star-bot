@@ -64,8 +64,8 @@ class StorageRepository(BaseRepository):
             if not row:
                 return None
             cursor.execute(
-                "DELETE FROM user_storage WHERE id = ?",
-                (row["id"],),
+                "DELETE FROM user_storage WHERE id = ? AND user_id = ?",
+                (row["id"], user_id),
             )
             return dict(row)
 
@@ -95,8 +95,8 @@ class StorageRepository(BaseRepository):
                 ids = [r["id"] for r in rows]
                 placeholders = ",".join("?" * len(ids))
                 cursor.execute(
-                    f"DELETE FROM user_storage WHERE id IN ({placeholders})",
-                    ids,
+                    f"DELETE FROM user_storage WHERE id IN ({placeholders}) AND user_id = ?",
+                    [*ids, user_id],
                 )
             return rows
 
@@ -116,8 +116,8 @@ class StorageRepository(BaseRepository):
                 ids = [r["id"] for r in rows]
                 placeholders = ",".join("?" * len(ids))
                 cursor.execute(
-                    f"DELETE FROM user_storage WHERE id IN ({placeholders})",
-                    ids,
+                    f"DELETE FROM user_storage WHERE id IN ({placeholders}) AND user_id = ?",
+                    [*ids, user_id],
                 )
             return rows
 

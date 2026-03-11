@@ -551,7 +551,14 @@ class EconomyCog(commands.Cog):
             label = f"({uses} uses)" if uses > 1 else ""
             await ctx.send(f"📦 Retrieved **{display}** {label} from storage!")
         else:
-            to_unstash = min(amount, len(matching))
+            # Check inventory space before removing from storage
+            bag_count = self.repo.get_inventory_count(ctx.author.id)
+            bag_capacity = self.repo.get_inventory_capacity(ctx.author.id)
+            available = bag_capacity - bag_count
+            if available <= 0:
+                await ctx.send(f"❌ {ctx.author.mention}, your inventory is full ({bag_count}/{bag_capacity})! Make room before unstashing.")
+                return
+            to_unstash = min(amount, len(matching), available)
             removed = self.repo.remove_from_storage_by_key(
                 ctx.author.id, actual_key, "inventory", to_unstash
             )
@@ -645,16 +652,35 @@ class EconomyCog(commands.Cog):
             # All inventory items
             inv_items = [s for s in stored if s["item_type"] == "inventory"]
             equip_items = [s for s in stored if s["item_type"] == "equipment"]
-            # Unstash inventory items
+            # Unstash inventory items (limited by available space)
             if inv_items:
+                bag_count = self.repo.get_inventory_count(ctx.author.id)
+                bag_capacity = self.repo.get_inventory_capacity(ctx.author.id)
+                available = bag_capacity - bag_count
+                if available <= 0 and not equip_items:
+                    await ctx.send(f"❌ {ctx.author.mention}, your inventory is full! Make room before unstashing.")
+                    return
                 keys_to_remove = set()
                 for item in inv_items:
                     keys_to_remove.add(item["item_key"])
                 removed = self.repo.remove_from_storage_by_category(
                     ctx.author.id, keys_to_remove
                 )
+                # Only add items up to available space
+                added = 0
+                leftover = []
                 for row in removed:
-                    self.repo.add_item(ctx.author.id, row["item_key"])
+                    if added < available:
+                        self.repo.add_item(ctx.author.id, row["item_key"])
+                        added += 1
+                    else:
+                        leftover.append(row)
+                # Put back items that didn't fit
+                if leftover:
+                    self.repo.add_to_storage_bulk(
+                        ctx.author.id,
+                        [(r["item_key"], r["item_type"], r["uses"]) for r in leftover],
+                    )
             # Unstash equipment
             for item in equip_items:
                 row = self.repo.remove_from_storage(
@@ -663,11 +689,15 @@ class EconomyCog(commands.Cog):
                 if row:
                     current = self.repo.get_equipment_uses(ctx.author.id, item["item_key"])
                     self.repo.set_equipment(ctx.author.id, item["item_key"], current + row["uses"])
-            total = len(inv_items) + len(equip_items)
+            inv_retrieved = added if inv_items else 0
+            total = inv_retrieved + len(equip_items)
             if total == 0:
                 await ctx.send("❌ Your storage is empty!")
                 return
-            await ctx.send(f"📦 Retrieved **{total}** items from storage!")
+            msg = f"📦 Retrieved **{total}** items from storage!"
+            if leftover:
+                msg += f" ({len(leftover)} left in storage — inventory full)"
+            await ctx.send(msg)
             return
 
         # Specific category
@@ -681,15 +711,34 @@ class EconomyCog(commands.Cog):
             await ctx.send(f"❌ No {category} items in your storage!")
             return
 
+        # Only add items up to available inventory space
+        bag_count = self.repo.get_inventory_count(ctx.author.id)
+        bag_capacity = self.repo.get_inventory_capacity(ctx.author.id)
+        available = bag_capacity - bag_count
+        added = 0
+        leftover = []
         for row in removed:
-            self.repo.add_item(ctx.author.id, row["item_key"])
+            if added < available:
+                self.repo.add_item(ctx.author.id, row["item_key"])
+                added += 1
+            else:
+                leftover.append(row)
+        # Put back items that didn't fit
+        if leftover:
+            self.repo.add_to_storage_bulk(
+                ctx.author.id,
+                [(r["item_key"], r["item_type"], r["uses"]) for r in leftover],
+            )
 
         cat_labels = {
             "mineral": "minerals", "fish": "fish", "ore": "space ores",
             "crop": "crops", "consumable": "consumables",
         }
         label = cat_labels.get(category, "items")
-        await ctx.send(f"📦 Retrieved **{len(removed)}** {label} from storage!")
+        msg = f"📦 Retrieved **{added}** {label} from storage!"
+        if leftover:
+            msg += f" ({len(leftover)} left in storage — inventory full)"
+        await ctx.send(msg)
 
     async def _unstash_all_equipment(self, ctx):
         """Unstash all equipment from storage."""
@@ -851,21 +900,38 @@ class _UnstashSelect(discord.ui.Select):
             stored = repo.get_storage_items(user_id)
             inv_items = [s for s in stored if s["item_type"] == "inventory"]
             equip_items = [s for s in stored if s["item_type"] == "equipment"]
+            inv_added = 0
+            inv_leftover = []
             if inv_items:
+                bag_count = repo.get_inventory_count(user_id)
+                bag_capacity = repo.get_inventory_capacity(user_id)
+                available = bag_capacity - bag_count
                 keys = {item["item_key"] for item in inv_items}
                 removed = repo.remove_from_storage_by_category(user_id, keys)
                 for row in removed:
-                    repo.add_item(user_id, row["item_key"])
+                    if inv_added < available:
+                        repo.add_item(user_id, row["item_key"])
+                        inv_added += 1
+                    else:
+                        inv_leftover.append(row)
+                if inv_leftover:
+                    repo.add_to_storage_bulk(
+                        user_id,
+                        [(r["item_key"], r["item_type"], r["uses"]) for r in inv_leftover],
+                    )
             for item in equip_items:
                 row = repo.remove_from_storage(user_id, item["item_key"], "equipment")
                 if row:
                     current = repo.get_equipment_uses(user_id, item["item_key"])
                     repo.set_equipment(user_id, item["item_key"], current + row["uses"])
-            total = len(inv_items) + len(equip_items)
+            total = inv_added + len(equip_items)
+            desc = f"Withdrew **{total}** items from storage."
+            if inv_leftover:
+                desc += f" ({len(inv_leftover)} left in storage — inventory full)"
             await interaction.response.edit_message(
                 embed=discord.Embed(
                     title="📦 Retrieved!",
-                    description=f"Withdrew **{total}** items from storage.",
+                    description=desc,
                     color=discord.Color.green(),
                 ),
                 view=None,
@@ -883,18 +949,35 @@ class _UnstashSelect(discord.ui.Select):
             await interaction.response.send_message("❌ No items of that type in storage!", ephemeral=True)
             return
 
+        bag_count = repo.get_inventory_count(user_id)
+        bag_capacity = repo.get_inventory_capacity(user_id)
+        available = bag_capacity - bag_count
+        added = 0
+        leftover = []
         for row in removed:
-            repo.add_item(user_id, row["item_key"])
+            if added < available:
+                repo.add_item(user_id, row["item_key"])
+                added += 1
+            else:
+                leftover.append(row)
+        if leftover:
+            repo.add_to_storage_bulk(
+                user_id,
+                [(r["item_key"], r["item_type"], r["uses"]) for r in leftover],
+            )
 
         cat_labels = {
             "mineral": "minerals", "fish": "fish", "ore": "space ores",
             "crop": "crops", "consumable": "consumables",
         }
         label = cat_labels.get(category, "items")
+        desc = f"Withdrew **{added}** {label} from storage."
+        if leftover:
+            desc += f" ({len(leftover)} left in storage — inventory full)"
         await interaction.response.edit_message(
             embed=discord.Embed(
                 title="📦 Retrieved!",
-                description=f"Withdrew **{len(removed)}** {label} from storage.",
+                description=desc,
                 color=discord.Color.green(),
             ),
             view=None,
