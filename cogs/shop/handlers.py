@@ -464,6 +464,7 @@ class ShopCog(commands.Cog):
             ("gold_pickaxe", "⛏️", "Gold Pickaxe", "permanent"),
             ("telescope", "📷", "Telescope", "permanent"),
             ("rocket_ship", "🚀", "Rocket Ship", "permanent"),
+            ("lucky_dice", "🎲", "Lucky Dice", "permanent"),
             ("growbot", "🤖", "Grow-Bot", "leveled"),
             ("preserver", "🏭", "Preserver", "leveled"),
             ("helmet", "🪖", "Helmet", "stackable"),

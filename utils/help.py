@@ -622,6 +622,14 @@ def _gambling_embed() -> discord.Embed:
         ),
         inline=False,
     )
+    embed.add_field(
+        name="🎲 Lucky Dice",
+        value=(
+            "Normally you must be in **Noodle Town** to gamble.\n"
+            "Buy **Lucky Dice** from `!store` (500 stars) to gamble from anywhere!"
+        ),
+        inline=False,
+    )
     return embed
 
 

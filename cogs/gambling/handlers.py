@@ -223,6 +223,11 @@ class GamblingCog(commands.Cog):
         self.blackjack_use_case = BlackJackUseCase()
         self.roulette_use_case = RouletteUseCase()
         self.roulette_use_case.set_game_callback(self._on_roulette_event)
+
+    def _has_lucky_dice(self, user_id: int) -> bool:
+        """Check if user owns Lucky Dice (gamble from anywhere)."""
+        inv = self.gamble_use_case.repo.get_user_inventory(user_id)
+        return inv.get("lucky_dice", 0) > 0
         self._achievement_defs = {
             definition["key"]: definition for definition in ACHIEVEMENT_DEFS
         }
@@ -269,8 +274,9 @@ class GamblingCog(commands.Cog):
     @commands.command(name="gamble")
     async def gamble(self, ctx, amount: int = None):
         """Gamble your noodle stars for a chance to win more!"""
-        if not await require_location(ctx, "noodle_town"):
-            return
+        if not self._has_lucky_dice(ctx.author.id):
+            if not await require_location(ctx, "noodle_town"):
+                return
         if amount is None:
             await ctx.send(
                 f"❌ {ctx.author.mention}, please specify how many stars to gamble! "
@@ -302,8 +308,9 @@ class GamblingCog(commands.Cog):
     @commands.command(name="coinflip")
     async def coinflip(self, ctx, amount: int = 0, choice: str = ''):
         """Flip a coin and bet on heads or tails!"""
-        if not await require_location(ctx, "noodle_town"):
-            return
+        if not self._has_lucky_dice(ctx.author.id):
+            if not await require_location(ctx, "noodle_town"):
+                return
         if amount is None or choice is None:
             await ctx.send(
                 f"❌ {ctx.author.mention}, please specify an amount and choice! "
@@ -342,8 +349,9 @@ class GamblingCog(commands.Cog):
     @commands.command(name="duel")
     async def duel(self, ctx, opponent: discord.Member = None, amount: int = 0):
         """Challenge another user to a dice duel!"""
-        if not await require_location(ctx, "noodle_town"):
-            return
+        if not self._has_lucky_dice(ctx.author.id):
+            if not await require_location(ctx, "noodle_town"):
+                return
         if opponent is None or amount is None:
             await ctx.send(
                 f"❌ {ctx.author.mention}, please specify an opponent and amount! "
@@ -407,8 +415,9 @@ class GamblingCog(commands.Cog):
     @commands.command(name="blackjack", aliases=["bj"])
     async def blackjack(self, ctx, amount: int = None):
         """Play BlackJack! Try to get 21 without going over. Dealer stands on 17."""
-        if not await require_location(ctx, "noodle_town"):
-            return
+        if not self._has_lucky_dice(ctx.author.id):
+            if not await require_location(ctx, "noodle_town"):
+                return
         try:
             if amount is None:
                 await ctx.send(
@@ -503,8 +512,9 @@ class GamblingCog(commands.Cog):
     @commands.command(name="russian", aliases=["rr"])
     async def russian(self, ctx, *, args: str = ""):
         """Challenge another player in PvP Russian roulette."""
-        if not await require_location(ctx, "noodle_town"):
-            return
+        if not self._has_lucky_dice(ctx.author.id):
+            if not await require_location(ctx, "noodle_town"):
+                return
         parts = args.split() if args else []
         if not parts:
             await ctx.send(

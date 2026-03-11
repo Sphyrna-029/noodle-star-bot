@@ -33,6 +33,7 @@ class InventoryRepository(BaseRepository):
         "gold_pickaxe": "gold_pickaxe",
         "telescope": "telescope",
         "rocket_ship": "rocket_ship",
+        "lucky_dice": "lucky_dice",
     }
 
     _CONSUMABLE_KEYS = {

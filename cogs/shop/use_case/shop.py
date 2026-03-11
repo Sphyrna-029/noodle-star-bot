@@ -38,6 +38,7 @@ class ShopUseCases:
             "ray_gun": "Utility",
             "rocket_ship": "Utility",
             "bag_upgrade": "Utility",
+            "lucky_dice": "Utility",
         }
         self._category_order = ("Mining", "Farming", "Fishing", "Utility", "Pets")
 

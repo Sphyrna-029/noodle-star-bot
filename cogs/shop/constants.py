@@ -158,6 +158,15 @@ SHOP_ITEMS: Final[dict[str, ShopItem]] = {
         description="Increase inventory capacity by 5 slots. Price scales with current capacity.",
         aliases=("bag upgrade", "bag", "backpack", "bag expansion"),
     ),
+    "lucky_dice": ShopItem(
+        price=500,
+        db_column="lucky_dice",
+        consumable=False,
+        emoji="🎲",
+        display_name="Lucky Dice",
+        description="Lets you gamble from anywhere! No need to travel to Noodle Town.",
+        aliases=("lucky dice", "dice"),
+    ),
 }
 
 
