@@ -217,6 +217,15 @@ class FishingCog(commands.Cog):
             # Inform user of equip success
             await ctx.send(f"✅ {ctx.author.mention}, {equip_result.message}")
 
+        # Gear warning before casting
+        from cogs.combat.ambush_constants import FISHING_AMBUSH_MOBS
+        from cogs.combat.use_case.gear_check import gear_warning
+        active_level = self.fishing.repo.get_active_fish_level(ctx.author.id)
+        fish_mobs = FISHING_AMBUSH_MOBS.get(active_level, [])
+        warning = gear_warning(ctx.author.id, fish_mobs, self.fishing.repo)
+        if warning:
+            await ctx.send(warning)
+
         result = await self.fishing.cast_line(
             ctx.author.id,
             str(ctx.author),

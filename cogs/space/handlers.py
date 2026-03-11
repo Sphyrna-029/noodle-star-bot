@@ -49,6 +49,16 @@ class SpaceCog(commands.Cog):
         """Mine for space ores on your active planet!"""
         if not await require_location(ctx, "starport_ziti"):
             return
+
+        # Gear warning
+        from cogs.combat.ambush_constants import SPACE_AMBUSH_MOBS
+        from cogs.combat.use_case.gear_check import gear_warning
+        active_planet = self.space.repo.get_active_space_planet(ctx.author.id)
+        mobs = SPACE_AMBUSH_MOBS.get(active_planet, [])
+        warning = gear_warning(ctx.author.id, mobs, self.space.repo)
+        if warning:
+            await ctx.send(warning)
+
         result = self.space.mine(ctx.author.id, str(ctx.author))
 
         if not result.success:

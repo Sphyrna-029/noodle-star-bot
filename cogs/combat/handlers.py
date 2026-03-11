@@ -682,6 +682,15 @@ class CombatCog(commands.Cog):
             await ctx.send(f"❌ {ctx.author.mention}, you're already in a fight! Finish it first.")
             return
 
+        # Gear warning
+        from cogs.combat.use_case.gear_check import gear_warning
+        stats = self.combat_uc.repo.get_combat_stats(ctx.author.id)
+        active_level = stats["active_combat_level"]
+        level_mobs = MOBS_BY_LEVEL.get(active_level, [])
+        warning = gear_warning(ctx.author.id, level_mobs, self.combat_uc.repo)
+        if warning:
+            await ctx.send(warning)
+
         battle, error = self.combat_uc.start_fight(ctx.author.id, str(ctx.author))
         if error:
             await ctx.send(f"❌ {error}")

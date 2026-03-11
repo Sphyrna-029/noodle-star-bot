@@ -211,6 +211,16 @@ class MiningCog(commands.Cog):
         """Mine for minerals to earn noodle stars!"""
         if not await require_location(ctx, "crystal_cave"):
             return
+
+        # Gear warning on initial mine command
+        from cogs.combat.ambush_constants import MINING_AMBUSH_MOBS
+        from cogs.combat.use_case.gear_check import gear_warning
+        active_level = self.mining.repo.get_active_mine_level(ctx.author.id)
+        mobs = MINING_AMBUSH_MOBS.get(active_level, [])
+        warning = gear_warning(ctx.author.id, mobs, self.mining.repo)
+        if warning:
+            await ctx.send(warning)
+
         result = self.mining.mine(ctx.author.id, str(ctx.author))
 
         if not result.success:
