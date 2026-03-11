@@ -10,7 +10,7 @@ from cogs.combat.constants import (
     COMBAT_ITEMS, CRAFT_RECIPES, DEATH_PENALTIES, DUNGEON_LEVELS,
     FISH_HEAL_VALUES, MOBS_BY_LEVEL, STAMINA_RECOVERY,
 )
-from cogs.combat.dto import BattleState
+from cogs.combat.dto import BattleState, BattleTurn
 from cogs.combat.use_case.combat import CombatUseCases
 from cogs.combat.use_case.crafting import CraftingUseCases
 from cogs.combat.use_case.equipment import EquipmentUseCases
@@ -245,20 +245,43 @@ class BattleView(discord.ui.View):
                     await interaction.edit_original_response(view=self)
                     return
 
-                self.battle.finished = True
-                self._disable_buttons()
+                escaped, chance = self.combat_uc.attempt_flee(self.battle)
+                pct = int(chance * 100)
 
-                # Save current HP/stamina (no death penalty)
-                self.combat_uc.repo.update_hp(self.author_id, self.battle.player_hp)
-                self.combat_uc.repo.update_stamina(self.author_id, self.battle.player_stamina)
+                if escaped:
+                    self.battle.finished = True
+                    self._disable_buttons()
 
-                embed = self._create_embed()
-                embed.add_field(
-                    name="🏃 FLED",
-                    value="You escaped the fight! No penalties, but no rewards either.",
-                    inline=False,
-                )
-                await interaction.edit_original_response(embed=embed, view=self)
+                    # Save current HP/stamina (no death penalty)
+                    self.combat_uc.repo.update_hp(self.author_id, self.battle.player_hp)
+                    self.combat_uc.repo.update_stamina(self.author_id, self.battle.player_stamina)
+
+                    embed = self._create_embed()
+                    embed.add_field(
+                        name="🏃 FLED",
+                        value=f"You escaped the fight! ({pct}% chance)\nNo penalties, but no rewards either.",
+                        inline=False,
+                    )
+                    await interaction.edit_original_response(embed=embed, view=self)
+                else:
+                    # Failed flee — mob gets a free attack
+                    self.battle.turn += 1
+                    turn = BattleTurn(
+                        turn_number=self.battle.turn,
+                        actor="player",
+                        action="flee_fail",
+                        actor_hp=self.battle.player_hp,
+                        target_hp=self.battle.mob_hp,
+                        actor_stamina=self.battle.player_stamina,
+                        message=f"🏃 You tried to flee but couldn't escape! ({pct}% chance)",
+                    )
+                    self.battle.turns.append(turn)
+
+                    await self._do_mob_turn(interaction, player_defended=False)
+
+                    if not self.battle.finished:
+                        embed = self._create_embed()
+                        await interaction.edit_original_response(embed=embed, view=self)
 
         except Exception:
             traceback.print_exc()

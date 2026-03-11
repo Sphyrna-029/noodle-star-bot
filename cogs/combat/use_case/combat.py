@@ -184,6 +184,42 @@ class CombatUseCases:
 
         return turn
 
+    # ── Flee ───────────────────────────────────────────────────
+
+    def calc_flee_chance(self, battle: BattleState) -> float:
+        """Calculate the probability of a successful flee.
+
+        At full stamina the player has a 90% chance regardless of stats.
+        At zero stamina the floor depends on defence vs mob attack:
+          • def >= mob_atk  → 75%
+          • def == 0        → 50%
+          • in between      → linear interpolation (50-75%)
+        The final chance is linearly interpolated between the floor and 90%
+        using the player's current stamina ratio.
+        """
+        stam_ratio = (
+            battle.player_stamina / battle.player_max_stamina
+            if battle.player_max_stamina > 0
+            else 0.0
+        )
+
+        # Defence ratio: how close player def is to mob atk (capped at 1.0)
+        def_ratio = (
+            min(1.0, battle.player_defense / battle.mob_attack)
+            if battle.mob_attack > 0
+            else 1.0
+        )
+
+        floor = 0.50 + 0.25 * def_ratio   # 50% → 75%
+        ceiling = 0.90
+
+        return floor + (ceiling - floor) * stam_ratio
+
+    def attempt_flee(self, battle: BattleState) -> tuple[bool, float]:
+        """Roll for flee. Returns (success, chance_used)."""
+        chance = self.calc_flee_chance(battle)
+        return random.random() < chance, chance
+
     # ── Battle resolution ─────────────────────────────────────
 
     def resolve_victory(self, user_id: int, username: str, battle: BattleState) -> BattleResult:
