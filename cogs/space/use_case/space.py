@@ -97,7 +97,7 @@ class SpaceUseCases:
         if status.current_stamina < stamina_cost:
             return SpaceMineResult(
                 success=False,
-                message=f"You need **{stamina_cost}** stamina to mine here, but you only have **{status.current_stamina}**! Use `!drink` to restore stamina.",
+                message=f"You need **{stamina_cost}** stamina to mine here, but you only have **{status.current_stamina}**! Use `!consume` to restore stamina.",
             )
         # Deduct stamina
         self.repo.update_stamina(user_id, status.current_stamina - stamina_cost)

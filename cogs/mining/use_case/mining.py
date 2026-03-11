@@ -67,7 +67,7 @@ class MiningUseCases:
         if status.current_stamina < stamina_cost:
             return MineResult(
                 success=False,
-                message=f"You need **{stamina_cost}** stamina to mine here, but you only have **{status.current_stamina}**! Use `!drink` to restore stamina.",
+                message=f"You need **{stamina_cost}** stamina to mine here, but you only have **{status.current_stamina}**! Use `!consume` to restore stamina.",
             )
 
         # Deduct stamina
@@ -167,7 +167,7 @@ class MiningUseCases:
             cur_noodle = self.repo.get_user_inventory(user_id)["fossilized_noodle"]
             self.repo.update_user_inventory(user_id, "fossilized_noodle", cur_noodle + 30)
             result.found_items.append(
-                "**Fossilized Noodle** -- Use `!drink fossilized noodle` for stamina! (30 uses)"
+                "**Fossilized Noodle** -- Use `!consume` for stamina! (30 uses)"
             )
 
         # 0.2% golden pickaxe

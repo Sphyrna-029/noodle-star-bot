@@ -56,7 +56,7 @@ class CombatUseCases:
             return None, (
                 f"You need at least **{STAMINA_PER_ATTACK} stamina** to fight! "
                 f"Current: **{current_stamina}/{max_stamina}**. "
-                "Use `!drink` to restore stamina."
+                "Use `!consume` to restore stamina."
             )
 
         # Pick a random mob

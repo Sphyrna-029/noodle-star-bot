@@ -415,7 +415,7 @@ FISH_HEAL_VALUES: Final[dict[str, int]] = {
 }
 
 # ---------------------------------------------------------------------------
-# Stamina recovery — fish and potions that restore stamina via !drink
+# Stamina recovery — fish and potions that restore stamina via !consume
 # ---------------------------------------------------------------------------
 
 STAMINA_RECOVERY: Final[dict[str, int]] = {
