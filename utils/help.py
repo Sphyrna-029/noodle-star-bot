@@ -588,10 +588,10 @@ def _economy_embed() -> discord.Embed:
     embed.add_field(
         name="Watch Out!",
         value=(
-            "👽 **Alien Abductions** — 0.5% chance on any command! "
-            "Without a Ray-Gun you auto-lose (wallet + items gone). "
+            "👽 **Alien Abductions** — 1% chance when traveling away from Noodle Town! "
+            "Without a Ray-Gun you auto-lose (100% wallet gone). "
             "With a Ray-Gun you fight the alien (+75 ATK both sides)!\n"
-            "**This is why you should deposit often.**\n\n"
+            "**This is why you should deposit before traveling!**\n\n"
             "📦 **Pro tip:** Use `!stash` to protect valuable items "
             "like rare equipment and crafting materials!"
         ),

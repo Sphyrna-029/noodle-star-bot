@@ -7,6 +7,16 @@ from cogs.locations.constants import LOCATIONS
 from cogs.locations.use_case import LocationUseCases
 
 
+async def _check_abduction(bot, ctx_or_interaction, previous_location: str, new_location: str):
+    """Check for alien abduction when traveling away from Noodle Town."""
+    if previous_location != "noodle_town" or new_location == "noodle_town":
+        return
+    cog = bot.get_cog("AlienAbductionCog")
+    if cog is None:
+        return
+    await cog.try_abduction(ctx_or_interaction)
+
+
 class TravelButton(discord.ui.Button):
     """Button for traveling to a specific location."""
 
@@ -39,6 +49,7 @@ class TravelButton(discord.ui.Button):
             return
 
         location_uc = LocationUseCases()
+        previous = location_uc.get_location(interaction.user.id)
         result = location_uc.travel(interaction.user.id, self.location_key)
 
         if not result.success:
@@ -58,6 +69,7 @@ class TravelButton(discord.ui.Button):
         )
         embed.set_footer(text=f"📍 You are now at {loc.name}")
         await interaction.response.edit_message(embed=embed, view=new_view)
+        await _check_abduction(interaction.client, interaction, previous, self.location_key)
 
 
 class TravelView(discord.ui.View):
@@ -146,6 +158,7 @@ class LocationsCog(commands.Cog):
             )
             return
 
+        previous = self.locations.get_location(ctx.author.id)
         result = self.locations.travel(ctx.author.id, loc_key)
         if not result.success:
             await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
@@ -153,6 +166,7 @@ class LocationsCog(commands.Cog):
 
         loc = LOCATIONS[loc_key]
         await ctx.send(f"🚶 {ctx.author.mention} traveled to **{loc.name}** {loc.emoji}")
+        await _check_abduction(self.bot, ctx, previous, loc_key)
 
     @commands.command(name="where")
     async def where(self, ctx, member: discord.Member = None):

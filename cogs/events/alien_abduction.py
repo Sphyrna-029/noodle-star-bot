@@ -1,5 +1,6 @@
 """Alien abduction random event cog.
 
+Triggers at 1% chance when a player travels away from Noodle Town.
 With a ray-gun the player fights the alien in interactive combat (both
 sides get +75 ATK).  Without a ray-gun the alien auto-wins and the
 standard alien defeat penalties are applied immediately.
@@ -7,43 +8,42 @@ standard alien defeat penalties are applied immediately.
 
 import random
 
+import discord
 from discord.ext import commands
 
 from cogs.combat.ambush_constants import (
     ALIEN_ATK_BONUS, ALIEN_MOB, AMBUSH_DEFEAT_PENALTIES,
 )
-from cogs.space.constants import SPACE_ABDUCTION_CHANCE
 from database.repository import UserRepository
 
 
-ABDUCTION_CHANCE = 0.0005  # ~2% per day
+ABDUCTION_CHANCE = 0.01  # 1% on travel away from Noodle Town
 
 NO_RAYGUN_MESSAGES = [
     (
         "🛸 **ALIEN ABDUCTION!** 🛸\n\n"
-        "{mention} was minding their own business when a tractor beam "
-        "locked onto them mid-command! Without a **Ray-Gun** you were "
+        "{mention} was traveling when a tractor beam "
+        "locked onto them! Without a **Ray-Gun** you were "
         "helpless against the 👽 **Alien Raider**!\n\n"
-        "They confiscated **{stars_lost} stars** from your wallet and took "
-        "all your items for \"galactic research purposes.\"\n\n"
+        "They confiscated **{stars_lost} stars** from your wallet!\n\n"
         "You were returned 3 hours later with no memory, weird tan lines, "
         "and a strong craving for space noodles."
     ),
     (
         "👽 **YOU'VE BEEN PROBED... FINANCIALLY!** 👽\n\n"
-        "{mention} just got snatched up by a UFO! The alien captain, "
+        "{mention} just got snatched up by a UFO mid-travel! The alien captain, "
         "Zorp, overpowered you easily — you didn't even have a **Ray-Gun** "
         "to fight back.\n\n"
-        "They took **{stars_lost} wallet stars** and all your items. "
+        "They took **{stars_lost} wallet stars**. "
         "Zorp's kids wanted souvenirs from Earth.\n\n"
         "You were dropped in a Walmart parking lot at 3 AM "
         "wearing a tinfoil hat you don't remember putting on."
     ),
     (
         "🌌 **CLOSE ENCOUNTER OF THE WORST KIND** 🌌\n\n"
-        "A flying saucer just yeeted {mention} into orbit! "
+        "A flying saucer just yeeted {mention} into orbit mid-travel! "
         "Without a **Ray-Gun** to defend yourself, the alien "
-        "took **{stars_lost} stars** and emptied your pockets.\n\n"
+        "took **{stars_lost} stars** from your wallet.\n\n"
         "They dropped you back on Earth with a bumper sticker that reads "
         "\"I got abducted by aliens and all I got was this crippling debt.\""
     ),
@@ -52,14 +52,14 @@ NO_RAYGUN_MESSAGES = [
 RAYGUN_INTRO_MESSAGES = [
     (
         "🛸 **ALIEN ABDUCTION!** 🛸\n\n"
-        "{mention} was beamed up by aliens! But you whip out your "
+        "{mention} was beamed up by aliens while traveling! But you whip out your "
         "🔫 **Ray-Gun** — let's see who wins this fight!\n\n"
         "*Both sides are supercharged with alien energy (+{atk_bonus} ATK each)!*\n"
         "Ray-Gun charge: {remaining} uses remaining."
     ),
     (
         "👽 **ALIEN ENCOUNTER!** 👽\n\n"
-        "{mention} got snatched by a UFO, but this time you came prepared "
+        "{mention} got snatched by a UFO mid-travel, but this time you came prepared "
         "with your 🔫 **Ray-Gun**! The alien energy field boosts both fighters "
         "(+{atk_bonus} ATK).\n\n"
         "Ray-Gun charge: {remaining} uses remaining. **FIGHT!**"
@@ -68,55 +68,53 @@ RAYGUN_INTRO_MESSAGES = [
 
 
 class AlienAbductionCog(commands.Cog):
-    """Random alien abduction event that can trigger on any command."""
+    """Random alien abduction event that triggers when traveling away from Noodle Town."""
 
     def __init__(self, bot):
         self.bot = bot
         self.repo = UserRepository()
 
-    @commands.Cog.listener()
-    async def on_command(self, ctx):
-        """Listener that fires before every command — 0.5% alien abduction chance."""
-        if ctx.author.bot:
-            return
+    async def try_abduction(self, ctx_or_interaction):
+        """Called by the travel system when leaving Noodle Town. Returns True if abduction happened.
 
-        # Don't trigger during banking commands
-        if ctx.command and ctx.command.name in ("deposit", "withdraw"):
-            return
+        Accepts either a commands.Context or discord.Interaction.
+        """
+        if random.random() > ABDUCTION_CHANCE:
+            return False
 
-        # Space explorers have per-planet abduction chance
-        inventory = self.repo.get_user_inventory(ctx.author.id)
-        space_level = inventory.get("space_planet_level", 0)
-        if space_level > 0:
-            chance = SPACE_ABDUCTION_CHANCE.get(space_level, ABDUCTION_CHANCE)
+        # Normalize ctx vs interaction
+        if isinstance(ctx_or_interaction, discord.Interaction):
+            user = ctx_or_interaction.user
+            send = ctx_or_interaction.followup.send
         else:
-            chance = ABDUCTION_CHANCE
+            user = ctx_or_interaction.author
+            send = ctx_or_interaction.send
 
-        if random.random() > chance:
-            return
+        user_id = user.id
+        username = str(user)
+        mention = user.mention
 
         # Check if user has anything worth stealing
-        user = self.repo.get_user(ctx.author.id, str(ctx.author))
-        inventory = self.repo.get_user_inventory(ctx.author.id)
-        equipment = self.repo.get_user_equipment(ctx.author.id)
-        bag_count = self.repo.get_inventory_count(ctx.author.id)
-        if user.stars == 0 and bag_count == 0 and not equipment:
-            return
+        user_data = self.repo.get_user(user_id, username)
+        if user_data.stars == 0:
+            return False
+
+        inventory = self.repo.get_user_inventory(user_id)
         ray_gun_uses = inventory.get("ray_gun", 0)
 
         from cogs.combat.use_case.combat import CombatUseCases
         from cogs.combat.handlers import BattleView, is_in_battle
 
-        if is_in_battle(ctx.author.id):
-            return
+        if is_in_battle(user_id):
+            return False
 
         if ray_gun_uses > 0:
             # ── Ray-gun: interactive combat with +75 ATK both sides ──
             combat_uc = CombatUseCases()
             penalty = AMBUSH_DEFEAT_PENALTIES["alien"][0]
             battle, error = combat_uc.start_ambush(
-                user_id=ctx.author.id,
-                username=str(ctx.author),
+                user_id=user_id,
+                username=username,
                 mob=ALIEN_MOB,
                 activity="alien",
                 activity_level=0,
@@ -126,29 +124,32 @@ class AlienAbductionCog(commands.Cog):
             )
             if battle:
                 # Consume ray-gun only after confirming fight can start
-                self.repo.update_user_inventory(ctx.author.id, "ray_gun", ray_gun_uses - 1)
+                self.repo.update_user_inventory(user_id, "ray_gun", ray_gun_uses - 1)
                 remaining = ray_gun_uses - 1
 
                 intro = random.choice(RAYGUN_INTRO_MESSAGES).format(
-                    mention=ctx.author.mention,
+                    mention=mention,
                     atk_bonus=ALIEN_ATK_BONUS,
                     remaining=remaining,
                 )
-                await ctx.send(intro)
+                await send(intro)
 
-                battle_view = BattleView(battle, combat_uc, ctx.author.id, str(ctx.author))
+                battle_view = BattleView(battle, combat_uc, user_id, username)
                 embed = battle_view._create_embed()
-                msg = await ctx.send(embed=embed, view=battle_view)
+                msg = await send(embed=embed, view=battle_view)
                 battle_view.message = msg
+                return True
             elif error:
                 # Too weak to fight — auto-lose (ray-gun NOT consumed)
-                await self._apply_auto_loss(ctx)
-            return
+                await self._apply_auto_loss(user_id, username, mention, send)
+                return True
+            return False
 
         # ── No ray-gun: auto-lose ──
-        await self._apply_auto_loss(ctx)
+        await self._apply_auto_loss(user_id, username, mention, send)
+        return True
 
-    async def _apply_auto_loss(self, ctx):
+    async def _apply_auto_loss(self, user_id, username, mention, send):
         """Apply alien defeat penalties without combat (no ray-gun or too weak)."""
         from cogs.combat.use_case.combat import CombatUseCases
         from cogs.combat.dto import BattleState, AmbushContext
@@ -158,7 +159,7 @@ class AlienAbductionCog(commands.Cog):
         penalty = AMBUSH_DEFEAT_PENALTIES["alien"][0]
 
         # Read actual player stats to avoid corrupting stamina
-        stats = combat_uc.repo.get_combat_stats(ctx.author.id)
+        stats = combat_uc.repo.get_combat_stats(user_id)
 
         # Build a minimal BattleState so resolve_defeat can apply penalties
         ambush_ctx = AmbushContext(
@@ -189,19 +190,15 @@ class AlienAbductionCog(commands.Cog):
             ambush=ambush_ctx,
         )
 
-        result = combat_uc.resolve_defeat(ctx.author.id, str(ctx.author), battle)
+        result = combat_uc.resolve_defeat(user_id, username, battle)
 
-        # Use actual stars_lost from resolve_defeat (not stale pre-combat value)
         message = random.choice(NO_RAYGUN_MESSAGES).format(
-            mention=ctx.author.mention,
+            mention=mention,
             stars_lost=result.stars_lost,
         )
-        if result.bank_loss > 0:
-            message += f"\n🏦 The aliens also raided your bank for **{result.bank_loss}** stars!"
-        else:
-            message += "\n🏦 Bank stars were safe — the aliens couldn't crack the PIN."
+        message += "\n🏦 Bank stars were safe — the aliens couldn't crack the PIN."
 
-        await ctx.send(message)
+        await send(message)
 
 
 async def setup(bot):
