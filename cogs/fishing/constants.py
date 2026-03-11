@@ -19,7 +19,7 @@ FISHING_BAIT_TIERS: Final[dict[str, BaitTier]] = {
         display_name="Worm",
         bite_wait_min=timedelta(seconds=11),
         bite_wait_max=timedelta(seconds=45),
-        pull_window=timedelta(seconds=30),
+        pull_window=timedelta(seconds=60),
         rare_boost=0.4924,
     ),
     "herring": BaitTier(
@@ -27,7 +27,7 @@ FISHING_BAIT_TIERS: Final[dict[str, BaitTier]] = {
         display_name="Herring",
         bite_wait_min=timedelta(seconds=68),
         bite_wait_max=timedelta(seconds=135),
-        pull_window=timedelta(seconds=18),
+        pull_window=timedelta(seconds=36),
         rare_boost=2.009,
     ),
     "sturgeon": BaitTier(
@@ -35,7 +35,7 @@ FISHING_BAIT_TIERS: Final[dict[str, BaitTier]] = {
         display_name="Sturgeon",
         bite_wait_min=timedelta(minutes=3, seconds=45),
         bite_wait_max=timedelta(minutes=6),
-        pull_window=timedelta(seconds=10),
+        pull_window=timedelta(seconds=20),
         rare_boost=9.964,
     ),
 }

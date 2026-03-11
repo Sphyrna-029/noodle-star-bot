@@ -14,11 +14,11 @@ ROCKET_SHIP_COST: Final[int] = 10000
 
 # Stamina cost per space mine attempt, scaling by planet
 SPACE_STAMINA_COST: Final[dict[int, int]] = {
-    1: 22,
-    2: 25,
-    3: 28,
-    4: 32,
-    5: 35,
+    1: 44,
+    2: 50,
+    3: 56,
+    4: 64,
+    5: 70,
 }
 
 # Per-planet abduction chance (replaces base 0.05% for space players)

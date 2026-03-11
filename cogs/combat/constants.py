@@ -8,11 +8,11 @@ from config.models import CombatItem, CraftRecipe, Mob
 # Base stats
 # ---------------------------------------------------------------------------
 BASE_HP: Final[int] = 100
-BASE_STAMINA: Final[int] = 50
+BASE_STAMINA: Final[int] = 100
 STAMINA_PER_ATTACK: Final[int] = 8
 STAMINA_PER_DEFEND: Final[int] = 3
 HP_REGEN_PER_MINUTE: Final[int] = 1
-STAMINA_REGEN_PER_MINUTE: Final[int] = 1
+STAMINA_REGEN_PER_MINUTE: Final[int] = 2
 DAMAGE_FLOOR: Final[float] = 0.20  # minimum damage multiplier at 0 stamina
 
 # ---------------------------------------------------------------------------
@@ -174,130 +174,130 @@ MOBS: Final[dict[str, Mob]] = {
     # ── Level 1: Training Grounds ──────────────────────────────
     "slime": Mob(
         key="slime", name="Slime", emoji="🟢",
-        level=1, hp=30, attack=5, defense=2, stamina=20,
+        level=1, hp=30, attack=5, defense=2, stamina=40,
         star_reward=15, is_boss=False,
     ),
     "rat": Mob(
         key="rat", name="Giant Rat", emoji="🐀",
-        level=1, hp=35, attack=7, defense=3, stamina=25,
+        level=1, hp=35, attack=7, defense=3, stamina=50,
         star_reward=20, is_boss=False,
     ),
     "bat": Mob(
         key="bat", name="Cave Bat", emoji="🦇",
-        level=1, hp=25, attack=8, defense=1, stamina=15,
+        level=1, hp=25, attack=8, defense=1, stamina=30,
         star_reward=18, is_boss=False,
     ),
     "mushroom_fiend": Mob(
         key="mushroom_fiend", name="Mushroom Fiend", emoji="🍄",
-        level=1, hp=40, attack=6, defense=4, stamina=30,
+        level=1, hp=40, attack=6, defense=4, stamina=60,
         star_reward=25, is_boss=False,
     ),
     "goblin_chief": Mob(
         key="goblin_chief", name="Goblin Chief", emoji="👺",
-        level=1, hp=80, attack=12, defense=6, stamina=40,
+        level=1, hp=80, attack=12, defense=6, stamina=80,
         star_reward=75, is_boss=True,
     ),
 
     # ── Level 2: Dark Corridors ────────────────────────────────
     "skeleton": Mob(
         key="skeleton", name="Skeleton Warrior", emoji="💀",
-        level=2, hp=60, attack=14, defense=8, stamina=35,
+        level=2, hp=60, attack=14, defense=8, stamina=70,
         star_reward=45, is_boss=False,
     ),
     "spider": Mob(
         key="spider", name="Giant Spider", emoji="🕷️",
-        level=2, hp=50, attack=16, defense=5, stamina=30,
+        level=2, hp=50, attack=16, defense=5, stamina=60,
         star_reward=40, is_boss=False,
     ),
     "zombie": Mob(
         key="zombie", name="Armored Zombie", emoji="🧟",
-        level=2, hp=75, attack=12, defense=12, stamina=40,
+        level=2, hp=75, attack=12, defense=12, stamina=80,
         star_reward=50, is_boss=False,
     ),
     "ghost": Mob(
         key="ghost", name="Phantom", emoji="👻",
-        level=2, hp=45, attack=18, defense=3, stamina=25,
+        level=2, hp=45, attack=18, defense=3, stamina=50,
         star_reward=55, is_boss=False,
     ),
     "troll_warlord": Mob(
         key="troll_warlord", name="Troll Warlord", emoji="🧌",
-        level=2, hp=150, attack=22, defense=14, stamina=55,
+        level=2, hp=150, attack=22, defense=14, stamina=110,
         star_reward=150, is_boss=True,
     ),
 
     # ── Level 3: Cursed Halls ──────────────────────────────────
     "dark_knight": Mob(
         key="dark_knight", name="Dark Knight", emoji="🖤",
-        level=3, hp=120, attack=24, defense=18, stamina=50,
+        level=3, hp=120, attack=24, defense=18, stamina=100,
         star_reward=100, is_boss=False,
     ),
     "fire_elemental": Mob(
         key="fire_elemental", name="Fire Elemental", emoji="🔥",
-        level=3, hp=90, attack=30, defense=10, stamina=45,
+        level=3, hp=90, attack=30, defense=10, stamina=90,
         star_reward=110, is_boss=False,
     ),
     "gargoyle": Mob(
         key="gargoyle", name="Stone Gargoyle", emoji="🗿",
-        level=3, hp=140, attack=20, defense=25, stamina=60,
+        level=3, hp=140, attack=20, defense=25, stamina=120,
         star_reward=120, is_boss=False,
     ),
     "wraith": Mob(
         key="wraith", name="Soul Wraith", emoji="😈",
-        level=3, hp=100, attack=28, defense=12, stamina=40,
+        level=3, hp=100, attack=28, defense=12, stamina=80,
         star_reward=115, is_boss=False,
     ),
     "lich": Mob(
         key="lich", name="The Lich", emoji="☠️",
-        level=3, hp=250, attack=32, defense=20, stamina=70,
+        level=3, hp=250, attack=32, defense=20, stamina=140,
         star_reward=300, is_boss=True,
     ),
 
     # ── Level 4: Infernal Depths ───────────────────────────────
     "demon": Mob(
         key="demon", name="Infernal Demon", emoji="👿",
-        level=4, hp=200, attack=36, defense=22, stamina=65,
+        level=4, hp=200, attack=36, defense=22, stamina=130,
         star_reward=200, is_boss=False,
     ),
     "golem": Mob(
         key="golem", name="Iron Golem", emoji="🤖",
-        level=4, hp=280, attack=28, defense=35, stamina=80,
+        level=4, hp=280, attack=28, defense=35, stamina=160,
         star_reward=220, is_boss=False,
     ),
     "hydra": Mob(
         key="hydra", name="Lesser Hydra", emoji="🐍",
-        level=4, hp=220, attack=38, defense=18, stamina=60,
+        level=4, hp=220, attack=38, defense=18, stamina=120,
         star_reward=230, is_boss=False,
     ),
     "shadow_dragon": Mob(
         key="shadow_dragon", name="Shadow Drake", emoji="🐲",
-        level=4, hp=240, attack=34, defense=28, stamina=70,
+        level=4, hp=240, attack=34, defense=28, stamina=140,
         star_reward=250, is_boss=False,
     ),
     "balrog": Mob(
         key="balrog", name="The Balrog", emoji="😤",
-        level=4, hp=400, attack=42, defense=30, stamina=90,
+        level=4, hp=400, attack=42, defense=30, stamina=180,
         star_reward=500, is_boss=True,
     ),
 
     # ── Level 5: The Void ──────────────────────────────────────
     "void_sentinel": Mob(
         key="void_sentinel", name="Void Sentinel", emoji="🌌",
-        level=5, hp=350, attack=45, defense=35, stamina=85,
+        level=5, hp=350, attack=45, defense=35, stamina=170,
         star_reward=400, is_boss=False,
     ),
     "cosmic_horror": Mob(
         key="cosmic_horror", name="Cosmic Horror", emoji="👁️",
-        level=5, hp=300, attack=50, defense=25, stamina=75,
+        level=5, hp=300, attack=50, defense=25, stamina=150,
         star_reward=450, is_boss=False,
     ),
     "noodle_titan": Mob(
         key="noodle_titan", name="Noodle Titan", emoji="🍝",
-        level=5, hp=400, attack=42, defense=40, stamina=90,
+        level=5, hp=400, attack=42, defense=40, stamina=180,
         star_reward=500, is_boss=False,
     ),
     "the_void_king": Mob(
         key="the_void_king", name="The Void King", emoji="💀",
-        level=5, hp=600, attack=55, defense=40, stamina=100,
+        level=5, hp=600, attack=55, defense=40, stamina=200,
         star_reward=1000, is_boss=True,
     ),
 }
@@ -413,22 +413,22 @@ FISH_HEAL_VALUES: Final[dict[str, int]] = {
 
 STAMINA_RECOVERY: Final[dict[str, int]] = {
     # Farming consumables
-    "raw_potato": 3,
-    "golden_mushroom": 20,
+    "raw_potato": 6,
+    "golden_mushroom": 40,
     # Junk fish that restore stamina (keys match stored inventory format)
-    "seaweed": 5,
-    "driftwood": 4,
-    "starfish": 6,
-    "rusty_anchor": 8,
-    "sea_sponge": 5,
-    "void_coral": 10,
-    "bioluminescent_jelly": 12,
-    "barnacle_cluster": 6,
-    "old_boot": 3,
+    "seaweed": 10,
+    "driftwood": 8,
+    "starfish": 12,
+    "rusty_anchor": 16,
+    "sea_sponge": 10,
+    "void_coral": 20,
+    "bioluminescent_jelly": 24,
+    "barnacle_cluster": 12,
+    "old_boot": 6,
     # Crafted potions
-    "minor_stamina_brew": 15,
-    "stamina_tonic": 25,
-    "void_energy_flask": 40,
+    "minor_stamina_brew": 30,
+    "stamina_tonic": 50,
+    "void_energy_flask": 80,
 }
 
 # ---------------------------------------------------------------------------

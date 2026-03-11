@@ -34,8 +34,8 @@ class CombatRepository(BaseRepository):
                 "current_hp": row["current_hp"] if row["current_hp"] is not None else 100,
                 "max_hp": row["max_hp"] if row["max_hp"] is not None else 100,
                 "hp_updated_at": row["hp_updated_at"],
-                "current_stamina": row["current_stamina"] if row["current_stamina"] is not None else 50,
-                "max_stamina": row["max_stamina"] if row["max_stamina"] is not None else 50,
+                "current_stamina": row["current_stamina"] if row["current_stamina"] is not None else 100,
+                "max_stamina": row["max_stamina"] if row["max_stamina"] is not None else 100,
                 "stamina_updated_at": row["stamina_updated_at"],
                 "combat_level": row["combat_level"] if row["combat_level"] is not None else 0,
                 "active_combat_level": row["active_combat_level"] if row["active_combat_level"] is not None else 1,
@@ -47,7 +47,7 @@ class CombatRepository(BaseRepository):
     def _default_combat_stats(self) -> dict:
         return {
             "current_hp": 100, "max_hp": 100, "hp_updated_at": None,
-            "current_stamina": 50, "max_stamina": 50, "stamina_updated_at": None,
+            "current_stamina": 100, "max_stamina": 100, "stamina_updated_at": None,
             "combat_level": 0, "active_combat_level": 1,
             "equipped_weapon": None, "equipped_shield": None, "equipped_armor": None,
         }

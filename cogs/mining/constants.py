@@ -15,11 +15,11 @@ __all__ = [
 
 # Stamina cost per mine attempt, scaling by level
 MINING_STAMINA_COST: Final[dict[int, int]] = {
-    1: 5,
-    2: 8,
-    3: 12,
-    4: 15,
-    5: 18,
+    1: 10,
+    2: 16,
+    3: 24,
+    4: 30,
+    5: 36,
 }
 
 MINING_DISASTER_CHANCE: Final[float] = 0.10

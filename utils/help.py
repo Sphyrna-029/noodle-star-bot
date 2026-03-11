@@ -212,12 +212,12 @@ def _mining_embed() -> discord.Embed:
     embed.add_field(
         name="Stamina Cost per Level",
         value=(
-            "⛏️ **Lv1 Surface Mine** — 5 stamina, 10% ambush\n"
-            "🕳️ **Lv2 Caverns** — 8 stamina, 12% ambush\n"
-            "🪨 **Lv3 Deep Tunnels** — 12 stamina, 14% ambush\n"
-            "🌋 **Lv4 Molten Core** — 15 stamina, 16% ambush, **bank risk on defeat**\n"
-            "🌑 **Lv5 The Abyss** — 18 stamina, 20% ambush, **bank risk on defeat**\n\n"
-            "Use `!drink potato` (+3) or `!drink mushroom` (+20) to restore stamina."
+            "⛏️ **Lv1 Surface Mine** — 10 stamina, 10% ambush\n"
+            "🕳️ **Lv2 Caverns** — 16 stamina, 12% ambush\n"
+            "🪨 **Lv3 Deep Tunnels** — 24 stamina, 14% ambush\n"
+            "🌋 **Lv4 Molten Core** — 30 stamina, 16% ambush, **bank risk on defeat**\n"
+            "🌑 **Lv5 The Abyss** — 36 stamina, 20% ambush, **bank risk on defeat**\n\n"
+            "Use `!drink potato` (+6) or `!drink mushroom` (+40) to restore stamina."
         ),
         inline=False,
     )
@@ -239,7 +239,7 @@ def _mining_embed() -> discord.Embed:
         name="Pro Tips",
         value=(
             "• The Gold Pickaxe (500 stars, one-time buy) makes rare minerals appear more often\n"
-            "• Raw Potatoes (+3 stamina, 2 stars) and Golden Mushrooms (+20 stamina) keep you mining\n"
+            "• Raw Potatoes (+6 stamina, 2 stars) and Golden Mushrooms (+40 stamina) keep you mining\n"
             "• At Lv4-5, buy Bank Insurance to protect your bank if you lose a fight\n"
             "• Lucky Charm halves your ambush chance!\n"
             "• `!deposit all` your stars before risky mines!"
@@ -287,7 +287,7 @@ def _fishing_embed() -> discord.Embed:
         name="Bait Comparison",
         value=(
             "🪱 **Worm** (33 stars) — Bites in 15-60 sec, 60 sec to pull — **Best for beginners**\n"
-            "🐟 **Herring** (79 stars) — Bites in 90-180 sec, 35 sec to pull — 2x better catches\n"
+            "🐟 **Herring** (79 stars) — Bites in 90-180 sec, 36 sec to pull — 2x better catches\n"
             "🐋 **Sturgeon** (110 stars) — Bites in 5-8 min, only 20 sec to pull — 10x better catches\n\n"
             "**Higher tier bait** = longer wait but WAY better fish.\n"
             "**Be careful with Sturgeon** — you only get 20 seconds to type `!pull`!"
@@ -418,7 +418,7 @@ def _farming_crops_embed() -> discord.Embed:
             "• Harvest value swings with quality, weather events, and soil condition\n"
             "• Replanting the same crop repeatedly on one plot drains soil faster\n"
             "• No cooldowns: plant and harvest as often as crops are ready\n"
-            "• Mushroom crops give Golden Mushrooms — use `!drink mushroom` for +20 stamina\n"
+            "• Mushroom crops give Golden Mushrooms — use `!drink mushroom` for +40 stamina\n"
             "• A plot must be empty before you plant into it"
         ),
         inline=False,
@@ -823,11 +823,11 @@ def _space_embed() -> discord.Embed:
     embed.add_field(
         name="The 5 Planets",
         value=(
-            "🌕 **Planet 1 — The Moon** — 22 stamina, 12% ambush\n"
-            "🔴 **Planet 2 — Mars** — 25 stamina, 14% ambush\n"
-            "🪐 **Planet 3 — Saturn** — 28 stamina, 16% ambush, **bank risk on defeat!**\n"
-            "💠 **Planet 4 — Uranus** — 32 stamina, 18% ambush, **bank risk on defeat!**\n"
-            "🥶 **Planet 5 — Pluto** — 35 stamina, 22% ambush, **bank risk on defeat!**\n\n"
+            "🌕 **Planet 1 — The Moon** — 44 stamina, 12% ambush\n"
+            "🔴 **Planet 2 — Mars** — 50 stamina, 14% ambush\n"
+            "🪐 **Planet 3 — Saturn** — 56 stamina, 16% ambush, **bank risk on defeat!**\n"
+            "💠 **Planet 4 — Uranus** — 64 stamina, 18% ambush, **bank risk on defeat!**\n"
+            "🥶 **Planet 5 — Pluto** — 70 stamina, 22% ambush, **bank risk on defeat!**\n\n"
             "Planets must be unlocked in order (1 → 2 → 3 → 4 → 5)."
         ),
         inline=False,
@@ -1062,9 +1062,9 @@ def _crafting_embed() -> discord.Embed:
     embed.add_field(
         name="Stamina Potions",
         value=(
-            "🧪 **Minor Stamina Brew** — 3 Seaweed + 1 Coal → +15 stamina\n"
-            "🧴 **Stamina Tonic** — 2 Bio Jelly + 1 Tin + Golden Seahorse → +25 stamina\n"
-            "⚗️ **Void Energy Flask** — 3 Void Coral + Dark Matter + Coral Golem → +40 stamina"
+            "🧪 **Minor Stamina Brew** — 3 Seaweed + 1 Coal → +30 stamina\n"
+            "🧴 **Stamina Tonic** — 2 Bio Jelly + 1 Tin + Golden Seahorse → +50 stamina\n"
+            "⚗️ **Void Energy Flask** — 3 Void Coral + Dark Matter + Coral Golem → +80 stamina"
         ),
         inline=False,
     )
