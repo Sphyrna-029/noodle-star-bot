@@ -65,6 +65,15 @@ class BattleTurn:
 
 
 @dataclass(slots=True)
+class AmbushContext:
+    """Metadata for an ambush fight (non-dungeon combat)."""
+    activity: str               # "mining", "fishing", "space", "alien"
+    activity_level: int         # 1-5 (0 for alien)
+    penalty: dict               # DEATH_PENALTIES-format dict
+    flee_lockout_turns: int     # turns before flee is available
+
+
+@dataclass(slots=True)
 class BattleState:
     """Mutable state during a fight."""
     mob_key: str
@@ -90,6 +99,8 @@ class BattleState:
     turns: list[BattleTurn] = field(default_factory=list)
     finished: bool = False
     player_won: bool = False
+    # Ambush context (None = dungeon fight)
+    ambush: Optional[AmbushContext] = None
 
 
 @dataclass(slots=True)

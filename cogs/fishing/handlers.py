@@ -76,17 +76,35 @@ class PullButtonView(discord.ui.View):
         if result.level_name:
             embed.set_footer(text=f"{result.level_emoji} {result.level_name}")
 
-        if result.disaster:
-            if result.disaster_protected:
-                embed.add_field(name=result.disaster_header, value=result.disaster_protected_msg, inline=False)
-            else:
-                disaster_text = result.disaster_unprotected_msg
-                if result.items_destroyed:
-                    disaster_text += f"\n💰 Wallet: **{result.new_balance}** stars"
-                embed.add_field(name=result.disaster_header, value=disaster_text, inline=False)
-                embed.color = discord.Color.red()
-
         await interaction.response.edit_message(content=None, embed=embed, view=self)
+
+        if result.ambush_mob_key:
+            from cogs.combat.ambush_constants import FISHING_AMBUSH_MOBS, AMBUSH_DEFEAT_PENALTIES, AMBUSH_FLEE_LOCKOUT
+            from cogs.combat.use_case.combat import CombatUseCases
+            from cogs.combat.handlers import BattleView
+
+            mobs = FISHING_AMBUSH_MOBS.get(result.ambush_level, [])
+            mob = next((m for m in mobs if m.key == result.ambush_mob_key), None)
+            if mob:
+                combat_uc = CombatUseCases()
+                penalty = AMBUSH_DEFEAT_PENALTIES["fishing"][result.ambush_level]
+                flee_lockout = AMBUSH_FLEE_LOCKOUT[result.ambush_level]
+                battle, error = combat_uc.start_ambush(
+                    user_id=interaction.user.id,
+                    username=str(interaction.user),
+                    mob=mob,
+                    activity="fishing",
+                    activity_level=result.ambush_level,
+                    penalty=penalty,
+                    flee_lockout_turns=flee_lockout,
+                )
+                if battle:
+                    battle_view = BattleView(battle, combat_uc, interaction.user.id, str(interaction.user))
+                    embed = battle_view._create_embed()
+                    msg = await interaction.followup.send(embed=embed, view=battle_view)
+                    battle_view.message = msg
+                elif error:
+                    await interaction.followup.send(f"⚠️ {interaction.user.mention}, a {result.ambush_mob_emoji} **{result.ambush_mob_name}** ambushed you but you were too weak to fight! {error}")
 
     async def on_timeout(self) -> None:
         for child in self.children:
@@ -260,26 +278,35 @@ class FishingCog(commands.Cog):
         if result.level_name:
             embed.set_footer(text=f"{result.level_emoji} {result.level_name}")
 
-        # Handle disaster messages
-        if result.disaster:
-            if result.disaster_protected:
-                embed.add_field(
-                    name=result.disaster_header,
-                    value=result.disaster_protected_msg,
-                    inline=False,
-                )
-            else:
-                disaster_text = result.disaster_unprotected_msg
-                if result.items_destroyed:
-                    disaster_text += f"\n\ud83d\udcb0 Wallet: **{result.new_balance}** stars"
-                embed.add_field(
-                    name=result.disaster_header,
-                    value=disaster_text,
-                    inline=False,
-                )
-                embed.color = discord.Color.red()
-
         await ctx.send(embed=embed)
+
+        if result.ambush_mob_key:
+            from cogs.combat.ambush_constants import FISHING_AMBUSH_MOBS, AMBUSH_DEFEAT_PENALTIES, AMBUSH_FLEE_LOCKOUT
+            from cogs.combat.use_case.combat import CombatUseCases
+            from cogs.combat.handlers import BattleView
+
+            mobs = FISHING_AMBUSH_MOBS.get(result.ambush_level, [])
+            mob = next((m for m in mobs if m.key == result.ambush_mob_key), None)
+            if mob:
+                combat_uc = CombatUseCases()
+                penalty = AMBUSH_DEFEAT_PENALTIES["fishing"][result.ambush_level]
+                flee_lockout = AMBUSH_FLEE_LOCKOUT[result.ambush_level]
+                battle, error = combat_uc.start_ambush(
+                    user_id=ctx.author.id,
+                    username=str(ctx.author),
+                    mob=mob,
+                    activity="fishing",
+                    activity_level=result.ambush_level,
+                    penalty=penalty,
+                    flee_lockout_turns=flee_lockout,
+                )
+                if battle:
+                    battle_view = BattleView(battle, combat_uc, ctx.author.id, str(ctx.author))
+                    embed = battle_view._create_embed()
+                    msg = await ctx.send(embed=embed, view=battle_view)
+                    battle_view.message = msg
+                elif error:
+                    await ctx.send(f"⚠️ {ctx.author.mention}, a {result.ambush_mob_emoji} **{result.ambush_mob_name}** ambushed you but you were too weak to fight! {error}")
 
     @commands.command(name="fishing")
     async def fishing_status(self, ctx):

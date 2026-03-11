@@ -214,25 +214,26 @@ def _mining_embed() -> discord.Embed:
     embed.add_field(
         name="The 5 Mine Levels",
         value=(
-            "⛏️ **Lv1 Surface Mine** — Free! 10% disaster chance\n"
-            "🕳️ **Lv2 Caverns** — Costs 1,500 stars to unlock, 12% disaster\n"
-            "🪨 **Lv3 Deep Tunnels** — Costs 3,000 stars, 14% disaster\n"
-            "🌋 **Lv4 Molten Core** — Costs 4,000 stars, 16% disaster, **bank risk if a disaster hits**\n"
-            "🌑 **Lv5 The Abyss** — Costs 5,000 stars, 20% disaster, **bank risk if a disaster hits**\n\n"
+            "⛏️ **Lv1 Surface Mine** — Free! 10% ambush chance\n"
+            "🕳️ **Lv2 Caverns** — Costs 1,500 stars, 12% ambush\n"
+            "🪨 **Lv3 Deep Tunnels** — Costs 3,000 stars, 14% ambush\n"
+            "🌋 **Lv4 Molten Core** — Costs 4,000 stars, 16% ambush, **bank risk on defeat**\n"
+            "🌑 **Lv5 The Abyss** — Costs 5,000 stars, 20% ambush, **bank risk on defeat**\n\n"
             "You must unlock levels in order (1 → 2 → 3 → 4 → 5)."
         ),
         inline=False,
     )
     embed.add_field(
-        name="What Are Disasters?",
+        name="Ambush Encounters",
         value=(
-            "After you mine, there's a chance something bad happens:\n"
-            "💥 **Collapse** / 🌊 **Flood** — Blocked by a Helmet (50 stars)\n"
-            "👹 **Goblin** / 🧌 **Troll** — Blocked by a Sword (75 stars)\n\n"
-            "**If you DON'T have protection:** You lose a chunk of your stars "
-            "AND all your items get destroyed.\n"
-            "**If you DO have protection:** The item breaks but you keep everything else.\n\n"
-            "**Always buy a Helmet AND Sword before mining Level 2+!**"
+            "After you mine, there's a chance a **monster ambushes you**!\n"
+            "You'll enter interactive combat — use Attack, Defend, or Flee.\n\n"
+            "**Win:** Keep your loot, no penalties!\n"
+            "**Lose:** Lose wallet stars, items, and possibly bank stars at Lv4-5.\n"
+            "**Flee:** Not available for the first few turns "
+            "(L1=1 turn, L2=2, L3=5, L4=7, L5=10). Flee chance depends on "
+            "your stamina and defense.\n\n"
+            "Equip combat gear before mining deeper levels!"
         ),
         inline=False,
     )
@@ -241,7 +242,8 @@ def _mining_embed() -> discord.Embed:
         value=(
             "• The Gold Pickaxe (500 stars, one-time buy) makes rare minerals appear more often\n"
             "• Raw Potatoes are only 2 stars — great for mining more often on a budget\n"
-            "• At Lv4-5, buy Bank Insurance to protect your bank if a disaster hits\n"
+            "• At Lv4-5, buy Bank Insurance to protect your bank if you lose a fight\n"
+            "• Lucky Charm halves your ambush chance!\n"
             "• `!deposit all` your stars before risky mines!"
         ),
         inline=False,
@@ -297,11 +299,12 @@ def _fishing_embed() -> discord.Embed:
     embed.add_field(
         name="Fishing Levels",
         value=(
-            "🎣 **Lv1 Calm Pond** — Safe, no dangers\n"
-            "🏞️ **Lv2 River Rapids** — 8% disaster, better catches\n"
-            "🪸 **Lv3 Coral Reef** — 10% disaster, even better catches\n"
-            "🚢 **Lv4 Shipwreck Depths** — 12% disaster, **bank risk if a disaster hits**\n"
-            "🌊 **Lv5 The Abyss Trench** — 14% disaster, **bank risk if a disaster hits**\n\n"
+            "🎣 **Lv1 Calm Pond** — Safe, no ambushes\n"
+            "🏞️ **Lv2 River Rapids** — 8% ambush chance, better catches\n"
+            "🪸 **Lv3 Coral Reef** — 10% ambush, even better catches\n"
+            "🚢 **Lv4 Shipwreck Depths** — 12% ambush, **bank risk on defeat**\n"
+            "🌊 **Lv5 The Abyss Trench** — 14% ambush, **bank risk on defeat**\n\n"
+            "You get your catch first, then the ambush triggers — win to keep it!\n"
             "Fishing levels unlock through mining (`!unlock`)."
         ),
         inline=False,
@@ -575,11 +578,11 @@ def _economy_embed() -> discord.Embed:
         name="Wallet vs Bank — What's the Difference?",
         value=(
             "💰 **Wallet** — This is your \"cash on hand\". Used for buying, "
-            "gambling, and earning. **Can be lost** from mining disasters, "
-            "fishing hazards, and alien abductions!\n\n"
+            "gambling, and earning. **Can be lost** from ambush defeats, "
+            "dungeon deaths, and alien abductions!\n\n"
             "🏦 **Bank** — This is your safe storage. Protected from almost everything. "
-            "Only Lv4-5 mining/fishing disasters can touch it, "
-            "and you can buy Bank Insurance to prevent even that.\n\n"
+            "Only high-level ambush defeats and dungeon deaths can touch it. "
+            "Buy Bank Insurance or find Heart of Leviathan to prevent even that.\n\n"
             "**Rule of thumb:** Always `!deposit all` after earning stars!"
         ),
         inline=False,
@@ -587,8 +590,9 @@ def _economy_embed() -> discord.Embed:
     embed.add_field(
         name="Watch Out!",
         value=(
-            "👽 **Alien Abductions** — 0.5% chance on any command to lose ALL "
-            "your wallet stars and items. Your bank is always safe though!\n"
+            "👽 **Alien Abductions** — 0.5% chance on any command! "
+            "Without a Ray-Gun you auto-lose (wallet + items gone). "
+            "With a Ray-Gun you fight the alien (+75 ATK both sides)!\n"
             "**This is why you should deposit often.**\n\n"
             "📦 **Pro tip:** Use `!stash` to protect valuable items "
             "like rare equipment and crafting materials!"
@@ -702,27 +706,25 @@ def _shop_embed() -> discord.Embed:
     embed.add_field(
         name="What Should I Buy First?",
         value=(
-            "1. 🪖 **Helmet** (50 stars) + ⚔️ **Sword** (75 stars) — "
-            "Buy these BEFORE mining Lv2+. They save you from disasters.\n"
-            "2. 🪱 **Worm Bait** (33 stars) — Needed to fish at all.\n"
-            "3. ⛏️ **Gold Pickaxe** (500 stars) — One-time buy, "
+            "1. 🪱 **Worm Bait** (33 stars) — Needed to fish at all.\n"
+            "2. ⛏️ **Gold Pickaxe** (500 stars) — One-time buy, "
             "permanently boosts mining luck.\n"
-            "4. 🥔 **Raw Potato** (2 stars) — Cheapest way to mine more often.\n"
+            "3. 🥔 **Raw Potato** (2 stars) — Cheapest way to mine more often.\n"
+            "4. ⚔️ **Combat Gear** — Equip weapons and armor to survive ambush encounters.\n"
             "5. 💸 **Bank Insurance** — Must-have for Lv4-5 "
-            "mining/fishing."
+            "mining/fishing/space."
         ),
         inline=False,
     )
     embed.add_field(
         name="Quick Item Reference",
         value=(
-            "🪖 Helmet (50) — Blocks 1 collapse/flood disaster\n"
-            "⚔️ Sword (75) — Blocks 1 goblin/troll disaster\n"
             "🥔 Raw Potato (2) — Mine after 5 min instead of 30\n"
             "🍄 Golden Mushroom (farm harvest) — Mine instantly, skip cooldown\n"
-            "💸 Bank Insurance (250) — Protects your bank from 1 disaster\n"
+            "💸 Bank Insurance (2000) — Protects your bank from 1 defeat\n"
             "📷 Telescope (200) — View a starfield (permanent, fun item)\n"
             "🪱 Worm (33) / 🐟 Herring (79) / 🐋 Sturgeon (110) — Fishing bait\n"
+            "🔫 Ray-Gun (5000, 3 uses) — Fight aliens instead of auto-losing\n"
             "🐾 Pets — Companion category in `!store` (buy with `!buy <pet>`)"
         ),
         inline=False,
@@ -793,7 +795,7 @@ def _space_embed() -> discord.Embed:
         description=(
             "Space mining is the endgame! After reaching mine level 5, "
             "buy a Rocket Ship and blast off to mine on 5 planets with "
-            "bigger rewards and deadlier hazards. Ores go to your inventory — "
+            "bigger rewards and tougher ambush encounters. Ores go to your inventory — "
             "use `!sell` to cash out."
         ),
         color=discord.Color.dark_blue(),
@@ -825,36 +827,35 @@ def _space_embed() -> discord.Embed:
     embed.add_field(
         name="The 5 Planets",
         value=(
-            "🌕 **Planet 1 — The Moon** — Free! 12% disaster chance\n"
-            "🔴 **Planet 2 — Mars** — 5,000 stars, 14% disaster\n"
-            "🪐 **Planet 3 — Saturn** — 10,000 stars, 16% disaster, **bank risk!**\n"
-            "💠 **Planet 4 — Uranus** — 15,000 stars, 18% disaster, **bank risk!**\n"
-            "🥶 **Planet 5 — Pluto** — 20,000 stars, 22% disaster, **bank risk!**\n\n"
+            "🌕 **Planet 1 — The Moon** — Free! 12% ambush chance\n"
+            "🔴 **Planet 2 — Mars** — 5,000 stars, 14% ambush\n"
+            "🪐 **Planet 3 — Saturn** — 10,000 stars, 16% ambush, **bank risk on defeat!**\n"
+            "💠 **Planet 4 — Uranus** — 15,000 stars, 18% ambush, **bank risk on defeat!**\n"
+            "🥶 **Planet 5 — Pluto** — 20,000 stars, 22% ambush, **bank risk on defeat!**\n\n"
             "Planets must be unlocked in order (1 → 2 → 3 → 4 → 5)."
         ),
         inline=False,
     )
     embed.add_field(
-        name="Space Hazards",
+        name="Space Ambush Encounters",
         value=(
-            "☄️ **Meteor Strike** — Blocked by Helmet (50% wallet loss)\n"
-            "🏴‍☠️ **Space Pirate** — Blocked by Sword (75% wallet loss)\n"
-            "☀️ **Solar Flare** (P3+) — Blocked by Helmet (85% wallet + 10% bank)\n"
-            "🕳️ **Black Hole Rift** (P3+) — Blocked by Sword (85% wallet + 15% bank)\n"
-            "👁️ **Void Entity** (P5 only) — Blocked by Sword (90% wallet + 30% bank)\n\n"
-            "**Helmets and swords have a HIGH failure chance in space!**\n"
-            "Golden Axe and Mithril Shield never fail — they're essential here."
+            "Space mobs are **much tougher** than surface mobs!\n"
+            "You mine your ore first, then the ambush triggers.\n\n"
+            "**Win:** Keep your loot!\n"
+            "**Lose:** Heavy wallet/bank losses and all items destroyed.\n"
+            "**Flee lockout:** Same as mining levels (P1=1 turn through P5=10 turns).\n\n"
+            "Equip the best combat gear you can before space mining!"
         ),
         inline=False,
     )
     embed.add_field(
         name="Pro Tips",
         value=(
-            "• `!deposit all` before space mining — the hazards are brutal\n"
+            "• `!deposit all` before space mining — defeat penalties are brutal\n"
             "• Buy Bank Insurance for planets 3+ to protect your bank\n"
             "• Space mining shares the same cooldown as regular mining\n"
-            "• Higher planets = better ores but much more dangerous\n"
-            "• Protection failure chance goes up to 50% on Pluto!"
+            "• Higher planets = better ores but much tougher enemies\n"
+            "• Lucky Charm halves your ambush chance!"
         ),
         inline=False,
     )
@@ -871,24 +872,12 @@ def _items_embed() -> discord.Embed:
         color=discord.Color.dark_purple(),
     )
     embed.add_field(
-        name="🛡️ Protection Items (from Shop)",
+        name="🛡️ Bank & Loss Protection (from Shop)",
         value=(
-            "🪖 **Helmet** (50 stars) — Blocks 1 collapse/flood/meteor disaster. "
-            "Consumed on use. Can fail at higher levels!\n"
-            "⚔️ **Sword** (75 stars) — Blocks 1 goblin/troll/pirate disaster. "
-            "Consumed on use. Can fail at higher levels!\n"
             "💸 **Bank Insurance** (2000 stars, 1 use) — Protects your bank from "
-            "Lv4-5 disasters that drain banked stars"
-        ),
-        inline=False,
-    )
-    embed.add_field(
-        name="🪓 Multi-Use Protection (Rare Drops)",
-        value=(
-            "🪓 **Golden Axe** (50 uses) — Works like a sword but lasts 50 hits. "
-            "Never fails at any level. *3% drop on rare/legendary fishing catches*\n"
-            "🛡️ **Mithril Shield** (10 uses) — Works like a helmet but lasts 10 hits. "
-            "Never fails at any level. *0.4% drop on any fishing catch*"
+            "ambush defeats or dungeon deaths that drain banked stars\n"
+            "💜 **Heart of Leviathan** (1 use, fishing drop) — Fully protects "
+            "your bank from one defeat"
         ),
         inline=False,
     )
@@ -901,8 +890,9 @@ def _items_embed() -> discord.Embed:
             "(or 30s with a rune). *0.1% drop per mine*\n"
             "🎣 **Bucktail Jig** (from fishing) — Use `!use jig` to get 20% legendary "
             "catch chance on your next cast. *0.3% drop per catch*\n"
-            "🔫 **Ray-Gun** (3 uses, 5,000 stars or fishing drop) — Protects your items from alien "
-            "abductions. *Also 0.35% drop per catch*"
+            "🔫 **Ray-Gun** (3 uses, 5,000 stars or fishing drop) — Lets you fight "
+            "the alien instead of auto-losing during abductions (+75 ATK both sides). "
+            "*Also 0.35% drop per catch*"
         ),
         inline=False,
     )
@@ -911,21 +901,19 @@ def _items_embed() -> discord.Embed:
         value=(
             "🧲 **Star Magnet** (20 uses, from fishing) — +15% stars on every mine "
             "and fishing catch. *1% drop on rare/legendary catches*\n"
-            "🍀 **Lucky Charm** (50 uses, from fishing) — Cuts disaster chance in half. "
-            "*0.05% drop on any catch*\n"
-            "💜 **Heart of Leviathan** (1 use, from fishing) — Fully protects your bank "
-            "from one disaster. *25% drop when catching Leviathan Scale*"
+            "🍀 **Lucky Charm** (50 uses, from fishing) — Cuts ambush chance in half. "
+            "*0.05% drop on any catch*"
         ),
         inline=False,
     )
     embed.add_field(
         name="📋 Quick Reference",
         value=(
-            "• Rare items **survive disasters** — they aren't destroyed when you lose items\n"
+            "• Rare items **survive ambush defeats** — they aren't destroyed when you lose items\n"
             "• Check your items with `!inventory`\n"
             "• Passive items (Star Magnet, Lucky Charm) activate automatically\n"
-            "• Helmets & swords have a **higher failure chance** on harder levels\n"
-            "• Golden Axe & Mithril Shield **never fail**, making them extremely valuable"
+            "• Lucky Charm halves ambush chance on mining, fishing, and space mining\n"
+            "• Bank Insurance and Heart of Leviathan protect your bank from defeat penalties"
         ),
         inline=False,
     )
@@ -988,6 +976,27 @@ def _combat_embed() -> discord.Embed:
             "• Mobs also have stamina — defend to outlast them!\n"
             "• Recover with `!drink` (junk fish, crafted potions)\n"
             "• HP and stamina regen passively over time (1/min each)"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Flee System",
+        value=(
+            "• Flee isn't always available — ambush fights lock it for several turns\n"
+            "• Flee chance depends on your **stamina** and **defense vs enemy attack**\n"
+            "• Full stamina = ~90% flee chance\n"
+            "• 0 stamina = 50-75% (higher defense = higher floor)\n"
+            "• Failed flee = enemy gets a free attack on you!"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Ambush Encounters",
+        value=(
+            "Mining, fishing, and space mining can trigger **ambush fights**!\n"
+            "You keep your loot first, then fight the monster.\n"
+            "**Win:** Keep everything! **Lose:** Penalties depend on the activity level.\n"
+            "Combat gear helps in ambushes too — always stay equipped!"
         ),
         inline=False,
     )

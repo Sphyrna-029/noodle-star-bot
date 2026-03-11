@@ -47,14 +47,7 @@ class MiningCog(commands.Cog):
             f"Added to inventory! (sell value: **{result.stars_earned}** ⭐)\n🎒 Bag: **{result.bag_count}/{result.bag_capacity}**"
         )
 
-        # Handle disaster messages using the generic hazard data
-        if result.disaster:
-            if result.disaster_protected:
-                message += f"\n\n{result.disaster_header}\n{result.disaster_protected_msg}"
-            else:
-                message += f"\n\n{result.disaster_header}\n{result.disaster_unprotected_msg}"
-
-        # Extra messages (e.g. heart of leviathan bank protection)
+        # Extra messages
         for extra in result.extra_messages:
             message += f"\n{extra}"
 
@@ -66,6 +59,35 @@ class MiningCog(commands.Cog):
 
         await ctx.send(message)
 
+        # Handle ambush encounter
+        if result.ambush_mob_key:
+            from cogs.combat.ambush_constants import MINING_AMBUSH_MOBS, AMBUSH_DEFEAT_PENALTIES, AMBUSH_FLEE_LOCKOUT
+            from cogs.combat.use_case.combat import CombatUseCases
+            from cogs.combat.handlers import BattleView
+
+            mobs = MINING_AMBUSH_MOBS.get(result.ambush_level, [])
+            mob = next((m for m in mobs if m.key == result.ambush_mob_key), None)
+            if mob:
+                combat_uc = CombatUseCases()
+                penalty = AMBUSH_DEFEAT_PENALTIES["mining"][result.ambush_level]
+                flee_lockout = AMBUSH_FLEE_LOCKOUT[result.ambush_level]
+                battle, error = combat_uc.start_ambush(
+                    user_id=ctx.author.id,
+                    username=str(ctx.author),
+                    mob=mob,
+                    activity="mining",
+                    activity_level=result.ambush_level,
+                    penalty=penalty,
+                    flee_lockout_turns=flee_lockout,
+                )
+                if battle:
+                    battle_view = BattleView(battle, combat_uc, ctx.author.id, str(ctx.author))
+                    embed = battle_view._create_embed()
+                    msg = await ctx.send(embed=embed, view=battle_view)
+                    battle_view.message = msg
+                elif error:
+                    await ctx.send(f"⚠️ {ctx.author.mention}, a {result.ambush_mob_emoji} **{result.ambush_mob_name}** ambushed you but you were too weak to fight! {error}")
+
     @commands.command(name="minelevel")
     async def minelevel(self, ctx, level: int = 0):
         """View or switch your mine level. Usage: !minelevel [number]"""
@@ -73,12 +95,6 @@ class MiningCog(commands.Cog):
             # Switch active level
             success, msg = self.mining.set_active_level(ctx.author.id, level)
             if success:
-                # Add bank risk warning for levels 4-5
-                if level >= 4:
-                    level_config = MINE_LEVELS[level]
-                    max_bank_loss = max(h.bank_loss_pct for h in level_config["hazards"])
-                    warning = f"\n⚠️ **WARNING:** This level has disasters that can take up to {int(max_bank_loss * 100)}% of your BANK if a disaster hits! Use protection items!"
-                    msg += warning
                 await ctx.send(f"⛏️ {ctx.author.mention}, {msg}")
             else:
                 await ctx.send(f"❌ {ctx.author.mention}, {msg}")
@@ -92,25 +108,15 @@ class MiningCog(commands.Cog):
         for lvl_num, lvl in info.levels.items():
             if lvl_num <= info.unlocked_level:
                 active = " ◀️" if lvl_num == info.active_level else ""
-                risk_warning = ""
-                if lvl_num >= 4:
-                    max_bank_loss = max(h.bank_loss_pct for h in lvl["hazards"])
-                    if max_bank_loss > 0:
-                        risk_warning = f" ⚠️ Bank risk: up to {int(max_bank_loss * 100)}% if a disaster hits"
-                lines.append(f"{lvl['emoji']} **Level {lvl_num} — {lvl['name']}** ✅{active}{risk_warning}")
+                lines.append(f"{lvl['emoji']} **Level {lvl_num} — {lvl['name']}** ✅{active}")
             elif lvl_num == info.unlocked_level + 1:
-                risk_warning = ""
-                if lvl_num >= 4:
-                    max_bank_loss = max(h.bank_loss_pct for h in lvl["hazards"])
-                    if max_bank_loss > 0:
-                        risk_warning = f" ⚠️ Bank risk: up to {int(max_bank_loss * 100)}% if a disaster hits"
-                lines.append(f"🔒 **Level {lvl_num} — {lvl['name']}** — *{lvl['cost']} stars to unlock*{risk_warning}")
+                lines.append(f"🔒 **Level {lvl_num} — {lvl['name']}** — *{lvl['cost']} stars to unlock*")
             else:
                 lines.append(f"🔒 **Level {lvl_num} — {lvl['name']}** — *Locked*")
 
         lines.append(f"\nUse `!minelevel <number>` to switch levels")
         lines.append(f"Use `!unlock <number>` to unlock the next level")
-        lines.append(f"\n💡 Levels 4-5 can affect your bank balance if a disaster hits!")
+        lines.append(f"\n⚔️ Higher levels have tougher ambush encounters — stay prepared!")
 
         await ctx.send("\n".join(lines))
 
@@ -135,11 +141,6 @@ class MiningCog(commands.Cog):
                 f"Cost: **{result.cost}** stars\n\n"
                 f"**New minerals available:**\n{mineral_list}"
             )
-
-            # Add bank risk warning for levels 4-5
-            if result.level >= 4:
-                max_bank_loss = max(h.bank_loss_pct for h in level_config["hazards"])
-                message += f"\n\n⚠️ **WARNING:** This level has disasters that can take up to {int(max_bank_loss * 100)}% of your BANK balance if a disaster hits! Keep protection items in your inventory!"
 
             await ctx.send(message)
         else:

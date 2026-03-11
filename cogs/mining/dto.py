@@ -29,6 +29,11 @@ class MineResult:
     item_sell_value: int = 0      # Base sell value of the mined resource
     bag_count: int = 0            # Current items in inventory after mining
     bag_capacity: int = 50        # Max inventory capacity
+    ambush_mob_key: str = ""
+    ambush_mob_name: str = ""
+    ambush_mob_emoji: str = ""
+    ambush_activity: str = ""
+    ambush_level: int = 0
 
 
 @dataclass(slots=True)

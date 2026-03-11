@@ -1,4 +1,4 @@
-"""Space mining service with planets, disasters, and space ores.
+"""Space mining service with planets, ambush encounters, and space ores.
 
 Average Returns (per mine, normal pickaxe):
     Moon (Planet 1):   ~132 stars
@@ -7,18 +7,12 @@ Average Returns (per mine, normal pickaxe):
     Uranus (Planet 4): ~366 stars
     Pluto (Planet 5):  ~511 stars
 
-Disaster Chances:
+Ambush Chances (halved by lucky charm):
     Moon:   12%
     Mars:   14%
-    Saturn: 16% (Solar Flare - 10% bank, Black Hole - 15% bank)
-    Uranus: 18% (Solar Flare - 10% bank, Black Hole - 15% bank)
-    Pluto:  22% (Void Entity - 30% bank)
-
-Protection:
-    - Helmet: Protects from meteor strikes and solar flares
-    - Sword: Protects from space pirates, black hole rifts, and void entities
-    - Mithril Shield: Multi-use helmet protection
-    - Golden Axe: Multi-use sword protection
+    Saturn: 16%
+    Uranus: 18%
+    Pluto:  22%
 """
 
 import random
@@ -27,7 +21,6 @@ from typing import Optional
 
 from cogs.mining.constants import MINING_BASE_COOLDOWN, MINING_POTATO_COOLDOWN
 from cogs.space.constants import SPACE_MINERAL_TABLES, SPACE_PLANETS
-from config.models import MineHazard
 from database.repository import UserRepository
 from utils.formatters import format_time_remaining
 from ..dto import LaunchResult, PlanetInfo, PlanetUnlockResult, SpaceMineResult
@@ -150,8 +143,6 @@ class SpaceUseCases:
         planet_config = SPACE_PLANETS[active_planet]
 
         has_gold_pickaxe = inventory["gold_pickaxe"] > 0
-        has_helmet = inventory["helmet"] > 0
-        has_sword = inventory["sword"] > 0
 
         # Select minerals based on pickaxe and planet
         mineral_table = SPACE_MINERAL_TABLES[active_planet]
@@ -186,104 +177,30 @@ class SpaceUseCases:
             bag_capacity=bag_capacity,
         )
 
-        # Check for disaster
-        if random.random() < planet_config["disaster_chance"]:
-            hazard: MineHazard = random.choice(planet_config["hazards"])
-            result.disaster = hazard.name
-            result.disaster_header = hazard.header
+        # Check for ambush (chance varies by planet, halved by lucky charm)
+        ambush_chance = planet_config["disaster_chance"]
+        lucky_charm_uses = inventory["lucky_charm"]
+        used_lucky_charm = False
+        if lucky_charm_uses > 0:
+            ambush_chance *= 0.5
+            used_lucky_charm = True
 
-            golden_axe_uses = inventory["golden_axe"]
-            mithril_shield_uses = inventory["mithril_shield"]
-            fail_chance = planet_config["protection_fail_chance"]
+        if random.random() < ambush_chance:
+            if used_lucky_charm:
+                self.repo.update_user_inventory(user_id, "lucky_charm", lucky_charm_uses - 1)
 
-            protected = False
-            protection_msg = ""
-
-            if hazard.protection_item == "helmet":
-                if has_helmet:
-                    self.repo.update_user_inventory(user_id, "helmet", inventory["helmet"] - 1)
-                    if random.random() < fail_chance:
-                        protection_msg = planet_config["helmet_fail_msg"]
-                    else:
-                        protected = True
-                        protection_msg = hazard.protected_msg
-                elif mithril_shield_uses > 0:
-                    protected = True
-                    remaining = mithril_shield_uses - 1
-                    self.repo.update_user_inventory(user_id, "mithril_shield", remaining)
-                    protection_msg = (
-                        f"Your mithril shield absorbed the blow!\n"
-                        f"*Your shield took a dent.* ({remaining} uses remaining)"
-                    )
-            elif hazard.protection_item == "sword":
-                if has_sword:
-                    self.repo.update_user_inventory(user_id, "sword", inventory["sword"] - 1)
-                    if random.random() < fail_chance:
-                        protection_msg = planet_config["sword_fail_msg"]
-                    else:
-                        protected = True
-                        protection_msg = hazard.protected_msg
-                elif golden_axe_uses > 0:
-                    protected = True
-                    remaining = golden_axe_uses - 1
-                    self.repo.update_user_inventory(user_id, "golden_axe", remaining)
-                    protection_msg = (
-                        f"Your golden axe fended off the attack!\n"
-                        f"*Your golden axe took a hit.* ({remaining} uses remaining)"
-                    )
-
-            if protected:
-                result.disaster_protected = True
-                result.disaster_protected_msg = protection_msg
-            else:
-                # Calculate wallet loss
-                stars_lost = int(new_stars * hazard.wallet_loss_pct)
-                new_stars = new_stars - stars_lost
-                self.repo.update_user_stars(user_id, username, new_stars)
-
-                # Calculate bank loss if applicable
-                bank_lost = 0
-                bank_insurance_used = False
-                if hazard.bank_loss_pct > 0:
-                    # Re-read inventory since helmet/sword may have been consumed
-                    inventory = self.repo.get_user_inventory(user_id)
-                    heart_uses = inventory.get("heart_of_leviathan", 0)
-                    if heart_uses > 0:
-                        self.repo.update_user_inventory(user_id, "heart_of_leviathan", heart_uses - 1)
-                        result.extra_messages.append(
-                            "Your **Heart of Leviathan** shielded your bank! *It crumbles to dust.*"
-                        )
-                    else:
-                        current_bank = self.repo.get_user_bank(user_id)
-                        potential_bank_loss = int(current_bank * hazard.bank_loss_pct)
-
-                        bank_insurance_uses = inventory.get("bank_insurance", 0)
-                        if bank_insurance_uses > 0 and potential_bank_loss > 0:
-                            bank_insurance_used = True
-                            self.repo.update_user_inventory(user_id, "bank_insurance", bank_insurance_uses - 1)
-                            bank_lost = 0
-                        else:
-                            bank_lost = potential_bank_loss
-                            if bank_lost > 0:
-                                self.repo.update_user_bank(user_id, username, current_bank - bank_lost)
-
-                self.repo.clear_user_inventory(user_id)
-                result.stars_lost = stars_lost
-                result.bank_lost = bank_lost
-                result.items_destroyed = True
-                result.new_balance = new_stars
-
-                disaster_msg = ""
-                if protection_msg:
-                    disaster_msg += protection_msg + "\n\n"
-                disaster_msg += hazard.unprotected_msg.format(
-                    stars_lost=stars_lost, bank_lost=bank_lost
-                )
-                if bank_insurance_used:
-                    remaining_insurance = bank_insurance_uses - 1
-                    disaster_msg += f"\n\n**Bank Insurance activated!** Your bank was protected from losing {potential_bank_loss} stars.\n*({remaining_insurance} uses remaining)*"
-
-                result.disaster_unprotected_msg = disaster_msg
+            from cogs.combat.ambush_constants import SPACE_AMBUSH_MOBS
+            mobs = SPACE_AMBUSH_MOBS.get(active_planet, [])
+            if mobs:
+                mob = random.choice(mobs)
+                result.ambush_mob_key = mob.key
+                result.ambush_mob_name = mob.name
+                result.ambush_mob_emoji = mob.emoji
+                result.ambush_activity = "space"
+                result.ambush_level = active_planet
+        else:
+            if used_lucky_charm:
+                self.repo.update_user_inventory(user_id, "lucky_charm", lucky_charm_uses - 1)
 
         return result
 

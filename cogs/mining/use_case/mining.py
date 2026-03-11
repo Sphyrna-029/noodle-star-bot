@@ -46,7 +46,6 @@ from cogs.mining.constants import (
     MINING_RUNE_COOLDOWN,
     MINING_RUNE_POTATO_COOLDOWN,
 )
-from config.models import MineHazard
 from database.repository import UserRepository
 from utils.formatters import format_time_remaining
 from ..dto import LevelInfo, MineResult, UnlockResult
@@ -275,132 +274,28 @@ class MiningUseCases:
                 "🏆 **Achievement unlocked:** 👑 **Mining Legend**"
             )
 
-        # Check for disaster (chance varies by level, halved by lucky charm)
-        disaster_chance = level_config["disaster_chance"]
+        # Check for ambush (chance varies by level, halved by lucky charm)
+        ambush_chance = level_config["disaster_chance"]
         lucky_charm_uses = inventory["lucky_charm"]
         used_lucky_charm = False
         if lucky_charm_uses > 0:
-            disaster_chance *= 0.5
+            ambush_chance *= 0.5
             used_lucky_charm = True
 
-        if random.random() < disaster_chance:
-            # Consume lucky charm use (it was active but disaster still happened)
+        if random.random() < ambush_chance:
             if used_lucky_charm:
                 self.repo.update_user_inventory(user_id, "lucky_charm", lucky_charm_uses - 1)
 
-            hazard: MineHazard = random.choice(level_config["hazards"])
-            result.disaster = hazard.name
-            result.disaster_header = hazard.header
-
-            # Re-read inventory in case rune was consumed above
-            inv = self.repo.get_user_inventory(user_id)
-            golden_axe_uses = inv["golden_axe"]
-            mithril_shield_uses = inv["mithril_shield"]
-            has_helmet = inv["helmet"] > 0
-            has_sword = inv["sword"] > 0
-            fail_chance = level_config["protection_fail_chance"]
-
-            # Siren and Leviathan require special items only
-            requires_special = hazard.name in ("siren", "leviathan")
-
-            protected = False
-            protection_msg = ""
-
-            if hazard.protection_item == "helmet":
-                if not requires_special and has_helmet:
-                    # Consume one helmet
-                    self.repo.update_user_inventory(user_id, "helmet", inv["helmet"] - 1)
-                    # Roll for failure — deeper levels can overwhelm basic gear
-                    if random.random() < fail_chance:
-                        protection_msg = level_config["helmet_fail_msg"]
-                    else:
-                        protected = True
-                        protection_msg = hazard.protected_msg
-                elif mithril_shield_uses > 0:
-                    # Mithril shield never fails — it's premium protection
-                    protected = True
-                    remaining = mithril_shield_uses - 1
-                    self.repo.update_user_inventory(user_id, "mithril_shield", remaining)
-                    protection_msg = (
-                        f"Your mithril shield absorbed the blow!\n"
-                        f"*Your shield took a dent.* ({remaining} uses remaining)"
-                    )
-            elif hazard.protection_item == "sword":
-                if not requires_special and has_sword:
-                    # Consume one sword
-                    self.repo.update_user_inventory(user_id, "sword", inv["sword"] - 1)
-                    # Roll for failure
-                    if random.random() < fail_chance:
-                        protection_msg = level_config["sword_fail_msg"]
-                    else:
-                        protected = True
-                        protection_msg = hazard.protected_msg
-                elif golden_axe_uses > 0:
-                    # Golden axe never fails — it's premium protection
-                    protected = True
-                    remaining = golden_axe_uses - 1
-                    self.repo.update_user_inventory(user_id, "golden_axe", remaining)
-                    protection_msg = (
-                        f"Your golden axe fended off the attack!\n"
-                        f"*Your golden axe took a hit.* ({remaining} uses remaining)"
-                    )
-
-            if protected:
-                result.disaster_protected = True
-                result.disaster_protected_msg = protection_msg
-            else:
-                # Calculate wallet loss
-                stars_lost = int(new_stars * hazard.wallet_loss_pct)
-                new_stars = new_stars - stars_lost
-                self.repo.update_user_stars(user_id, username, new_stars)
-
-                # Calculate bank loss (heart of leviathan provides 100% protection)
-                bank_lost = 0
-                bank_insurance_used = False
-                if hazard.bank_loss_pct > 0:
-                    # Re-read inventory since helmet/sword may have been consumed
-                    inv = self.repo.get_user_inventory(user_id)
-                    heart_uses = inv["heart_of_leviathan"]
-                    if heart_uses > 0:
-                        self.repo.update_user_inventory(user_id, "heart_of_leviathan", heart_uses - 1)
-                        result.extra_messages.append(
-                            "Your **Heart of Leviathan** shielded your bank! *It crumbles to dust.*"
-                        )
-                    else:
-                        current_bank = self.repo.get_user_bank(user_id)
-                        potential_bank_loss = int(current_bank * hazard.bank_loss_pct)
-
-                        # Check if user has bank insurance
-                        bank_insurance_uses = inv.get("bank_insurance", 0)
-                        if bank_insurance_uses > 0 and potential_bank_loss > 0:
-                            bank_insurance_used = True
-                            self.repo.update_user_inventory(user_id, "bank_insurance", bank_insurance_uses - 1)
-                            bank_lost = 0
-                        else:
-                            bank_lost = potential_bank_loss
-                            if bank_lost > 0:
-                                self.repo.update_user_bank(user_id, username, current_bank - bank_lost)
-
-                self.repo.clear_user_inventory(user_id)
-                result.stars_lost = stars_lost
-                result.bank_lost = bank_lost
-                result.items_destroyed = True
-                result.new_balance = new_stars
-
-                # Build disaster message, prepending protection-failed text if applicable
-                disaster_msg = ""
-                if protection_msg:
-                    disaster_msg += protection_msg + "\n\n"
-                disaster_msg += hazard.unprotected_msg.format(
-                    stars_lost=stars_lost, bank_lost=bank_lost
-                )
-                if bank_insurance_used:
-                    remaining_insurance = bank_insurance_uses - 1
-                    disaster_msg += f"\n\n**Bank Insurance activated!** Your bank was protected from losing {potential_bank_loss} stars.\n*({remaining_insurance} uses remaining)*"
-
-                result.disaster_unprotected_msg = disaster_msg
+            from cogs.combat.ambush_constants import MINING_AMBUSH_MOBS
+            mobs = MINING_AMBUSH_MOBS.get(active_level, [])
+            if mobs:
+                mob = random.choice(mobs)
+                result.ambush_mob_key = mob.key
+                result.ambush_mob_name = mob.name
+                result.ambush_mob_emoji = mob.emoji
+                result.ambush_activity = "mining"
+                result.ambush_level = active_level
         else:
-            # Lucky charm was active but no disaster -- still consume a use
             if used_lucky_charm:
                 self.repo.update_user_inventory(user_id, "lucky_charm", lucky_charm_uses - 1)
 

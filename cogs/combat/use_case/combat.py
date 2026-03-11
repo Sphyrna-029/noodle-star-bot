@@ -8,7 +8,7 @@ from cogs.combat.constants import (
     DAMAGE_FLOOR, DEATH_PENALTIES, DUNGEON_LEVELS, MOBS, MOBS_BY_LEVEL,
     STAMINA_PER_ATTACK, STAMINA_PER_DEFEND, WINS_PER_COMBAT_LEVEL,
 )
-from cogs.combat.dto import BattleResult, BattleState, BattleTurn, DungeonUnlockResult
+from cogs.combat.dto import AmbushContext, BattleResult, BattleState, BattleTurn, DungeonUnlockResult
 from database.repository import UserRepository
 
 
@@ -93,6 +93,75 @@ class CombatUseCases:
             mob_defense=mob.defense,
             mob_stamina=mob.stamina,
             mob_max_stamina=mob.stamina,
+        )
+        return battle, ""
+
+    # ── Ambush initialization ──────────────────────────────────
+
+    def start_ambush(
+        self,
+        user_id: int,
+        username: str,
+        mob,
+        activity: str,
+        activity_level: int,
+        penalty: dict,
+        flee_lockout_turns: int,
+        atk_bonus: int = 0,
+    ) -> tuple[Optional[BattleState], str]:
+        """Initialize an ambush fight triggered by mining/fishing/space.
+
+        Returns (BattleState, "") on success, or (None, error_message) on failure.
+        If player has 0 HP or insufficient stamina, returns an error so the
+        handler can apply auto-loss penalties.
+        """
+        stats = self.repo.get_combat_stats(user_id)
+        current_hp = stats["current_hp"] or BASE_HP
+        max_hp = stats["max_hp"] or BASE_HP
+        current_stamina = stats["current_stamina"] or BASE_STAMINA
+        max_stamina = stats["max_stamina"] or BASE_STAMINA
+
+        if current_hp <= 0:
+            return None, "You were too weak to fight back!"
+
+        if current_stamina < STAMINA_PER_ATTACK:
+            return None, "You had no stamina to fight back!"
+
+        # Calculate player stats from equipment
+        player_atk = 5 + atk_bonus
+        player_def = 2
+        for slot in ("equipped_weapon", "equipped_shield", "equipped_armor"):
+            key = stats.get(slot)
+            if key and key in COMBAT_ITEMS:
+                item = COMBAT_ITEMS[key]
+                player_atk += item.attack
+                player_def += item.defense
+
+        ambush_ctx = AmbushContext(
+            activity=activity,
+            activity_level=activity_level,
+            penalty=penalty,
+            flee_lockout_turns=flee_lockout_turns,
+        )
+
+        battle = BattleState(
+            mob_key=mob.key,
+            mob_name=mob.name,
+            mob_emoji=mob.emoji,
+            dungeon_level=activity_level,
+            player_hp=current_hp,
+            player_max_hp=max_hp,
+            player_stamina=current_stamina,
+            player_max_stamina=max_stamina,
+            player_attack=player_atk,
+            player_defense=player_def,
+            mob_hp=mob.hp,
+            mob_max_hp=mob.hp,
+            mob_attack=mob.attack + atk_bonus,
+            mob_defense=mob.defense,
+            mob_stamina=mob.stamina,
+            mob_max_stamina=mob.stamina,
+            ambush=ambush_ctx,
         )
         return battle, ""
 
@@ -224,31 +293,39 @@ class CombatUseCases:
 
     def resolve_victory(self, user_id: int, username: str, battle: BattleState) -> BattleResult:
         """Handle victory — award stars, check level up, save state."""
-        mob = MOBS.get(battle.mob_key)
-        star_reward = mob.star_reward if mob else 50
-
-        # Award stars
-        current_stars = self.repo.get_user_stars(user_id, username)
-        self.repo.update_user_stars(user_id, username, current_stars + star_reward)
-
         # Save HP/stamina
         self.repo.update_hp(user_id, battle.player_hp)
         self.repo.update_stamina(user_id, battle.player_stamina)
 
-        # Check combat level progression
+        # Ambush victory: no star reward, just survival
+        if battle.ambush:
+            return BattleResult(
+                success=True,
+                won=True,
+                message=f"You fought off the **{battle.mob_name}**! Your loot is safe.",
+                mob_name=battle.mob_name,
+                mob_emoji=battle.mob_emoji,
+                turns=battle.turns,
+            )
+
+        # Dungeon victory: award stars and check level up
+        mob = MOBS.get(battle.mob_key)
+        star_reward = mob.star_reward if mob else 50
+
+        current_stars = self.repo.get_user_stars(user_id, username)
+        self.repo.update_user_stars(user_id, username, current_stars + star_reward)
+
         stats = self.repo.get_combat_stats(user_id)
         combat_level = stats["combat_level"]
-        wins_at_level = self.repo.get_combat_wins_at_level(user_id, battle.dungeon_level) + 1  # +1 for this win
+        wins_at_level = self.repo.get_combat_wins_at_level(user_id, battle.dungeon_level) + 1
         level_up = False
         new_level = combat_level
 
         if wins_at_level >= WINS_PER_COMBAT_LEVEL and combat_level == battle.dungeon_level - 1:
-            # Can level up if fighting at the appropriate level
             new_level = combat_level + 1
             self.repo.update_combat_level(user_id, new_level)
             level_up = True
 
-        # Log combat
         self.repo.log_combat(
             user_id=user_id,
             dungeon_level=battle.dungeon_level,
@@ -272,8 +349,11 @@ class CombatUseCases:
         )
 
     def resolve_defeat(self, user_id: int, username: str, battle: BattleState) -> BattleResult:
-        """Handle defeat — apply death penalties based on dungeon level."""
-        penalty = DEATH_PENALTIES.get(battle.dungeon_level, DEATH_PENALTIES[1])
+        """Handle defeat — apply death penalties based on dungeon level or ambush context."""
+        if battle.ambush:
+            penalty = battle.ambush.penalty
+        else:
+            penalty = DEATH_PENALTIES.get(battle.dungeon_level, DEATH_PENALTIES[1])
 
         stars_lost = 0
         items_lost = []
@@ -286,12 +366,22 @@ class CombatUseCases:
             stars_lost = int(current_stars * penalty["wallet_loss_pct"])
             self.repo.update_user_stars(user_id, username, max(0, current_stars - stars_lost))
 
-        # Bank loss
+        # Bank loss (Heart of Leviathan / Bank Insurance can protect)
         if penalty["bank_loss_pct"] > 0:
             current_bank = self.repo.get_user_bank(user_id)
             bank_loss = int(current_bank * penalty["bank_loss_pct"])
             if bank_loss > 0:
-                self.repo.update_user_bank(user_id, username, max(0, current_bank - bank_loss))
+                inv = self.repo.get_user_inventory(user_id)
+                heart_uses = inv.get("heart_of_leviathan", 0)
+                bank_ins = inv.get("bank_insurance", 0)
+                if heart_uses > 0:
+                    self.repo.update_user_inventory(user_id, "heart_of_leviathan", heart_uses - 1)
+                    bank_loss = 0
+                elif bank_ins > 0:
+                    self.repo.update_user_inventory(user_id, "bank_insurance", bank_ins - 1)
+                    bank_loss = 0
+                else:
+                    self.repo.update_user_bank(user_id, username, max(0, current_bank - bank_loss))
 
         # Item losses
         if penalty["lose_all_items"]:

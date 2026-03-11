@@ -69,6 +69,8 @@ class BattleView(discord.ui.View):
         self.username = username
         self.message = None
         self._finish_lock = asyncio.Lock()
+        # Initialize flee lockout state
+        self._update_flee_button()
 
     def _disable_buttons(self) -> None:
         for item in self.children:
@@ -90,10 +92,12 @@ class BattleView(discord.ui.View):
         else:
             color = discord.Color.orange()
 
-        embed = discord.Embed(
-            title=f"⚔️ Battle — {b.mob_emoji} {b.mob_name} (Lv{b.dungeon_level})",
-            color=color,
-        )
+        if b.ambush:
+            title = f"⚔️ Ambush! — {b.mob_emoji} {b.mob_name}"
+        else:
+            title = f"⚔️ Battle — {b.mob_emoji} {b.mob_name} (Lv{b.dungeon_level})"
+
+        embed = discord.Embed(title=title, color=color)
 
         # Player stats bar
         hp_pct = b.player_hp / b.player_max_hp if b.player_max_hp else 0
@@ -138,9 +142,24 @@ class BattleView(discord.ui.View):
             )
 
         if not b.finished:
-            embed.set_footer(text="⚔️ Attack | 🛡️ Defend | 🏃 Flee")
+            if b.ambush and b.turn < b.ambush.flee_lockout_turns:
+                remaining = b.ambush.flee_lockout_turns - b.turn
+                embed.set_footer(text=f"⚔️ Attack | 🛡️ Defend | 🏃 Flee (locked for {remaining} turns)")
+            else:
+                embed.set_footer(text="⚔️ Attack | 🛡️ Defend | 🏃 Flee")
 
         return embed
+
+    def _update_flee_button(self) -> None:
+        """Enable/disable the Flee button based on lockout."""
+        b = self.battle
+        if b.ambush and b.turn < b.ambush.flee_lockout_turns:
+            remaining = b.ambush.flee_lockout_turns - b.turn
+            self.flee_button.label = f"Flee ({remaining})"
+            self.flee_button.disabled = True
+        else:
+            self.flee_button.label = "Flee"
+            self.flee_button.disabled = False
 
     async def _do_mob_turn(self, interaction: discord.Interaction, player_defended: bool):
         """Execute mob's turn and check for defeat."""
@@ -206,6 +225,7 @@ class BattleView(discord.ui.View):
                 await self._do_mob_turn(interaction, player_defended=False)
 
                 if not self.battle.finished:
+                    self._update_flee_button()
                     embed = self._create_embed()
                     await interaction.edit_original_response(embed=embed, view=self)
 
@@ -229,6 +249,7 @@ class BattleView(discord.ui.View):
                 await self._do_mob_turn(interaction, player_defended=True)
 
                 if not self.battle.finished:
+                    self._update_flee_button()
                     embed = self._create_embed()
                     await interaction.edit_original_response(embed=embed, view=self)
 
@@ -280,6 +301,7 @@ class BattleView(discord.ui.View):
                     await self._do_mob_turn(interaction, player_defended=False)
 
                     if not self.battle.finished:
+                        self._update_flee_button()
                         embed = self._create_embed()
                         await interaction.edit_original_response(embed=embed, view=self)
 

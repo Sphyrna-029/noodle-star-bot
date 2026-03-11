@@ -1,7 +1,7 @@
 """DTOs for space mining use-cases."""
 
 from dataclasses import dataclass, field
-from typing import List, Mapping, Optional
+from typing import List, Mapping
 
 
 @dataclass(slots=True)
@@ -22,14 +22,11 @@ class SpaceMineResult:
     mineral_emoji: str = ""
     stars_earned: int = 0
     new_balance: int = 0
-    disaster: Optional[str] = None
-    disaster_protected: bool = False
-    disaster_header: str = ""
-    disaster_protected_msg: str = ""
-    disaster_unprotected_msg: str = ""
-    stars_lost: int = 0
-    bank_lost: int = 0
-    items_destroyed: bool = False
+    ambush_mob_key: str = ""
+    ambush_mob_name: str = ""
+    ambush_mob_emoji: str = ""
+    ambush_activity: str = ""
+    ambush_level: int = 0
     extra_messages: List[str] = field(default_factory=list)
     planet_name: str = ""
     planet_emoji: str = ""
