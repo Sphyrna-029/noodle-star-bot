@@ -570,19 +570,9 @@ class _ConsumeHPSelect(discord.ui.Select):
             await interaction.response.send_message("Not your menu!", ephemeral=True)
             return
         item_key = self.values[0]
-        result = view.health_uc.eat_fish(view.author_id, item_key)
-        if result.success:
-            status = view.health_uc.get_status(view.author_id)
-            await interaction.response.edit_message(
-                embed=_consume_result_embed(
-                    f"🍖 {result.message}",
-                    f"❤️ **HP:** {result.current_hp}/{result.max_hp}\n"
-                    f"⚡ **Stamina:** {status.current_stamina}/{status.max_stamina}",
-                ),
-                view=None,
-            )
-        else:
-            await interaction.response.send_message(f"❌ {result.message}", ephemeral=True)
+        view.selected_item = item_key
+        view.selected_type = "hp"
+        await view.do_consume(interaction)
 
 
 class _ConsumeStaminaSelect(discord.ui.Select):
@@ -601,23 +591,13 @@ class _ConsumeStaminaSelect(discord.ui.Select):
             await interaction.response.send_message("Not your menu!", ephemeral=True)
             return
         item_key = self.values[0]
-        result = view.health_uc.drink(view.author_id, item_key)
-        if result.success:
-            status = view.health_uc.get_status(view.author_id)
-            await interaction.response.edit_message(
-                embed=_consume_result_embed(
-                    f"⚡ {result.message}",
-                    f"❤️ **HP:** {status.current_hp}/{status.max_hp}\n"
-                    f"⚡ **Stamina:** {result.current_stamina}/{result.max_stamina}",
-                ),
-                view=None,
-            )
-        else:
-            await interaction.response.send_message(f"❌ {result.message}", ephemeral=True)
+        view.selected_item = item_key
+        view.selected_type = "stamina"
+        await view.do_consume(interaction)
 
 
 class _ConsumeView(discord.ui.View):
-    """Two-dropdown consume menu for HP and stamina items."""
+    """Two-dropdown consume menu with a Consume Again button."""
 
     def __init__(
         self,
@@ -626,31 +606,142 @@ class _ConsumeView(discord.ui.View):
         repo,
         hp_options: list[discord.SelectOption],
         stam_options: list[discord.SelectOption],
-        timeout: float = 60,
+        timeout: float = 120,
     ):
         super().__init__(timeout=timeout)
         self.author_id = author_id
         self.health_uc = health_uc
         self.repo = repo
         self.message = None
+        self.selected_item: str | None = None
+        self.selected_type: str | None = None  # "hp" or "stamina"
+        self._hp_options = hp_options
+        self._stam_options = stam_options
 
         if hp_options:
             self.add_item(_ConsumeHPSelect(hp_options))
         if stam_options:
             self.add_item(_ConsumeStaminaSelect(stam_options))
 
+    def _rebuild_options(self):
+        """Refresh item counts in dropdown options after consuming."""
+        items = self.repo.get_inventory_items(self.author_id)
+        item_counts: dict[str, int] = {}
+        for item in items:
+            key = item["item_key"]
+            item_counts[key] = item_counts.get(key, 0) + 1
+
+        # Rebuild HP options
+        new_hp = []
+        for key, count in sorted(item_counts.items()):
+            heal = self.health_uc.get_hp_value(key)
+            if heal and count > 0:
+                display = key.replace("_", " ").title()
+                res = get_resource(key)
+                emoji = res.emoji if res else "🍽️"
+                new_hp.append(discord.SelectOption(
+                    label=f"{display} (+{heal} HP) x{count}",
+                    value=key,
+                    emoji=emoji,
+                    default=(key == self.selected_item and self.selected_type == "hp"),
+                ))
+        self._hp_options = new_hp
+
+        new_stam = []
+        for key, count in sorted(item_counts.items()):
+            recovery = STAMINA_RECOVERY.get(key)
+            if recovery and count > 0:
+                display = key.replace("_", " ").title()
+                res = get_resource(key)
+                emoji = res.emoji if res else "⚡"
+                new_stam.append(discord.SelectOption(
+                    label=f"{display} (+{recovery} stam) x{count}",
+                    value=key,
+                    emoji=emoji,
+                    default=(key == self.selected_item and self.selected_type == "stamina"),
+                ))
+        self._stam_options = new_stam
+
+        # Rebuild the view components
+        self.clear_items()
+        if self._hp_options:
+            self.add_item(_ConsumeHPSelect(self._hp_options))
+        if self._stam_options:
+            self.add_item(_ConsumeStaminaSelect(self._stam_options))
+        # Re-add the consume again button
+        self.add_item(self.consume_again_btn)
+
+    async def do_consume(self, interaction: discord.Interaction):
+        """Consume the selected item and update the embed."""
+        if self.selected_type == "hp":
+            result = self.health_uc.eat_fish(self.author_id, self.selected_item)
+        else:
+            result = self.health_uc.drink(self.author_id, self.selected_item)
+
+        if not result.success:
+            # Item depleted or at full — disable button, show error
+            self.consume_again_btn.disabled = True
+            self.consume_again_btn.label = "Can't Consume"
+            self.consume_again_btn.style = discord.ButtonStyle.secondary
+            self._rebuild_options()
+            status = self.health_uc.get_status(self.author_id)
+            embed = _consume_status_embed(status, f"❌ {result.message}")
+            await interaction.response.edit_message(embed=embed, view=self)
+            return
+
+        # Success — update button and rebuild dropdowns
+        status = self.health_uc.get_status(self.author_id)
+        display = self.selected_item.replace("_", " ").title()
+        res = get_resource(self.selected_item)
+        emoji = res.emoji if res else "🍽️"
+
+        self.consume_again_btn.disabled = False
+        self.consume_again_btn.label = f"Consume {display}"
+        self.consume_again_btn.emoji = emoji
+        self.consume_again_btn.style = discord.ButtonStyle.success
+        self._rebuild_options()
+
+        if self.selected_type == "hp":
+            msg = f"🍖 {result.message}"
+        else:
+            msg = f"⚡ {result.message}"
+
+        embed = _consume_status_embed(status, msg)
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    @discord.ui.button(label="Select an item first", emoji="🍽️", style=discord.ButtonStyle.secondary, disabled=True, row=3)
+    async def consume_again_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message("Not your menu!", ephemeral=True)
+            return
+        if not self.selected_item:
+            await interaction.response.send_message("Select an item from the dropdown first!", ephemeral=True)
+            return
+        await self.do_consume(interaction)
+
     async def on_timeout(self):
         if self.message:
+            for child in self.children:
+                child.disabled = True
             try:
-                await self.message.edit(view=None)
+                await self.message.edit(view=self)
             except Exception:
                 pass
 
 
-def _consume_result_embed(title: str, stats: str) -> discord.Embed:
+def _consume_status_embed(status, last_action: str) -> discord.Embed:
+    hp_pct = status.current_hp / status.max_hp if status.max_hp else 0
+    hp_bar = _progress_bar(hp_pct)
+    stam_pct = status.current_stamina / status.max_stamina if status.max_stamina else 0
+    stam_bar = _progress_bar(stam_pct)
     embed = discord.Embed(
-        title="🍽️ Consumed!",
-        description=f"{title}\n\n{stats}",
+        title="🍽️ Consume Menu",
+        description=(
+            f"{last_action}\n\n"
+            f"❤️ **HP:** {status.current_hp}/{status.max_hp} {hp_bar}\n"
+            f"⚡ **Stamina:** {status.current_stamina}/{status.max_stamina} {stam_bar}\n\n"
+            "Select an item or click the button to consume again."
+        ),
         color=discord.Color.green(),
     )
     return embed
@@ -817,15 +908,7 @@ class CombatCog(commands.Cog):
             return
 
         status = health_uc.get_status(user_id)
-        embed = discord.Embed(
-            title="🍽️ Consume Menu",
-            description=(
-                f"❤️ **HP:** {status.current_hp}/{status.max_hp}\n"
-                f"⚡ **Stamina:** {status.current_stamina}/{status.max_stamina}\n\n"
-                "Select an item from the dropdowns below."
-            ),
-            color=discord.Color.green(),
-        )
+        embed = _consume_status_embed(status, "Select an item to consume.")
 
         view = _ConsumeView(ctx.author.id, health_uc, repo, hp_options, stam_options)
         msg = await ctx.send(embed=embed, view=view)
