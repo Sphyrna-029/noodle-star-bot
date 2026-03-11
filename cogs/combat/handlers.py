@@ -362,6 +362,142 @@ def _progress_bar(pct: float, length: int = 10) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Gear management view — interactive equip/unequip buttons
+# ---------------------------------------------------------------------------
+
+class _GearSlotSelect(discord.ui.Select):
+    """Dropdown showing owned items for a specific equipment slot."""
+
+    def __init__(self, slot: str, owned_items: list[tuple[str, str]], equipped_key: str | None, row: int):
+        self.slot = slot
+        slot_emoji = {"weapon": "🗡️", "shield": "🛡️", "armor": "🦺"}[slot]
+        options = []
+        for item_key, item in owned_items:
+            label = f"{item.name} (T{item.tier})"
+            desc = f"ATK +{item.attack}  DEF +{item.defense}  HP +{item.hp_bonus}"
+            is_equipped = item_key == equipped_key
+            options.append(discord.SelectOption(
+                label=label,
+                value=item_key,
+                emoji=item.emoji,
+                description=desc,
+                default=is_equipped,
+            ))
+        # Add "unequip" option
+        options.append(discord.SelectOption(
+            label=f"Unequip {slot}",
+            value=f"__unequip_{slot}__",
+            emoji="❌",
+            description=f"Remove your {slot}",
+            default=equipped_key is None,
+        ))
+        super().__init__(
+            placeholder=f"{slot_emoji} Choose {slot}...",
+            options=options,
+            row=row,
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        view: GearView = self.view
+        if interaction.user.id != view.author_id:
+            await interaction.response.send_message("Not your gear menu!", ephemeral=True)
+            return
+
+        value = self.values[0]
+        if value.startswith("__unequip_"):
+            result = view.equip_uc.unequip(view.author_id, self.slot)
+        else:
+            result = view.equip_uc.equip(view.author_id, value)
+
+        # Rebuild the view with updated state
+        view.refresh()
+        embed = view.build_embed()
+        status_line = f"✅ {result.message}" if result.success else f"❌ {result.message}"
+        embed.set_footer(text=status_line)
+        await interaction.response.edit_message(embed=embed, view=view)
+
+
+class GearView(discord.ui.View):
+    """Interactive gear management view with dropdowns per slot."""
+
+    def __init__(self, author_id: int, equip_uc, health_uc, timeout: float = 120):
+        super().__init__(timeout=timeout)
+        self.author_id = author_id
+        self.equip_uc = equip_uc
+        self.health_uc = health_uc
+        self.message = None
+        self.refresh()
+
+    def refresh(self):
+        """Rebuild dropdowns from current equipment state."""
+        self.clear_items()
+        equipment = self.equip_uc.repo.get_user_equipment(self.author_id)
+        stats = self.equip_uc.repo.get_combat_stats(self.author_id)
+
+        # Find all owned combat items grouped by slot
+        slot_items: dict[str, list[tuple[str, object]]] = {
+            "weapon": [], "shield": [], "armor": [],
+        }
+        for item_key, uses in equipment.items():
+            if uses > 0 and item_key in COMBAT_ITEMS:
+                item = COMBAT_ITEMS[item_key]
+                slot_items[item.slot].append((item_key, item))
+
+        # Sort each slot by tier descending
+        for slot in slot_items:
+            slot_items[slot].sort(key=lambda x: (-x[1].tier, -x[1].attack - x[1].defense))
+
+        # Add a select for each slot that has items (or has something equipped)
+        row = 0
+        for slot in ("weapon", "shield", "armor"):
+            equipped_key = stats.get(f"equipped_{slot}")
+            items = slot_items[slot]
+            if not items and not equipped_key:
+                continue  # No items and nothing equipped — skip
+            if items:
+                self.add_item(_GearSlotSelect(slot, items, equipped_key, row=row))
+                row += 1
+
+    def build_embed(self) -> discord.Embed:
+        gear = self.equip_uc.get_gear(self.author_id)
+        status = self.health_uc.get_status(self.author_id)
+
+        embed = discord.Embed(
+            title="⚔️ Combat Gear",
+            color=discord.Color.dark_gold(),
+        )
+        embed.add_field(
+            name="Equipped",
+            value=(
+                f"🗡️ Weapon: {gear.weapon or '*empty*'}\n"
+                f"🛡️ Shield: {gear.shield or '*empty*'}\n"
+                f"🦺 Armor: {gear.armor or '*empty*'}"
+            ),
+            inline=False,
+        )
+        embed.add_field(
+            name="Total Stats",
+            value=(
+                f"⚔️ Attack: **{gear.total_attack + 5}** (base 5 + {gear.total_attack})\n"
+                f"🛡️ Defense: **{gear.total_defense + 2}** (base 2 + {gear.total_defense})\n"
+                f"❤️ Max HP: **{status.max_hp}** (base 100 + {gear.total_hp_bonus})"
+            ),
+            inline=False,
+        )
+        embed.description = "Use the dropdowns below to equip or swap gear."
+        return embed
+
+    async def on_timeout(self):
+        if self.message:
+            for child in self.children:
+                child.disabled = True
+            try:
+                await self.message.edit(view=self)
+            except discord.HTTPException:
+                pass
+
+
+# ---------------------------------------------------------------------------
 # Cog
 # ---------------------------------------------------------------------------
 
@@ -541,33 +677,11 @@ class CombatCog(commands.Cog):
 
     @commands.command(name="gear", aliases=["combatgear", "cg"])
     async def gear(self, ctx):
-        """View your equipped combat gear."""
-        result = self.equip_uc.get_gear(ctx.author.id)
-        status = self.health_uc.get_status(ctx.author.id)
-
-        embed = discord.Embed(
-            title="⚔️ Combat Gear",
-            color=discord.Color.dark_gold(),
-        )
-        embed.add_field(
-            name="Equipped",
-            value=(
-                f"🗡️ Weapon: {result.weapon or '*empty*'}\n"
-                f"🛡️ Shield: {result.shield or '*empty*'}\n"
-                f"🦺 Armor: {result.armor or '*empty*'}"
-            ),
-            inline=False,
-        )
-        embed.add_field(
-            name="Total Stats",
-            value=(
-                f"⚔️ Attack: **{result.total_attack + 5}** (base 5 + {result.total_attack})\n"
-                f"🛡️ Defense: **{result.total_defense + 2}** (base 2 + {result.total_defense})\n"
-                f"❤️ Max HP: **{status.max_hp}** (base 100 + {result.total_hp_bonus})"
-            ),
-            inline=False,
-        )
-        await ctx.send(embed=embed)
+        """View and manage your equipped combat gear."""
+        view = GearView(ctx.author.id, self.equip_uc, self.health_uc)
+        embed = view.build_embed()
+        msg = await ctx.send(embed=embed, view=view)
+        view.message = msg
 
     # ── Crafting ──────────────────────────────────────────────
 
