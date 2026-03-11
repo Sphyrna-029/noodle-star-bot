@@ -553,9 +553,21 @@ def _economy_embed() -> discord.Embed:
             "`!deposit 100` — Move 100 stars to your bank\n"
             "`!deposit all` — Move everything to your bank\n"
             "`!withdraw 50` — Take 50 stars from your bank\n"
-            "`!withdraw all` — Take everything out\n\n"
-            "**Deposit cooldown:** 60 minutes\n"
-            "**Withdraw cooldown:** 15 minutes"
+            "`!withdraw all` — Take everything out"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="📦 Safe Storage (Keep Your Items Safe!)",
+        value=(
+            "`!storage` / `!vault` — View your stored items\n"
+            "`!stash <item>` — Move an item to safe storage\n"
+            "`!stash <item> 5` — Stash multiple items at once\n"
+            "`!unstash <item>` — Take an item out of storage\n"
+            "`!unstash <item> 5` — Unstash multiple items\n\n"
+            "Must be in **Noodle Town** to stash/unstash.\n"
+            "Items in storage are **100% immune** to disasters, "
+            "death, and alien abductions — but **can't be used** until withdrawn."
         ),
         inline=False,
     )
@@ -577,7 +589,9 @@ def _economy_embed() -> discord.Embed:
         value=(
             "👽 **Alien Abductions** — 0.5% chance on any command to lose ALL "
             "your wallet stars and items. Your bank is always safe though!\n"
-            "**This is why you should deposit often.**"
+            "**This is why you should deposit often.**\n\n"
+            "📦 **Pro tip:** Use `!stash` to protect valuable items "
+            "like rare equipment and crafting materials!"
         ),
         inline=False,
     )

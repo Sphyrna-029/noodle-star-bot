@@ -7,6 +7,7 @@ from discord.ext import commands
 
 from cogs.locations.check import require_location
 from cogs.economy.use_case import EconomyUseCases
+from database.repository import UserRepository
 
 
 class EconomyCog(commands.Cog):
@@ -14,7 +15,8 @@ class EconomyCog(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.economy = EconomyUseCases()
+        self.repo = UserRepository()
+        self.economy = EconomyUseCases(self.repo)
 
     @commands.command(name="stars")
     async def check_stars(self, ctx, member: discord.Member = None):
@@ -213,6 +215,214 @@ class EconomyCog(commands.Cog):
         )
 
         await ctx.send(embed=embed)
+
+
+    # ── Storage (safe vault) ────────────────────────────────
+
+    @commands.command(name="storage", aliases=["vault"])
+    async def storage(self, ctx):
+        """View your safe storage. Items here are immune to all disasters."""
+        items = self.repo.get_storage_summary(ctx.author.id)
+
+        if not items:
+            await ctx.send(
+                f"📦 {ctx.author.mention}, your storage is empty!\n"
+                f"Use `!stash <item>` in **Noodle Town** to store items safely."
+            )
+            return
+
+        embed = discord.Embed(
+            title="📦 Safe Storage",
+            description=(
+                "Items here are **100% safe** — immune to disasters, "
+                "death penalties, and alien abductions.\n"
+                "Items in storage **cannot be used** until withdrawn."
+            ),
+            color=discord.Color.dark_teal(),
+        )
+
+        equip_lines = []
+        inv_lines = []
+
+        for row in items:
+            key = row["item_key"]
+            count = row["count"]
+            item_type = row["item_type"]
+
+            if item_type == "equipment":
+                uses = row["total_uses"]
+                if uses > 1:
+                    equip_lines.append(f"**{key}** ({uses} uses)")
+                else:
+                    equip_lines.append(f"**{key}**")
+            else:
+                if count > 1:
+                    inv_lines.append(f"**{key}** x{count}")
+                else:
+                    inv_lines.append(f"**{key}**")
+
+        if equip_lines:
+            embed.add_field(
+                name="🔧 Equipment",
+                value="\n".join(equip_lines),
+                inline=False,
+            )
+        if inv_lines:
+            embed.add_field(
+                name="📦 Items",
+                value="\n".join(inv_lines),
+                inline=False,
+            )
+
+        await ctx.send(embed=embed)
+
+    @commands.command(name="stash")
+    async def stash(self, ctx, *, item_name: str = ""):
+        """Move an item to safe storage. Usage: !stash <item> [amount]"""
+        if not await require_location(ctx, "noodle_town"):
+            return
+
+        if not item_name:
+            await ctx.send(
+                f"❌ {ctx.author.mention}, specify an item to store!\n"
+                f"Usage: `!stash <item>` or `!stash <item> <amount>`"
+            )
+            return
+
+        # Parse optional amount from the end
+        parts = item_name.rsplit(" ", 1)
+        amount = 1
+        name = item_name
+        if len(parts) == 2 and parts[1].isdigit():
+            name = parts[0]
+            amount = int(parts[1])
+            if amount < 1:
+                amount = 1
+
+        # Try equipment first
+        equip = self.repo.get_user_equipment(ctx.author.id)
+        equip_key = _resolve_equip_key(name, equip)
+
+        if equip_key:
+            uses = equip.get(equip_key, 0)
+            if uses <= 0:
+                await ctx.send(f"❌ You don't own **{equip_key}**!")
+                return
+
+            # Check if item is currently equipped as combat gear
+            stats = self.repo.get_combat_stats(ctx.author.id)
+            for slot in ("equipped_weapon", "equipped_shield", "equipped_armor"):
+                if stats.get(slot) == equip_key:
+                    self.repo.set_equipped_combat_item(ctx.author.id, slot.replace("equipped_", ""), None)
+
+            # Move to storage
+            self.repo.set_equipment(ctx.author.id, equip_key, 0)
+            self.repo.add_to_storage(ctx.author.id, equip_key, "equipment", uses)
+
+            label = f"({uses} uses)" if uses > 1 else ""
+            await ctx.send(
+                f"📦 Stashed **{equip_key}** {label} into safe storage!\n"
+                f"It's now immune to all disasters but can't be used until withdrawn."
+            )
+            return
+
+        # Try inventory items
+        inv_items = self.repo.get_inventory_items(ctx.author.id)
+        matching = [i for i in inv_items if i["item_key"].lower() == name.lower()]
+
+        if not matching:
+            # Try fuzzy match
+            matching = [i for i in inv_items if name.lower() in i["item_key"].lower()]
+
+        if not matching:
+            await ctx.send(f"❌ No item called **{name}** found in your inventory or equipment!")
+            return
+
+        actual_key = matching[0]["item_key"]
+        to_stash = min(amount, len(matching))
+        ids_to_remove = [m["id"] for m in matching[:to_stash]]
+
+        self.repo.remove_items_by_ids(ctx.author.id, ids_to_remove)
+        for _ in range(to_stash):
+            self.repo.add_to_storage(ctx.author.id, actual_key, "inventory")
+
+        label = f"x{to_stash}" if to_stash > 1 else ""
+        await ctx.send(
+            f"📦 Stashed **{actual_key}** {label} into safe storage!\n"
+            f"Immune to all disasters but can't be used until withdrawn."
+        )
+
+    @commands.command(name="unstash")
+    async def unstash(self, ctx, *, item_name: str = ""):
+        """Take an item out of safe storage. Usage: !unstash <item> [amount]"""
+        if not await require_location(ctx, "noodle_town"):
+            return
+
+        if not item_name:
+            await ctx.send(
+                f"❌ {ctx.author.mention}, specify an item to withdraw!\n"
+                f"Usage: `!unstash <item>` or `!unstash <item> <amount>`"
+            )
+            return
+
+        # Parse optional amount
+        parts = item_name.rsplit(" ", 1)
+        amount = 1
+        name = item_name
+        if len(parts) == 2 and parts[1].isdigit():
+            name = parts[0]
+            amount = int(parts[1])
+            if amount < 1:
+                amount = 1
+
+        # Find matching items in storage
+        stored = self.repo.get_storage_items(ctx.author.id)
+        matching = [s for s in stored if s["item_key"].lower() == name.lower()]
+        if not matching:
+            matching = [s for s in stored if name.lower() in s["item_key"].lower()]
+
+        if not matching:
+            await ctx.send(f"❌ No item called **{name}** found in your storage!")
+            return
+
+        actual_key = matching[0]["item_key"]
+        item_type = matching[0]["item_type"]
+
+        if item_type == "equipment":
+            # Equipment: restore to user_equipment
+            row = self.repo.remove_from_storage(ctx.author.id, actual_key, "equipment")
+            if not row:
+                await ctx.send(f"❌ Failed to retrieve **{actual_key}** from storage!")
+                return
+
+            uses = row["uses"]
+            current_uses = self.repo.get_equipment_uses(ctx.author.id, actual_key)
+            self.repo.set_equipment(ctx.author.id, actual_key, current_uses + uses)
+
+            label = f"({uses} uses)" if uses > 1 else ""
+            await ctx.send(f"📦 Retrieved **{actual_key}** {label} from storage!")
+        else:
+            # Inventory items: restore to user_inventory_items
+            to_unstash = min(amount, len(matching))
+            for i in range(to_unstash):
+                removed = self.repo.remove_from_storage(ctx.author.id, actual_key, "inventory")
+                if removed:
+                    self.repo.add_item(ctx.author.id, actual_key)
+
+            label = f"x{to_unstash}" if to_unstash > 1 else ""
+            await ctx.send(f"📦 Retrieved **{actual_key}** {label} from storage!")
+
+
+def _resolve_equip_key(name: str, equipment: dict) -> str | None:
+    """Try to match an equipment key by name."""
+    lower = name.lower().replace(" ", "_")
+    if lower in equipment:
+        return lower
+    # Fuzzy match
+    for key in equipment:
+        if lower in key or key in lower:
+            return key
+    return None
 
 
 async def setup(bot):

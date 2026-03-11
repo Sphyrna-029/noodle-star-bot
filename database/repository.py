@@ -13,6 +13,7 @@ from database.repositories import (
     MiningRepository,
     PetsRepository,
     ProgressionRepository,
+    StorageRepository,
     UserCoreRepository,
 )
 
@@ -31,6 +32,7 @@ class UserRepository(
     FarmingRepository,
     PetsRepository,
     ProgressionRepository,
+    StorageRepository,
 ):
     """Unified repository composed from smaller domain repositories."""
 

@@ -13,6 +13,7 @@ from database.repositories.inventory_items import InventoryItemsRepository
 from database.repositories.mining import MiningRepository
 from database.repositories.pets import PetsRepository
 from database.repositories.progression import ProgressionRepository
+from database.repositories.storage import StorageRepository
 from database.repositories.user_core import UserCoreRepository
 
 __all__ = [
@@ -30,4 +31,5 @@ __all__ = [
     "FarmingRepository",
     "PetsRepository",
     "ProgressionRepository",
+    "StorageRepository",
 ]
