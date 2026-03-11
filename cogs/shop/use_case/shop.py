@@ -39,8 +39,12 @@ class ShopUseCases:
             "rocket_ship": "Utility",
             "bag_upgrade": "Utility",
             "lucky_dice": "Utility",
+            "wooden_sword": "Combat",
+            "wooden_shield": "Combat",
+            "leather_vest": "Combat",
+            "iron_dagger": "Combat",
         }
-        self._category_order = ("Mining", "Farming", "Fishing", "Utility", "Pets")
+        self._category_order = ("Mining", "Farming", "Fishing", "Utility", "Combat", "Pets")
 
     def get_items(self) -> List[ShopItem]:
         """Get all items available in the shop."""

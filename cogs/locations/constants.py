@@ -43,6 +43,12 @@ LOCATIONS: Final[dict[str, Location]] = {
         emoji="🚀",
         description="Launch into space and mine planets.",
     ),
+    "noodle_colosseum": Location(
+        key="noodle_colosseum",
+        name="Noodle Colosseum",
+        emoji="🏟️",
+        description="Fight mobs in 5 dungeon levels for star rewards.",
+    ),
 }
 
 DEFAULT_LOCATION: Final[str] = "noodle_town"

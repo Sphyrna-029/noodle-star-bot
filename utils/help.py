@@ -83,6 +83,16 @@ def _main_embed() -> discord.Embed:
         inline=True,
     )
     embed.add_field(
+        name="⚔️ Combat",
+        value="Fight mobs, gear up, dungeon levels",
+        inline=True,
+    )
+    embed.add_field(
+        name="🔨 Crafting",
+        value="Forge weapons, brew potions",
+        inline=True,
+    )
+    embed.add_field(
         name="🎒 Items",
         value="Rare items, effects & how to get them",
         inline=True,
@@ -116,7 +126,8 @@ def _travel_embed() -> discord.Embed:
             "⛏️ **Crystal Cave** — Mine for minerals and stars\n"
             "🎣 **Starfish Bay** — Cast your line and catch fish\n"
             "🌾 **Fusilli Farms** — Plant, tend, and harvest crops\n"
-            "🚀 **Starport Ziti** — Launch into space and mine planets"
+            "🚀 **Starport Ziti** — Launch into space and mine planets\n"
+            "🏟️ **Noodle Colosseum** — Fight mobs in 5 dungeon levels"
         ),
         inline=False,
     )
@@ -129,7 +140,8 @@ def _travel_embed() -> discord.Embed:
             "**⛏️ Crystal Cave** — `!mine` `!minelevel`\n"
             "**🎣 Starfish Bay** — `!fish` `!pull` `!fishing`\n"
             "**🌾 Fusilli Farms** — `!plant` `!harvest` `!tend`\n"
-            "**🚀 Starport Ziti** — `!launch` `!spacemine`"
+            "**🚀 Starport Ziti** — `!launch` `!spacemine`\n"
+            "**🏟️ Noodle Colosseum** — `!fight` `!dungeon`"
         ),
         inline=False,
     )
@@ -147,7 +159,9 @@ def _travel_embed() -> discord.Embed:
         value=(
             "`!stars` `!profile` `!inventory` `!farm` `!crops`\n"
             "`!farm growbot ...` `!farm preserver ...`\n"
-            "`!pet` `!fishlevel` `!baitshop` `!planets` `!where`"
+            "`!pet` `!fishlevel` `!baitshop` `!planets` `!where`\n"
+            "`!hp` `!stamina` `!gear` `!eat` `!drink` `!equip`\n"
+            "`!craft` `!recipes` `!recipe`"
         ),
         inline=False,
     )
@@ -904,6 +918,129 @@ def _items_embed() -> discord.Embed:
     return embed
 
 
+def _combat_embed() -> discord.Embed:
+    embed = discord.Embed(
+        title="⚔️ Combat — How It Works",
+        description=(
+            "Travel to the **Noodle Colosseum** 🏟️ and fight mobs across 5 dungeon levels. "
+            "Win stars, gain combat levels, and unlock deeper dungeons."
+        ),
+        color=discord.Color.red(),
+    )
+    embed.add_field(
+        name="Getting Started",
+        value=(
+            "**Step 1:** Buy starter gear from `!store` (Combat section)\n"
+            "**Step 2:** Equip it with `!equip wooden sword`, `!equip leather vest`, etc.\n"
+            "**Step 3:** Travel to Noodle Colosseum with `!t colosseum`\n"
+            "**Step 4:** Type `!fight` to battle a random mob\n"
+            "**Step 5:** Use Attack ⚔️, Defend 🛡️, or Flee 🏃 buttons"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Combat Commands",
+        value=(
+            "`!fight` (or `!f`) — Start a fight at your active dungeon level\n"
+            "`!dungeon` — View all dungeon levels and your progress\n"
+            "`!dungeon 2` — Switch to a different dungeon level\n"
+            "`!hp` — Check your HP and stamina\n"
+            "`!gear` — View your equipped combat gear\n"
+            "`!equip <item>` — Equip a combat item\n"
+            "`!unequip <slot>` — Unequip weapon/shield/armor\n"
+            "`!eat` — See healing fish list\n"
+            "`!eat <fish>` — Eat a fish to restore HP\n"
+            "`!drink` — See stamina recovery items\n"
+            "`!drink <item>` — Consume an item to restore stamina"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Dungeon Levels",
+        value=(
+            "🏋️ **Lv1 Training Grounds** — Easy mobs, low reward. Death: lose 50% wallet\n"
+            "🕯️ **Lv2 Dark Corridors** — Medium mobs. Death: 100% wallet + 50% items\n"
+            "🏚️ **Lv3 Cursed Halls** — Hard mobs. Death: wallet + all items\n"
+            "🔥 **Lv4 Infernal Depths** — Very hard. Death: + 2 random equipment\n"
+            "🌌 **Lv5 The Void** — Endgame. Death: EVERYTHING + 10% bank"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Stamina System",
+        value=(
+            "• Every attack costs **8 stamina**, defending costs **3**\n"
+            "• Lower stamina = lower damage (min 20% damage at 0 stamina)\n"
+            "• Mobs also have stamina — defend to outlast them!\n"
+            "• Recover with `!drink` (junk fish, crafted potions)\n"
+            "• HP and stamina regen passively over time (1/min each)"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Pro Tips",
+        value=(
+            "• Defense builds can outlast mobs by waiting for their stamina to drop\n"
+            "• Stock up on healing fish before entering L3+ dungeons\n"
+            "• Each dungeon has a **boss** with extra HP and rewards\n"
+            "• Win 5 fights at your combat level to level up\n"
+            "• Better gear = more attack, defense, and max HP"
+        ),
+        inline=False,
+    )
+    return embed
+
+
+def _crafting_embed() -> discord.Embed:
+    embed = discord.Embed(
+        title="🔨 Crafting — How It Works",
+        description=(
+            "Craft combat gear and potions from mined minerals and rare fish. "
+            "Higher tier items need rarer materials."
+        ),
+        color=discord.Color.dark_gold(),
+    )
+    embed.add_field(
+        name="Crafting Commands",
+        value=(
+            "`!recipes` — View all recipes and which you can craft\n"
+            "`!recipe <name>` — View details for a specific recipe\n"
+            "`!craft <name>` — Craft an item (consumes materials)"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Material Sources",
+        value=(
+            "**⛏️ Mining** — Ores and gems from all 10 mine/space levels\n"
+            "**🎣 Fishing** — Rare/legendary fish are crafting ingredients\n"
+            "**🧪 Junk Fish** — Seaweed, Starfish, etc. for stamina potions"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Gear Tiers",
+        value=(
+            "🗡️ **Tier 1** — Buy from `!store` (200-250 stars)\n"
+            "⚔️ **Tier 2** — Craft from Iron, Copper, Silver, Gold\n"
+            "✨ **Tier 3** — Craft from Platinum, Emerald, Mithril + rare fish\n"
+            "🌟 **Tier 4** — Craft from Star Fragment, Adamantium + legendary fish\n"
+            "🍜 **Tier 5** — Craft from Noodle Gem, Eternity Gem + endgame fish"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Stamina Potions",
+        value=(
+            "🧪 **Minor Stamina Brew** — 3 Seaweed + 1 Coal → +15 stamina\n"
+            "🧴 **Stamina Tonic** — 2 Bio Jelly + 1 Tin + Golden Seahorse → +25 stamina\n"
+            "⚗️ **Void Energy Flask** — 3 Void Coral + Dark Matter + Coral Golem → +40 stamina"
+        ),
+        inline=False,
+    )
+    return embed
+
+
 _CATEGORY_HELP_BUILDERS = {
     "travel": _travel_embed,
     "locations": _travel_embed,
@@ -915,11 +1052,13 @@ _CATEGORY_HELP_BUILDERS = {
     "economy": _economy_embed,
     "gambling": _gambling_embed,
     "shop": _shop_embed,
-    "trading": _shop_embed,  # "Shop & Trade" interactive section
+    "trading": _shop_embed,
     "space": _space_embed,
     "treasure": _treasure_embed,
     "treasure hunt": _treasure_embed,
     "items": _items_embed,
+    "combat": _combat_embed,
+    "crafting": _crafting_embed,
 }
 
 
@@ -996,6 +1135,16 @@ class HelpView(discord.ui.View):
     async def treasure_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = SubHelpView(self.author_id)
         await interaction.response.edit_message(embed=_treasure_embed(), view=view)
+
+    @discord.ui.button(label="Combat", style=discord.ButtonStyle.danger, emoji="⚔️", row=2)
+    async def combat_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = SubHelpView(self.author_id)
+        await interaction.response.edit_message(embed=_combat_embed(), view=view)
+
+    @discord.ui.button(label="Crafting", style=discord.ButtonStyle.secondary, emoji="🔨", row=2)
+    async def crafting_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = SubHelpView(self.author_id)
+        await interaction.response.edit_message(embed=_crafting_embed(), view=view)
 
     @discord.ui.button(label="Items", style=discord.ButtonStyle.secondary, emoji="🎒", row=2)
     async def items_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -1077,6 +1226,16 @@ class SubHelpView(discord.ui.View):
     async def treasure_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = SubHelpView(self.author_id)
         await interaction.response.edit_message(embed=_treasure_embed(), view=view)
+
+    @discord.ui.button(label="Combat", style=discord.ButtonStyle.danger, emoji="⚔️", row=3)
+    async def combat_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = SubHelpView(self.author_id)
+        await interaction.response.edit_message(embed=_combat_embed(), view=view)
+
+    @discord.ui.button(label="Crafting", style=discord.ButtonStyle.secondary, emoji="🔨", row=3)
+    async def crafting_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = SubHelpView(self.author_id)
+        await interaction.response.edit_message(embed=_crafting_embed(), view=view)
 
     @discord.ui.button(label="Items", style=discord.ButtonStyle.secondary, emoji="🎒", row=3)
     async def items_button(self, interaction: discord.Interaction, button: discord.ui.Button):

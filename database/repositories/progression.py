@@ -64,6 +64,10 @@ class ProgressionRepository(BaseRepository):
             "inventory_capacity", "equipped_bait", "jig_active",
             "preserver_level", "preserver_pending_stars", "preserver_ready_ts",
             "growbot_level",
+            "current_hp", "max_hp", "hp_updated_at",
+            "current_stamina", "max_stamina", "stamina_updated_at",
+            "combat_level", "active_combat_level",
+            "equipped_weapon", "equipped_shield", "equipped_armor",
         }
         if field not in _VALID_FIELDS:
             raise ValueError(f"Invalid progression field: {field}")

@@ -34,6 +34,10 @@ class InventoryRepository(BaseRepository):
         "telescope": "telescope",
         "rocket_ship": "rocket_ship",
         "lucky_dice": "lucky_dice",
+        "wooden_sword": "wooden_sword",
+        "wooden_shield": "wooden_shield",
+        "leather_vest": "leather_vest",
+        "iron_dagger": "iron_dagger",
     }
 
     _CONSUMABLE_KEYS = {

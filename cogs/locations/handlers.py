@@ -12,12 +12,13 @@ class TravelButton(discord.ui.Button):
 
     def __init__(self, location_key: str, disabled: bool = False):
         loc = LOCATIONS[location_key]
+        _ROW_0 = ("noodle_town", "crystal_cave", "starfish_bay")
         super().__init__(
             label=loc.name,
             emoji=loc.emoji,
             style=discord.ButtonStyle.primary if not disabled else discord.ButtonStyle.secondary,
             disabled=disabled,
-            row=0 if location_key in ("noodle_town", "crystal_cave", "starfish_bay") else 1,
+            row=0 if location_key in _ROW_0 else 1,
         )
         self.location_key = location_key
 
@@ -121,6 +122,10 @@ class LocationsCog(commands.Cog):
         # Starport Ziti
         "space": "starport_ziti", "spacemine": "starport_ziti", "starport": "starport_ziti",
         "ziti": "starport_ziti", "starport_ziti": "starport_ziti", "launch": "starport_ziti",
+        # Noodle Colosseum
+        "colosseum": "noodle_colosseum", "fight": "noodle_colosseum", "combat": "noodle_colosseum",
+        "arena": "noodle_colosseum", "noodle_colosseum": "noodle_colosseum",
+        "dungeon": "noodle_colosseum", "battle": "noodle_colosseum",
     }
 
     @commands.command(name="travel", aliases=["t"])

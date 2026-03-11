@@ -1,0 +1,605 @@
+"""Combat system constants — items, mobs, recipes, fish roles, death penalties."""
+
+from typing import Final
+
+from config.models import CombatItem, CraftRecipe, Mob
+
+# ---------------------------------------------------------------------------
+# Base stats
+# ---------------------------------------------------------------------------
+BASE_HP: Final[int] = 100
+BASE_STAMINA: Final[int] = 50
+STAMINA_PER_ATTACK: Final[int] = 8
+STAMINA_PER_DEFEND: Final[int] = 3
+HP_REGEN_PER_MINUTE: Final[int] = 1
+STAMINA_REGEN_PER_MINUTE: Final[int] = 1
+DAMAGE_FLOOR: Final[float] = 0.20  # minimum damage multiplier at 0 stamina
+
+# ---------------------------------------------------------------------------
+# Combat items — 24 total across 5 tiers
+# Tier 1: Store-bought (4 items)
+# Tier 2: Crafted (5 items)
+# Tier 3: Crafted (5 items)
+# Tier 4: Crafted (6 items)
+# Tier 5: Crafted (4 items)
+# ---------------------------------------------------------------------------
+
+COMBAT_ITEMS: Final[dict[str, CombatItem]] = {
+    # ── Tier 1: Store-bought starters ──────────────────────────
+    "wooden_sword": CombatItem(
+        key="wooden_sword", name="Wooden Sword", emoji="🗡️",
+        slot="weapon", tier=1, attack=8, defense=0, hp_bonus=0,
+        stamina_cost=8, description="A basic wooden sword. Gets the job done.",
+    ),
+    "wooden_shield": CombatItem(
+        key="wooden_shield", name="Wooden Shield", emoji="🛡️",
+        slot="shield", tier=1, attack=0, defense=6, hp_bonus=0,
+        stamina_cost=0, description="A simple wooden shield for blocking.",
+    ),
+    "leather_vest": CombatItem(
+        key="leather_vest", name="Leather Vest", emoji="🦺",
+        slot="armor", tier=1, attack=0, defense=4, hp_bonus=15,
+        stamina_cost=0, description="Light leather armor. Better than nothing.",
+    ),
+    "iron_dagger": CombatItem(
+        key="iron_dagger", name="Iron Dagger", emoji="🔪",
+        slot="weapon", tier=1, attack=6, defense=0, hp_bonus=0,
+        stamina_cost=6, description="A quick iron dagger. Low damage, low stamina cost.",
+    ),
+
+    # ── Tier 2: Crafted ───────────────────────────────────────
+    "iron_sword": CombatItem(
+        key="iron_sword", name="Iron Sword", emoji="⚔️",
+        slot="weapon", tier=2, attack=14, defense=0, hp_bonus=0,
+        stamina_cost=8, description="A sturdy iron blade forged from mined iron.",
+    ),
+    "iron_shield": CombatItem(
+        key="iron_shield", name="Iron Shield", emoji="🛡️",
+        slot="shield", tier=2, attack=0, defense=10, hp_bonus=5,
+        stamina_cost=0, description="An iron-reinforced shield.",
+    ),
+    "chainmail": CombatItem(
+        key="chainmail", name="Chainmail Armor", emoji="⛓️",
+        slot="armor", tier=2, attack=0, defense=8, hp_bonus=25,
+        stamina_cost=0, description="Linked iron rings provide solid protection.",
+    ),
+    "silver_rapier": CombatItem(
+        key="silver_rapier", name="Silver Rapier", emoji="🤺",
+        slot="weapon", tier=2, attack=12, defense=2, hp_bonus=0,
+        stamina_cost=7, description="An elegant silver blade with a parrying guard.",
+    ),
+    "studded_buckler": CombatItem(
+        key="studded_buckler", name="Studded Buckler", emoji="🔰",
+        slot="shield", tier=2, attack=2, defense=12, hp_bonus=0,
+        stamina_cost=0, description="A small shield with iron studs for bashing.",
+    ),
+
+    # ── Tier 3: Crafted ───────────────────────────────────────
+    "platinum_blade": CombatItem(
+        key="platinum_blade", name="Platinum Blade", emoji="✨",
+        slot="weapon", tier=3, attack=22, defense=0, hp_bonus=0,
+        stamina_cost=9, description="A gleaming platinum sword of remarkable sharpness.",
+    ),
+    "emerald_aegis": CombatItem(
+        key="emerald_aegis", name="Emerald Aegis", emoji="💚",
+        slot="shield", tier=3, attack=0, defense=18, hp_bonus=10,
+        stamina_cost=0, description="A crystalline shield infused with emerald power.",
+    ),
+    "mithril_plate": CombatItem(
+        key="mithril_plate", name="Mithril Plate", emoji="🔵",
+        slot="armor", tier=3, attack=0, defense=14, hp_bonus=40,
+        stamina_cost=0, description="Lightweight yet incredibly strong mithril armor.",
+    ),
+    "sapphire_lance": CombatItem(
+        key="sapphire_lance", name="Sapphire Lance", emoji="💙",
+        slot="weapon", tier=3, attack=18, defense=4, hp_bonus=0,
+        stamina_cost=8, description="A long lance tipped with a sapphire crystal.",
+    ),
+    "ruby_guardian": CombatItem(
+        key="ruby_guardian", name="Ruby Guardian", emoji="❤️",
+        slot="shield", tier=3, attack=4, defense=16, hp_bonus=15,
+        stamina_cost=0, description="A ruby-encrusted shield that pulses with warmth.",
+    ),
+
+    # ── Tier 4: Crafted ───────────────────────────────────────
+    "star_fragment_blade": CombatItem(
+        key="star_fragment_blade", name="Star Fragment Blade", emoji="🌟",
+        slot="weapon", tier=4, attack=32, defense=0, hp_bonus=0,
+        stamina_cost=10, description="A blade forged from a fallen star fragment.",
+    ),
+    "opal_fortress": CombatItem(
+        key="opal_fortress", name="Opal Fortress", emoji="🌈",
+        slot="shield", tier=4, attack=0, defense=26, hp_bonus=20,
+        stamina_cost=0, description="An iridescent shield that shimmers with opal light.",
+    ),
+    "adamantium_mail": CombatItem(
+        key="adamantium_mail", name="Adamantium Mail", emoji="⛓️",
+        slot="armor", tier=4, attack=0, defense=22, hp_bonus=60,
+        stamina_cost=0, description="Nearly indestructible armor woven from adamantium.",
+    ),
+    "dragonstone_axe": CombatItem(
+        key="dragonstone_axe", name="Dragonstone Axe", emoji="🪓",
+        slot="weapon", tier=4, attack=28, defense=6, hp_bonus=0,
+        stamina_cost=9, description="A massive axe with a dragonstone core.",
+    ),
+    "void_crystal_ward": CombatItem(
+        key="void_crystal_ward", name="Void Crystal Ward", emoji="🔮",
+        slot="shield", tier=4, attack=6, defense=24, hp_bonus=10,
+        stamina_cost=0, description="A shield that absorbs energy from the void.",
+    ),
+    "titanium_cuirass": CombatItem(
+        key="titanium_cuirass", name="Titanium Cuirass", emoji="⚪",
+        slot="armor", tier=4, attack=4, defense=20, hp_bonus=50,
+        stamina_cost=0, description="Precision-forged titanium body armor.",
+    ),
+
+    # ── Tier 5: Crafted (endgame) ─────────────────────────────
+    "noodle_gem_katana": CombatItem(
+        key="noodle_gem_katana", name="Noodle Gem Katana", emoji="🍜",
+        slot="weapon", tier=5, attack=45, defense=5, hp_bonus=0,
+        stamina_cost=10, description="The legendary katana made from a Noodle Gem. Unmatched power.",
+    ),
+    "eternity_bulwark": CombatItem(
+        key="eternity_bulwark", name="Eternity Bulwark", emoji="👑",
+        slot="shield", tier=5, attack=0, defense=35, hp_bonus=30,
+        stamina_cost=0, description="A shield said to endure until the end of time.",
+    ),
+    "darkite_warplate": CombatItem(
+        key="darkite_warplate", name="Darkite Warplate", emoji="🌑",
+        slot="armor", tier=5, attack=8, defense=30, hp_bonus=80,
+        stamina_cost=0, description="Impossibly dark armor that seems to consume light itself.",
+    ),
+    "void_reaper": CombatItem(
+        key="void_reaper", name="Void Reaper", emoji="⚛️",
+        slot="weapon", tier=5, attack=40, defense=0, hp_bonus=0,
+        stamina_cost=8, description="A scythe forged from pure Dark Matter. Terrifyingly efficient.",
+    ),
+}
+
+# ---------------------------------------------------------------------------
+# Mobs — 24 total: 5 per level (L1-4), 4 at L5, 1 boss per level
+# ---------------------------------------------------------------------------
+
+MOBS: Final[dict[str, Mob]] = {
+    # ── Level 1: Training Grounds ──────────────────────────────
+    "slime": Mob(
+        key="slime", name="Slime", emoji="🟢",
+        level=1, hp=30, attack=5, defense=2, stamina=20,
+        star_reward=15, is_boss=False,
+    ),
+    "rat": Mob(
+        key="rat", name="Giant Rat", emoji="🐀",
+        level=1, hp=35, attack=7, defense=3, stamina=25,
+        star_reward=20, is_boss=False,
+    ),
+    "bat": Mob(
+        key="bat", name="Cave Bat", emoji="🦇",
+        level=1, hp=25, attack=8, defense=1, stamina=15,
+        star_reward=18, is_boss=False,
+    ),
+    "mushroom_fiend": Mob(
+        key="mushroom_fiend", name="Mushroom Fiend", emoji="🍄",
+        level=1, hp=40, attack=6, defense=4, stamina=30,
+        star_reward=25, is_boss=False,
+    ),
+    "goblin_chief": Mob(
+        key="goblin_chief", name="Goblin Chief", emoji="👺",
+        level=1, hp=80, attack=12, defense=6, stamina=40,
+        star_reward=75, is_boss=True,
+    ),
+
+    # ── Level 2: Dark Corridors ────────────────────────────────
+    "skeleton": Mob(
+        key="skeleton", name="Skeleton Warrior", emoji="💀",
+        level=2, hp=60, attack=14, defense=8, stamina=35,
+        star_reward=45, is_boss=False,
+    ),
+    "spider": Mob(
+        key="spider", name="Giant Spider", emoji="🕷️",
+        level=2, hp=50, attack=16, defense=5, stamina=30,
+        star_reward=40, is_boss=False,
+    ),
+    "zombie": Mob(
+        key="zombie", name="Armored Zombie", emoji="🧟",
+        level=2, hp=75, attack=12, defense=12, stamina=40,
+        star_reward=50, is_boss=False,
+    ),
+    "ghost": Mob(
+        key="ghost", name="Phantom", emoji="👻",
+        level=2, hp=45, attack=18, defense=3, stamina=25,
+        star_reward=55, is_boss=False,
+    ),
+    "troll_warlord": Mob(
+        key="troll_warlord", name="Troll Warlord", emoji="🧌",
+        level=2, hp=150, attack=22, defense=14, stamina=55,
+        star_reward=150, is_boss=True,
+    ),
+
+    # ── Level 3: Cursed Halls ──────────────────────────────────
+    "dark_knight": Mob(
+        key="dark_knight", name="Dark Knight", emoji="🖤",
+        level=3, hp=120, attack=24, defense=18, stamina=50,
+        star_reward=100, is_boss=False,
+    ),
+    "fire_elemental": Mob(
+        key="fire_elemental", name="Fire Elemental", emoji="🔥",
+        level=3, hp=90, attack=30, defense=10, stamina=45,
+        star_reward=110, is_boss=False,
+    ),
+    "gargoyle": Mob(
+        key="gargoyle", name="Stone Gargoyle", emoji="🗿",
+        level=3, hp=140, attack=20, defense=25, stamina=60,
+        star_reward=120, is_boss=False,
+    ),
+    "wraith": Mob(
+        key="wraith", name="Soul Wraith", emoji="😈",
+        level=3, hp=100, attack=28, defense=12, stamina=40,
+        star_reward=115, is_boss=False,
+    ),
+    "lich": Mob(
+        key="lich", name="The Lich", emoji="☠️",
+        level=3, hp=250, attack=32, defense=20, stamina=70,
+        star_reward=300, is_boss=True,
+    ),
+
+    # ── Level 4: Infernal Depths ───────────────────────────────
+    "demon": Mob(
+        key="demon", name="Infernal Demon", emoji="👿",
+        level=4, hp=200, attack=36, defense=22, stamina=65,
+        star_reward=200, is_boss=False,
+    ),
+    "golem": Mob(
+        key="golem", name="Iron Golem", emoji="🤖",
+        level=4, hp=280, attack=28, defense=35, stamina=80,
+        star_reward=220, is_boss=False,
+    ),
+    "hydra": Mob(
+        key="hydra", name="Lesser Hydra", emoji="🐍",
+        level=4, hp=220, attack=38, defense=18, stamina=60,
+        star_reward=230, is_boss=False,
+    ),
+    "shadow_dragon": Mob(
+        key="shadow_dragon", name="Shadow Drake", emoji="🐲",
+        level=4, hp=240, attack=34, defense=28, stamina=70,
+        star_reward=250, is_boss=False,
+    ),
+    "balrog": Mob(
+        key="balrog", name="The Balrog", emoji="😤",
+        level=4, hp=400, attack=42, defense=30, stamina=90,
+        star_reward=500, is_boss=True,
+    ),
+
+    # ── Level 5: The Void ──────────────────────────────────────
+    "void_sentinel": Mob(
+        key="void_sentinel", name="Void Sentinel", emoji="🌌",
+        level=5, hp=350, attack=45, defense=35, stamina=85,
+        star_reward=400, is_boss=False,
+    ),
+    "cosmic_horror": Mob(
+        key="cosmic_horror", name="Cosmic Horror", emoji="👁️",
+        level=5, hp=300, attack=50, defense=25, stamina=75,
+        star_reward=450, is_boss=False,
+    ),
+    "noodle_titan": Mob(
+        key="noodle_titan", name="Noodle Titan", emoji="🍝",
+        level=5, hp=400, attack=42, defense=40, stamina=90,
+        star_reward=500, is_boss=False,
+    ),
+    "the_void_king": Mob(
+        key="the_void_king", name="The Void King", emoji="💀",
+        level=5, hp=600, attack=55, defense=40, stamina=100,
+        star_reward=1000, is_boss=True,
+    ),
+}
+
+# Lookup: level -> list of mobs at that level
+MOBS_BY_LEVEL: Final[dict[int, list[Mob]]] = {}
+for _mob in MOBS.values():
+    MOBS_BY_LEVEL.setdefault(_mob.level, []).append(_mob)
+
+# ---------------------------------------------------------------------------
+# Dungeon level info
+# ---------------------------------------------------------------------------
+
+DUNGEON_LEVELS: Final[dict[int, dict]] = {
+    1: {"name": "Training Grounds", "emoji": "🏋️", "unlock_cost": 0},
+    2: {"name": "Dark Corridors", "emoji": "🕯️", "unlock_cost": 500},
+    3: {"name": "Cursed Halls", "emoji": "🏚️", "unlock_cost": 2000},
+    4: {"name": "Infernal Depths", "emoji": "🔥", "unlock_cost": 5000},
+    5: {"name": "The Void", "emoji": "🌌", "unlock_cost": 10000},
+}
+
+# ---------------------------------------------------------------------------
+# Death penalties by dungeon level
+# ---------------------------------------------------------------------------
+
+DEATH_PENALTIES: Final[dict[int, dict]] = {
+    1: {
+        "wallet_loss_pct": 0.50,
+        "bank_loss_pct": 0.0,
+        "lose_all_items": False,
+        "lose_random_items_pct": 0.0,
+        "lose_random_equipment": 0,
+        "lose_all_equipment": False,
+        "description": "Lose 50% of wallet",
+    },
+    2: {
+        "wallet_loss_pct": 1.0,
+        "bank_loss_pct": 0.0,
+        "lose_all_items": False,
+        "lose_random_items_pct": 0.50,
+        "lose_random_equipment": 0,
+        "lose_all_equipment": False,
+        "description": "Lose 100% wallet + 50% of random items",
+    },
+    3: {
+        "wallet_loss_pct": 1.0,
+        "bank_loss_pct": 0.0,
+        "lose_all_items": True,
+        "lose_random_items_pct": 0.0,
+        "lose_random_equipment": 0,
+        "lose_all_equipment": False,
+        "description": "Lose 100% wallet + all items",
+    },
+    4: {
+        "wallet_loss_pct": 1.0,
+        "bank_loss_pct": 0.0,
+        "lose_all_items": True,
+        "lose_random_items_pct": 0.0,
+        "lose_random_equipment": 2,
+        "lose_all_equipment": False,
+        "description": "Lose 100% wallet + all items + 2 random equipment",
+    },
+    5: {
+        "wallet_loss_pct": 1.0,
+        "bank_loss_pct": 0.10,
+        "lose_all_items": True,
+        "lose_random_items_pct": 0.0,
+        "lose_random_equipment": 0,
+        "lose_all_equipment": True,
+        "description": "Lose everything + all equipment + 10% bank",
+    },
+}
+
+# ---------------------------------------------------------------------------
+# Fish healing values — maps fish name to HP restored
+# 23 fish heal HP via !eat
+# ---------------------------------------------------------------------------
+
+FISH_HEAL_VALUES: Final[dict[str, int]] = {
+    # Level 1 fish
+    "Small Fish": 8,
+    "Crab": 10,
+    "Shrimp": 12,
+    "Salmon": 20,
+    "Tuna": 25,
+    "Lobster": 30,
+    "Octopus": 35,
+    # Level 2 fish
+    "Trout": 12,
+    "Catfish": 15,
+    "Bass": 18,
+    "River Salmon": 25,
+    "Sturgeon": 30,
+    "Snapping Turtle": 35,
+    "Giant Catfish": 40,
+    # Level 3 fish
+    "Clownfish": 10,
+    "Parrotfish": 18,
+    "Sea Urchin": 20,
+    "Moray Eel": 22,
+    "Reef Shark": 35,
+    # Level 4 fish
+    "Anglerfish": 15,
+    "Barracuda": 25,
+    "Swordfish": 30,
+    # Level 5 fish
+    "Abyssal Crab": 20,
+}
+
+# ---------------------------------------------------------------------------
+# Stamina recovery — fish and potions that restore stamina via !drink
+# ---------------------------------------------------------------------------
+
+STAMINA_RECOVERY: Final[dict[str, int]] = {
+    # Junk fish that restore stamina
+    "Seaweed": 5,
+    "Driftwood": 4,
+    "Starfish": 6,
+    "Rusty Anchor": 8,
+    "Sea Sponge": 5,
+    "Void Coral": 10,
+    "Bioluminescent Jelly": 12,
+    "Barnacle Cluster": 6,
+    "Old Boot": 3,
+    # Crafted potions
+    "minor_stamina_brew": 15,
+    "stamina_tonic": 25,
+    "void_energy_flask": 40,
+}
+
+# ---------------------------------------------------------------------------
+# Crafting materials from fish — maps fish name to crafting material key
+# 19 fish are crafting ingredients
+# ---------------------------------------------------------------------------
+
+FISH_CRAFT_MATERIALS: Final[dict[str, str]] = {
+    # These fish are used as-is in crafting recipes
+    "Golden Fish": "golden_fish",
+    "Giant Squid": "giant_squid",
+    "Mermaid's Pearl": "mermaids_pearl",
+    "Platinum Trout": "platinum_trout",
+    "River Dragon": "river_dragon",
+    "Lost Crown": "lost_crown",
+    "Golden Seahorse": "golden_seahorse",
+    "Coral Golem": "coral_golem",
+    "Neptune's Trident": "neptunes_trident",
+    "Phantom Captain": "phantom_captain",
+    "Diamond Anchor": "diamond_anchor",
+    "Leviathan Scale": "leviathan_scale",
+    "Poseidon's Eye": "poseidons_eye",
+    "World Serpent Fang": "world_serpent_fang",
+    "Heart of the Abyss": "heart_of_abyss",
+    "Ancient Artifact": "ancient_artifact",
+    "River Spirit Gem": "river_spirit_gem",
+    "Pearl of the Deep": "pearl_of_deep",
+    "Davy Jones' Chest": "davy_jones_chest",
+}
+
+# ---------------------------------------------------------------------------
+# Crafting recipes
+# ---------------------------------------------------------------------------
+
+CRAFT_RECIPES: Final[dict[str, CraftRecipe]] = {
+    # ── Tier 2 weapons/shields/armor ──────────────────────────
+    "iron_sword": CraftRecipe(
+        result_key="iron_sword", result_name="Iron Sword", result_emoji="⚔️",
+        ingredients=(("Iron", 3), ("Coal", 2)),
+        description="Forge an iron sword from mined iron and coal.",
+    ),
+    "iron_shield": CraftRecipe(
+        result_key="iron_shield", result_name="Iron Shield", result_emoji="🛡️",
+        ingredients=(("Iron", 4), ("Stone", 2)),
+        description="Hammer iron over stone to form a sturdy shield.",
+    ),
+    "chainmail": CraftRecipe(
+        result_key="chainmail", result_name="Chainmail Armor", result_emoji="⛓️",
+        ingredients=(("Iron", 5), ("Copper", 3)),
+        description="Link iron rings with copper fasteners.",
+    ),
+    "silver_rapier": CraftRecipe(
+        result_key="silver_rapier", result_name="Silver Rapier", result_emoji="🤺",
+        ingredients=(("Silver", 3), ("Gold", 1)),
+        description="A silver blade with a gold-plated guard.",
+    ),
+    "studded_buckler": CraftRecipe(
+        result_key="studded_buckler", result_name="Studded Buckler", result_emoji="🔰",
+        ingredients=(("Iron", 3), ("Copper", 2), ("Stone", 1)),
+        description="A compact shield reinforced with iron studs.",
+    ),
+
+    # ── Tier 3 ────────────────────────────────────────────────
+    "platinum_blade": CraftRecipe(
+        result_key="platinum_blade", result_name="Platinum Blade", result_emoji="✨",
+        ingredients=(("Platinum", 4), ("Silver", 2), ("golden_fish", 1)),
+        description="A gleaming platinum sword tempered with golden fish oil.",
+    ),
+    "emerald_aegis": CraftRecipe(
+        result_key="emerald_aegis", result_name="Emerald Aegis", result_emoji="💚",
+        ingredients=(("Emerald", 3), ("Mithril", 2)),
+        description="An emerald-infused shield reinforced with mithril.",
+    ),
+    "mithril_plate": CraftRecipe(
+        result_key="mithril_plate", result_name="Mithril Plate", result_emoji="🔵",
+        ingredients=(("Mithril", 5), ("Titanium", 2)),
+        description="Lightweight mithril armor plating.",
+    ),
+    "sapphire_lance": CraftRecipe(
+        result_key="sapphire_lance", result_name="Sapphire Lance", result_emoji="💙",
+        ingredients=(("Sapphire", 3), ("Platinum", 2), ("river_dragon", 1)),
+        description="A lance tipped with sapphire, imbued with river dragon essence.",
+    ),
+    "ruby_guardian": CraftRecipe(
+        result_key="ruby_guardian", result_name="Ruby Guardian", result_emoji="❤️",
+        ingredients=(("Ruby", 3), ("Emerald", 1), ("mermaids_pearl", 1)),
+        description="A ruby shield enchanted with mermaid's pearl magic.",
+    ),
+
+    # ── Tier 4 ────────────────────────────────────────────────
+    "star_fragment_blade": CraftRecipe(
+        result_key="star_fragment_blade", result_name="Star Fragment Blade", result_emoji="🌟",
+        ingredients=(("Star Fragment", 3), ("Amethyst", 2), ("neptunes_trident", 1)),
+        description="A blade forged from star fragments and Neptune's power.",
+    ),
+    "opal_fortress": CraftRecipe(
+        result_key="opal_fortress", result_name="Opal Fortress", result_emoji="🌈",
+        ingredients=(("Opal", 4), ("Dragonstone", 2)),
+        description="A fortress-like shield of shimmering opal.",
+    ),
+    "adamantium_mail": CraftRecipe(
+        result_key="adamantium_mail", result_name="Adamantium Mail", result_emoji="⛓️",
+        ingredients=(("Adamantium", 5), ("Titanium", 3), ("diamond_anchor", 1)),
+        description="Nearly indestructible mail forged from adamantium.",
+    ),
+    "dragonstone_axe": CraftRecipe(
+        result_key="dragonstone_axe", result_name="Dragonstone Axe", result_emoji="🪓",
+        ingredients=(("Dragonstone", 4), ("Obsidian", 3), ("leviathan_scale", 1)),
+        description="A massive axe with a dragonstone edge and leviathan handle.",
+    ),
+    "void_crystal_ward": CraftRecipe(
+        result_key="void_crystal_ward", result_name="Void Crystal Ward", result_emoji="🔮",
+        ingredients=(("Void Crystal", 3), ("Darkite", 2), ("poseidons_eye", 1)),
+        description="A shield infused with void energy and deep sea power.",
+    ),
+    "titanium_cuirass": CraftRecipe(
+        result_key="titanium_cuirass", result_name="Titanium Cuirass", result_emoji="⚪",
+        ingredients=(("Titanium", 5), ("Mithril", 2), ("phantom_captain", 1)),
+        description="Precision body armor haunted by a phantom captain's spirit.",
+    ),
+
+    # ── Tier 5 ────────────────────────────────────────────────
+    "noodle_gem_katana": CraftRecipe(
+        result_key="noodle_gem_katana", result_name="Noodle Gem Katana", result_emoji="🍜",
+        ingredients=(("Noodle Gem", 2), ("Star Fragment", 3), ("world_serpent_fang", 1)),
+        description="The ultimate weapon — a katana of pure Noodle Gem.",
+    ),
+    "eternity_bulwark": CraftRecipe(
+        result_key="eternity_bulwark", result_name="Eternity Bulwark", result_emoji="👑",
+        ingredients=(("Eternity Gem", 2), ("Void Crystal", 3), ("heart_of_abyss", 1)),
+        description="A shield forged from eternity, bound with abyssal power.",
+    ),
+    "darkite_warplate": CraftRecipe(
+        result_key="darkite_warplate", result_name="Darkite Warplate", result_emoji="🌑",
+        ingredients=(("Darkite", 5), ("Adamantium", 3), ("pearl_of_deep", 1)),
+        description="Armor so dark it seems to consume light itself.",
+    ),
+    "void_reaper": CraftRecipe(
+        result_key="void_reaper", result_name="Void Reaper", result_emoji="⚛️",
+        ingredients=(("Dark Matter", 3), ("Noodle Gem", 1), ("davy_jones_chest", 1)),
+        description="A terrifying scythe forged from Dark Matter and cursed treasure.",
+    ),
+
+    # ── Stamina potions ───────────────────────────────────────
+    "minor_stamina_brew": CraftRecipe(
+        result_key="minor_stamina_brew", result_name="Minor Stamina Brew", result_emoji="🧪",
+        ingredients=(("Seaweed", 3), ("Coal", 1)),
+        description="A simple brew that restores a little stamina.",
+    ),
+    "stamina_tonic": CraftRecipe(
+        result_key="stamina_tonic", result_name="Stamina Tonic", result_emoji="🧴",
+        ingredients=(("Bioluminescent Jelly", 2), ("Tin", 1), ("golden_seahorse", 1)),
+        description="A potent tonic that restores a good deal of stamina.",
+    ),
+    "void_energy_flask": CraftRecipe(
+        result_key="void_energy_flask", result_name="Void Energy Flask", result_emoji="⚗️",
+        ingredients=(("Void Coral", 3), ("Dark Matter", 1), ("coral_golem", 1)),
+        description="Pure concentrated void energy. Full stamina restoration.",
+    ),
+}
+
+# ---------------------------------------------------------------------------
+# T1 combat items available in shop (defined here for reference;
+# actual ShopItem entries go in cogs/shop/constants.py)
+# ---------------------------------------------------------------------------
+
+STORE_COMBAT_ITEMS: Final[dict[str, int]] = {
+    "wooden_sword": 200,
+    "wooden_shield": 150,
+    "leather_vest": 250,
+    "iron_dagger": 175,
+}
+
+# ---------------------------------------------------------------------------
+# Combat level unlock requirements
+# ---------------------------------------------------------------------------
+
+COMBAT_LEVEL_UNLOCK: Final[dict[int, dict]] = {
+    1: {"required_combat_level": 0, "cost": 0},
+    2: {"required_combat_level": 1, "cost": 500},
+    3: {"required_combat_level": 2, "cost": 2000},
+    4: {"required_combat_level": 3, "cost": 5000},
+    5: {"required_combat_level": 4, "cost": 10000},
+}
+
+# How many wins at current level to gain a combat level
+WINS_PER_COMBAT_LEVEL: Final[int] = 5

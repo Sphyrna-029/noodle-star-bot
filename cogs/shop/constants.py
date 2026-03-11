@@ -167,6 +167,43 @@ SHOP_ITEMS: Final[dict[str, ShopItem]] = {
         description="Lets you gamble from anywhere! No need to travel to Noodle Town.",
         aliases=("lucky dice", "dice"),
     ),
+    # ── Combat starter items (Tier 1) ──────────────────────
+    "wooden_sword": ShopItem(
+        price=200,
+        db_column="wooden_sword",
+        consumable=False,
+        emoji="🗡️",
+        display_name="Wooden Sword",
+        description="A basic combat weapon for the Noodle Colosseum. +8 ATK.",
+        aliases=("wooden sword",),
+    ),
+    "wooden_shield": ShopItem(
+        price=150,
+        db_column="wooden_shield",
+        consumable=False,
+        emoji="🛡️",
+        display_name="Wooden Shield",
+        description="A simple combat shield. +6 DEF.",
+        aliases=("wooden shield",),
+    ),
+    "leather_vest": ShopItem(
+        price=250,
+        db_column="leather_vest",
+        consumable=False,
+        emoji="🦺",
+        display_name="Leather Vest",
+        description="Light combat armor. +4 DEF, +15 max HP.",
+        aliases=("leather vest", "vest"),
+    ),
+    "iron_dagger": ShopItem(
+        price=175,
+        db_column="iron_dagger",
+        consumable=False,
+        emoji="🔪",
+        display_name="Iron Dagger",
+        description="A quick combat dagger. +6 ATK, low stamina cost.",
+        aliases=("iron dagger", "dagger"),
+    ),
 }
 
 

@@ -50,6 +50,7 @@ class NoodleStarBot(commands.Bot):
             "cogs.trading.handlers",
             "cogs.space.handlers",
             "cogs.treasure.handlers",
+            "cogs.combat.handlers",
         ]
 
         async def _set_star_ledger_context(ctx):
