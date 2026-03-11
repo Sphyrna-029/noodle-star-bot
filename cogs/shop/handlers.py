@@ -167,7 +167,7 @@ class ItemSelect(discord.ui.Select):
         super().__init__(
             placeholder="Select an item to buy...",
             options=options,
-            row=1,
+            row=2,
         )
 
     async def callback(self, interaction: discord.Interaction):
@@ -187,8 +187,8 @@ class ItemSelect(discord.ui.Select):
 class StoreCategoryButton(discord.ui.Button):
     """Button used to switch store category pages."""
 
-    def __init__(self, category: str):
-        super().__init__(label=category, style=discord.ButtonStyle.secondary, row=0)
+    def __init__(self, category: str, row: int = 0):
+        super().__init__(label=category, style=discord.ButtonStyle.secondary, row=row)
         self.category = category
 
     async def callback(self, interaction: discord.Interaction):
@@ -214,8 +214,8 @@ class StoreCategoryView(discord.ui.View):
         self.categories = list(items_by_category.keys())
         self.current_category = self.categories[0]
 
-        for category in self.categories:
-            self.add_item(StoreCategoryButton(category))
+        for i, category in enumerate(self.categories):
+            self.add_item(StoreCategoryButton(category, row=i // 5))
         self._add_item_select()
         self._refresh_button_state()
 
