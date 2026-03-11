@@ -9,6 +9,90 @@ from cogs.fishing.dto import FishingState
 from cogs.locations.check import require_location
 
 
+class PullButtonView(discord.ui.View):
+    """A single Pull button for when a fish is biting."""
+
+    def __init__(self, user_id: int, fishing_uc: "FishingUseCases", timeout: float = 120):
+        super().__init__(timeout=timeout)
+        self.user_id = user_id
+        self.fishing_uc = fishing_uc
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message(
+                "This isn't your fishing line!", ephemeral=True
+            )
+            return False
+        return True
+
+    @discord.ui.button(label="Pull!", style=discord.ButtonStyle.success, emoji="🎣")
+    async def pull_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        result = self.fishing_uc.pull_line(interaction.user.id, str(interaction.user))
+
+        # Disable button after use
+        for child in self.children:
+            child.disabled = True
+
+        if not result.success:
+            await interaction.response.edit_message(
+                content=f"🎣 {interaction.user.mention}, {result.message}",
+                view=self,
+            )
+            return
+
+        # Build success embed (same as the !pull command)
+        if result.catch_rarity == "legendary":
+            header = "🌟 **LEGENDARY CATCH!** 🌟"
+            color = discord.Color.gold()
+        elif result.catch_rarity == "rare":
+            header = "✨ **RARE CATCH!** ✨"
+            color = discord.Color.blue()
+        else:
+            header = "🎣 **You caught something!**"
+            color = discord.Color.green()
+
+        embed = discord.Embed(title=header, color=color)
+
+        if result.stars_earned > 0:
+            embed.description = (
+                f"{interaction.user.mention} caught a {result.catch_emoji} **{result.catch_name}**!\n\n"
+                f"Added to inventory! (sell value: **{result.stars_earned}** ⭐)\n"
+                f"🎒 Bag: **{result.bag_count}/{result.bag_capacity}**\n"
+                f"💰 Wallet: **{result.new_balance}** stars"
+            )
+        else:
+            embed.description = (
+                f"{interaction.user.mention} caught a {result.catch_emoji} **{result.catch_name}**!\n\n"
+                f"*It's worthless junk... but at least you caught something!*\n"
+                f"🎒 Bag: **{result.bag_count}/{result.bag_capacity}**\n"
+                f"💰 Wallet: **{result.new_balance}** stars"
+            )
+
+        if result.found_items:
+            embed.add_field(name="**ITEM DROP!**", value="\n".join(result.found_items), inline=False)
+        if result.extra_messages:
+            for msg in result.extra_messages:
+                embed.add_field(name="\u200b", value=msg, inline=False)
+        if result.level_name:
+            embed.set_footer(text=f"{result.level_emoji} {result.level_name}")
+
+        if result.disaster:
+            if result.disaster_protected:
+                embed.add_field(name=result.disaster_header, value=result.disaster_protected_msg, inline=False)
+            else:
+                disaster_text = result.disaster_unprotected_msg
+                if result.items_destroyed:
+                    disaster_text += f"\n💰 Wallet: **{result.new_balance}** stars"
+                embed.add_field(name=result.disaster_header, value=disaster_text, inline=False)
+                embed.color = discord.Color.red()
+
+        await interaction.response.edit_message(content=None, embed=embed, view=self)
+
+    async def on_timeout(self) -> None:
+        for child in self.children:
+            child.disabled = True
+
+
 class FishingCog(commands.Cog):
     """Commands for the fishing minigame."""
 
@@ -51,20 +135,22 @@ class FishingCog(commands.Cog):
                 f"🐟💨 {user.mention}, the fish got away! "
                 f"You didn't pull in time. Your line snapped."
             )
+            view = None
         else:
             msg = (
                 f"🎣 **{user.mention}, you feel a tug!** "
-                f"Type `!pull` within **{pull_window} seconds**!"
+                f"Type `!pull` or click the button within **{pull_window} seconds**!"
             )
+            view = PullButtonView(user_id, self.fishing, timeout=pull_window)
 
         # Send to channel if available, otherwise DM the user
         try:
             if channel is not None:
-                await channel.send(msg)
+                await channel.send(msg, view=view)
             else:
                 # Fallback to DM
                 try:
-                    await user.send(msg)
+                    await user.send(msg, view=view)
                 except Exception:
                     # If DM fails, give up silently
                     return
@@ -253,6 +339,12 @@ class FishingCog(commands.Cog):
                         value=f"**{status.time_until_expires}s** to `!pull`!",
                         inline=True,
                     )
+                pull_view = PullButtonView(
+                    ctx.author.id, self.fishing,
+                    timeout=status.time_until_expires or 60,
+                )
+                await ctx.send(embed=embed, view=pull_view)
+                return
 
             embed.color = discord.Color.orange()
 

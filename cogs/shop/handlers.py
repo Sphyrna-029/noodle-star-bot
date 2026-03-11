@@ -51,6 +51,20 @@ class BuyItemView(discord.ui.View):
 
     @discord.ui.button(label="Buy", style=discord.ButtonStyle.success, row=0)
     async def buy_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # Must be in Noodle Town to purchase
+        from cogs.locations.use_case import LocationUseCases
+        loc = LocationUseCases().get_location(self.author_id)
+        if loc != "noodle_town":
+            await interaction.response.edit_message(
+                embed=discord.Embed(
+                    title="❌ Purchase Failed",
+                    description="You need to be in **Noodle Town** 🏘️ to buy items!\nUse `!t town` to travel there.",
+                    color=discord.Color.red(),
+                ),
+                view=self,
+            )
+            return
+
         result = self.shop.buy(
             self.author_id, self.username, self.item.key.replace("_", " ")
         )
@@ -311,8 +325,6 @@ class ShopCog(commands.Cog):
     @commands.command(name="store")
     async def store(self, ctx):
         """View items available for purchase"""
-        if not await require_location(ctx, "noodle_town"):
-            return
         items_by_category = self.shop.get_items_by_category()
         if not items_by_category:
             await ctx.send("❌ The store is currently empty.")
