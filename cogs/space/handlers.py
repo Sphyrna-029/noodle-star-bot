@@ -45,11 +45,11 @@ class SpaceCog(commands.Cog):
         )
 
     @commands.command(name="spacemine")
-    async def spacemine(self, ctx, use_item: str = ''):
+    async def spacemine(self, ctx):
         """Mine for space ores on your active planet!"""
         if not await require_location(ctx, "starport_ziti"):
             return
-        result = self.space.mine(ctx.author.id, str(ctx.author), use_item)
+        result = self.space.mine(ctx.author.id, str(ctx.author))
 
         if not result.success:
             await ctx.send(f"⏰ {ctx.author.mention}, {result.message}")

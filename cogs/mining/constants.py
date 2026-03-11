@@ -1,15 +1,9 @@
-from datetime import timedelta
 from typing import Final
 
 from config.models import MineHazard, Mineral
 
 __all__ = [
-    "MINING_BASE_COOLDOWN",
-    "MINING_POTATO_COOLDOWN",
-    "MINING_RUNE_COOLDOWN",
-    "MINING_RUNE_POTATO_COOLDOWN",
-    "MINING_NOODLE_COOLDOWN",
-    "MINING_NOODLE_RUNE_COOLDOWN",
+    "MINING_STAMINA_COST",
     "MINING_DISASTER_CHANCE",
     "MINING_COLLAPSE_LOSS_PERCENT",
     "MINING_GOBLIN_LOSS_PERCENT",
@@ -19,12 +13,14 @@ __all__ = [
     "MINE_LEVELS",
 ]
 
-MINING_BASE_COOLDOWN: Final[timedelta] = timedelta(minutes=30)
-MINING_POTATO_COOLDOWN: Final[timedelta] = timedelta(minutes=5)
-MINING_RUNE_COOLDOWN: Final[timedelta] = timedelta(minutes=15)
-MINING_RUNE_POTATO_COOLDOWN: Final[timedelta] = timedelta(minutes=2, seconds=30)
-MINING_NOODLE_COOLDOWN: Final[timedelta] = timedelta(minutes=1)
-MINING_NOODLE_RUNE_COOLDOWN: Final[timedelta] = timedelta(seconds=30)
+# Stamina cost per mine attempt, scaling by level
+MINING_STAMINA_COST: Final[dict[int, int]] = {
+    1: 5,
+    2: 8,
+    3: 12,
+    4: 15,
+    5: 18,
+}
 
 MINING_DISASTER_CHANCE: Final[float] = 0.10
 MINING_COLLAPSE_LOSS_PERCENT: Final[float] = 0.50

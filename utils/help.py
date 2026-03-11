@@ -193,7 +193,7 @@ def _mining_embed() -> discord.Embed:
         value=(
             "**Step 1:** Type `!mine` — you'll find a mineral (added to your inventory)\n"
             "**Step 2:** Type `!sell all` to sell your minerals for stars\n"
-            "**Step 3:** Wait 30 minutes, then `!mine` again\n"
+            "**Step 3:** Use `!drink` items to restore stamina, then mine again\n"
             "**Step 4:** When you have 500+ stars, buy a Gold Pickaxe from `!store`\n"
             "**Step 5:** Unlock deeper mines with `!unlock 2` for better loot"
         ),
@@ -202,9 +202,7 @@ def _mining_embed() -> discord.Embed:
     embed.add_field(
         name="All Mining Commands",
         value=(
-            "`!mine` — Dig for minerals (30 min cooldown)\n"
-            "`!mine potato` — Mine after only 5 min (costs 1 Raw Potato)\n"
-            "`!mine mushroom` — Mine right now, no waiting (uses 1 Golden Mushroom from farming harvests)\n"
+            "`!mine` — Dig for minerals (costs stamina)\n"
             "`!minelevel` — See what mine levels you've unlocked\n"
             "`!minelevel 2` — Switch to a different mine level\n"
             "`!unlock 2` — Pay to unlock the next mine level"
@@ -212,14 +210,14 @@ def _mining_embed() -> discord.Embed:
         inline=False,
     )
     embed.add_field(
-        name="The 5 Mine Levels",
+        name="Stamina Cost per Level",
         value=(
-            "⛏️ **Lv1 Surface Mine** — Free! 10% ambush chance\n"
-            "🕳️ **Lv2 Caverns** — Costs 1,500 stars, 12% ambush\n"
-            "🪨 **Lv3 Deep Tunnels** — Costs 3,000 stars, 14% ambush\n"
-            "🌋 **Lv4 Molten Core** — Costs 4,000 stars, 16% ambush, **bank risk on defeat**\n"
-            "🌑 **Lv5 The Abyss** — Costs 5,000 stars, 20% ambush, **bank risk on defeat**\n\n"
-            "You must unlock levels in order (1 → 2 → 3 → 4 → 5)."
+            "⛏️ **Lv1 Surface Mine** — 5 stamina, 10% ambush\n"
+            "🕳️ **Lv2 Caverns** — 8 stamina, 12% ambush\n"
+            "🪨 **Lv3 Deep Tunnels** — 12 stamina, 14% ambush\n"
+            "🌋 **Lv4 Molten Core** — 15 stamina, 16% ambush, **bank risk on defeat**\n"
+            "🌑 **Lv5 The Abyss** — 18 stamina, 20% ambush, **bank risk on defeat**\n\n"
+            "Use `!drink potato` (+3) or `!drink mushroom` (+20) to restore stamina."
         ),
         inline=False,
     )
@@ -241,7 +239,7 @@ def _mining_embed() -> discord.Embed:
         name="Pro Tips",
         value=(
             "• The Gold Pickaxe (500 stars, one-time buy) makes rare minerals appear more often\n"
-            "• Raw Potatoes are only 2 stars — great for mining more often on a budget\n"
+            "• Raw Potatoes (+3 stamina, 2 stars) and Golden Mushrooms (+20 stamina) keep you mining\n"
             "• At Lv4-5, buy Bank Insurance to protect your bank if you lose a fight\n"
             "• Lucky Charm halves your ambush chance!\n"
             "• `!deposit all` your stars before risky mines!"
@@ -420,7 +418,7 @@ def _farming_crops_embed() -> discord.Embed:
             "• Harvest value swings with quality, weather events, and soil condition\n"
             "• Replanting the same crop repeatedly on one plot drains soil faster\n"
             "• No cooldowns: plant and harvest as often as crops are ready\n"
-            "• Mushroom crops are the source of Golden Mushrooms for instant mining\n"
+            "• Mushroom crops give Golden Mushrooms — use `!drink mushroom` for +20 stamina\n"
             "• A plot must be empty before you plant into it"
         ),
         inline=False,
@@ -709,7 +707,7 @@ def _shop_embed() -> discord.Embed:
             "1. 🪱 **Worm Bait** (33 stars) — Needed to fish at all.\n"
             "2. ⛏️ **Gold Pickaxe** (500 stars) — One-time buy, "
             "permanently boosts mining luck.\n"
-            "3. 🥔 **Raw Potato** (2 stars) — Cheapest way to mine more often.\n"
+            "3. 🥔 **Raw Potato** (2 stars) — Restores 3 stamina for mining.\n"
             "4. ⚔️ **Combat Gear** — Equip weapons and armor to survive ambush encounters.\n"
             "5. 💸 **Bank Insurance** — Must-have for Lv4-5 "
             "mining/fishing/space."
@@ -719,8 +717,8 @@ def _shop_embed() -> discord.Embed:
     embed.add_field(
         name="Quick Item Reference",
         value=(
-            "🥔 Raw Potato (2) — Mine after 5 min instead of 30\n"
-            "🍄 Golden Mushroom (farm harvest) — Mine instantly, skip cooldown\n"
+            "🥔 Raw Potato (2) — `!drink potato` restores 3 stamina\n"
+            "🍄 Golden Mushroom (farm harvest) — `!drink mushroom` restores 20 stamina\n"
             "💸 Bank Insurance (2000) — Protects your bank from 1 defeat\n"
             "📷 Telescope (200) — View a starfield (permanent, fun item)\n"
             "🪱 Worm (33) / 🐟 Herring (79) / 🐋 Sturgeon (110) — Fishing bait\n"
@@ -815,9 +813,7 @@ def _space_embed() -> discord.Embed:
         name="All Space Commands",
         value=(
             "`!launch` — Blast off into space (one-time, requires Rocket Ship + mine Lv5)\n"
-            "`!spacemine` — Mine on your active planet (shares mining cooldown)\n"
-            "`!spacemine potato` — Mine with reduced cooldown (uses 1 Raw Potato)\n"
-            "`!spacemine mushroom` — Mine instantly (uses 1 Golden Mushroom)\n"
+            "`!spacemine` — Mine on your active planet (costs stamina)\n"
             "`!planets` — View all planets and your active planet\n"
             "`!planets 3` — Switch to a different planet\n"
             "`!unlockplanet 2` — Pay to unlock the next planet"
@@ -827,11 +823,11 @@ def _space_embed() -> discord.Embed:
     embed.add_field(
         name="The 5 Planets",
         value=(
-            "🌕 **Planet 1 — The Moon** — Free! 12% ambush chance\n"
-            "🔴 **Planet 2 — Mars** — 5,000 stars, 14% ambush\n"
-            "🪐 **Planet 3 — Saturn** — 10,000 stars, 16% ambush, **bank risk on defeat!**\n"
-            "💠 **Planet 4 — Uranus** — 15,000 stars, 18% ambush, **bank risk on defeat!**\n"
-            "🥶 **Planet 5 — Pluto** — 20,000 stars, 22% ambush, **bank risk on defeat!**\n\n"
+            "🌕 **Planet 1 — The Moon** — 22 stamina, 12% ambush\n"
+            "🔴 **Planet 2 — Mars** — 25 stamina, 14% ambush\n"
+            "🪐 **Planet 3 — Saturn** — 28 stamina, 16% ambush, **bank risk on defeat!**\n"
+            "💠 **Planet 4 — Uranus** — 32 stamina, 18% ambush, **bank risk on defeat!**\n"
+            "🥶 **Planet 5 — Pluto** — 35 stamina, 22% ambush, **bank risk on defeat!**\n\n"
             "Planets must be unlocked in order (1 → 2 → 3 → 4 → 5)."
         ),
         inline=False,
@@ -853,7 +849,7 @@ def _space_embed() -> discord.Embed:
         value=(
             "• `!deposit all` before space mining — defeat penalties are brutal\n"
             "• Buy Bank Insurance for planets 3+ to protect your bank\n"
-            "• Space mining shares the same cooldown as regular mining\n"
+            "• Space mining costs more stamina than regular mining — stock up on mushrooms!\n"
             "• Higher planets = better ores but much tougher enemies\n"
             "• Lucky Charm halves your ambush chance!"
         ),
@@ -895,10 +891,10 @@ def _items_embed() -> discord.Embed:
     embed.add_field(
         name="✨ Rare Effect Items (Drops)",
         value=(
-            "🔮 **Rune Fragment** (30 uses, from mining) — Reduces mining cooldown to 15 min "
-            "(or 2m30s with a potato). *0.5% drop per mine*\n"
-            "🦴 **Fossilized Noodle** (30 uses, from mining) — Reduces mining cooldown to just 1 min "
-            "(or 30s with a rune). *0.5% drop per mine*\n"
+            "🔮 **Rune Fragment** (30 uses, from mining) — A mysterious glowing fragment. "
+            "*0.5% drop per mine*\n"
+            "🦴 **Fossilized Noodle** (30 uses, from mining) — A rare ancient noodle. "
+            "*0.5% drop per mine*\n"
             "🎣 **Bucktail Jig** (from fishing) — Use `!use jig` to get 20% legendary "
             "catch chance on your next cast. *0.3% drop per catch*\n"
             "🔫 **Ray-Gun** (3 uses, 5,000 stars or fishing drop) — Lets you fight "

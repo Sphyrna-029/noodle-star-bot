@@ -17,13 +17,10 @@ Ambush Chances (halved by lucky charm):
 
 import math
 import random
-from datetime import datetime
 from typing import Optional
 
-from cogs.mining.constants import MINING_BASE_COOLDOWN, MINING_POTATO_COOLDOWN
-from cogs.space.constants import SPACE_MINERAL_TABLES, SPACE_PLANETS
+from cogs.space.constants import SPACE_MINERAL_TABLES, SPACE_PLANETS, SPACE_STAMINA_COST
 from database.repository import UserRepository
-from utils.formatters import format_time_remaining
 from ..dto import LaunchResult, PlanetInfo, PlanetUnlockResult, SpaceMineResult
 
 
@@ -69,8 +66,8 @@ class SpaceUseCases:
             message="You've launched into space! The Moon is now available for mining.",
         )
 
-    def mine(self, user_id: int, username: str, use_item: str = "") -> SpaceMineResult:
-        """Mine on the active space planet. Shares cooldown with regular mining."""
+    def mine(self, user_id: int, username: str) -> SpaceMineResult:
+        """Mine on the active space planet. Costs stamina."""
         if not self.has_launched(user_id):
             return SpaceMineResult(
                 success=False,
@@ -88,59 +85,23 @@ class SpaceUseCases:
                 message=f"your inventory is full ({bag_count}/{bag_capacity})! Use `!sell` to make room before mining.",
             )
 
-        # Check if using golden mushroom
-        using_mushroom = False
-        if use_item and use_item.lower() in [
-            "mushroom",
-            "golden mushroom",
-            "goldenmushroom",
-        ]:
-            if inventory["golden_mushroom"] <= 0:
-                return SpaceMineResult(
-                    success=False,
-                    message="You don't have any golden mushrooms!",
-                )
-            using_mushroom = True
-            self.repo.update_user_inventory(
-                user_id, "golden_mushroom", inventory["golden_mushroom"] - 1
-            )
-
-        # Get last mine time (shared cooldown)
-        last_mine = self.repo.get_last_mine(user_id)
-        now = datetime.now()
-
-        # Check cooldown (skip if using mushroom)
-        if not using_mushroom and last_mine is not None:
-            time_since = now - last_mine
-
-            # Check if using potato
-            if use_item and use_item.lower() in ["potato", "raw potato", "rawpotato"]:
-                if inventory["raw_potato"] <= 0:
-                    return SpaceMineResult(
-                        success=False,
-                        message="You don't have any raw potatoes!",
-                    )
-
-                if time_since < MINING_POTATO_COOLDOWN:
-                    remaining = MINING_POTATO_COOLDOWN - time_since
-                    return SpaceMineResult(
-                        success=False,
-                        message=f"Even with a raw potato, you need to wait!\nCome back in **{format_time_remaining(remaining)}** to mine again!",
-                    )
-
-                self.repo.update_user_inventory(
-                    user_id, "raw_potato", inventory["raw_potato"] - 1
-                )
-            else:
-                if time_since < MINING_BASE_COOLDOWN:
-                    remaining = MINING_BASE_COOLDOWN - time_since
-                    return SpaceMineResult(
-                        success=False,
-                        message=f"You're too tired to mine right now!\nCome back in **{format_time_remaining(remaining)}** to mine again!\n💡 *Use `!spacemine potato` to reduce cooldown or `!spacemine mushroom` (from farming harvests) to mine instantly!*",
-                    )
-
-        # Get active planet config
+        # Get active planet and stamina cost
         active_planet = self.repo.get_active_space_planet(user_id)
+        stamina_cost = SPACE_STAMINA_COST[active_planet]
+
+        # Apply passive regen then check stamina
+        from cogs.combat.use_case.health import HealthUseCases
+        health_uc = HealthUseCases(self.repo)
+        status = health_uc.get_status(user_id)
+
+        if status.current_stamina < stamina_cost:
+            return SpaceMineResult(
+                success=False,
+                message=f"You need **{stamina_cost}** stamina to mine here, but you only have **{status.current_stamina}**! Use `!drink` to restore stamina.",
+            )
+        # Deduct stamina
+        self.repo.update_stamina(user_id, status.current_stamina - stamina_cost)
+
         planet_config = SPACE_PLANETS[active_planet]
 
         has_gold_pickaxe = inventory["gold_pickaxe"] > 0
@@ -167,7 +128,6 @@ class SpaceUseCases:
 
         current_stars = self.repo.get_user_stars(user_id, username)
         new_stars = current_stars  # No star change from space mining
-        self.repo.update_last_mine(user_id)
 
         result = SpaceMineResult(
             success=True,

@@ -5,11 +5,21 @@ from config.models import MineHazard, Mineral
 __all__ = [
     "SPACE_MINERAL_TABLES",
     "SPACE_PLANETS",
+    "SPACE_STAMINA_COST",
     "ROCKET_SHIP_COST",
     "SPACE_ABDUCTION_CHANCE",
 ]
 
 ROCKET_SHIP_COST: Final[int] = 10000
+
+# Stamina cost per space mine attempt, scaling by planet
+SPACE_STAMINA_COST: Final[dict[int, int]] = {
+    1: 22,
+    2: 25,
+    3: 28,
+    4: 32,
+    5: 35,
+}
 
 # Per-planet abduction chance (replaces base 0.05% for space players)
 SPACE_ABDUCTION_CHANCE: Final[dict[int, float]] = {

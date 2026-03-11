@@ -1,4 +1,4 @@
-"""Mining service with cooldowns, ambush encounters, and mine levels.
+"""Mining service with stamina costs, ambush encounters, and mine levels.
 
 Average Returns (per mine):
     Level 1 (Normal):        17.00 stars | (Gold Pickaxe): 21.50 stars
@@ -7,6 +7,7 @@ Average Returns (per mine):
     Level 4 (Normal):        63.50 stars | (Gold Pickaxe): 88.00 stars  Bank risk: 10%
     Level 5 (Normal):        93.00 stars | (Gold Pickaxe): 128.00 stars Bank risk: 25%
 
+Stamina cost per mine: L1=5, L2=8, L3=12, L4=15, L5=18.
 Ambush encounters trigger after mining with level-scaled chance (halved by Lucky Charm).
 
 Rare Effect Items (dropped from mining):
@@ -21,21 +22,14 @@ Shared Effect Items (from fishing drops, active in mining too):
 
 import math
 import random
-from datetime import datetime
 from typing import Optional
 
 from cogs.mining.constants import (
     MINE_LEVELS,
     MINERAL_TABLES,
-    MINING_BASE_COOLDOWN,
-    MINING_NOODLE_COOLDOWN,
-    MINING_NOODLE_RUNE_COOLDOWN,
-    MINING_POTATO_COOLDOWN,
-    MINING_RUNE_COOLDOWN,
-    MINING_RUNE_POTATO_COOLDOWN,
+    MINING_STAMINA_COST,
 )
 from database.repository import UserRepository
-from utils.formatters import format_time_remaining
 from ..dto import LevelInfo, MineResult, UnlockResult
 
 # Gold pickaxe shop price (for auto-sell at half)
@@ -48,22 +42,11 @@ class MiningUseCases:
     def __init__(self, repository: Optional[UserRepository] = None):
         self.repo = repository or UserRepository()
 
-    def mine(self, user_id: int, username: str, use_item: str = "") -> MineResult:
-        """
-        Execute mining with all logic.
-
-        Args:
-            user_id: Discord user ID
-            username: Discord username
-            use_item: Optional item to use ("potato", "mushroom", or "noodle")
-
-        Returns:
-            MineResult with outcome
-        """
+    def mine(self, user_id: int, username: str) -> MineResult:
+        """Execute mining — costs stamina instead of a cooldown."""
         inventory = self.repo.get_user_inventory(user_id)
-        has_rune = inventory["rune_fragment"] > 0
 
-        # Check inventory space before consuming cooldown items
+        # Check inventory space
         bag_count = self.repo.get_inventory_count(user_id)
         bag_capacity = self.repo.get_inventory_capacity(user_id)
         if bag_count >= bag_capacity:
@@ -72,102 +55,23 @@ class MiningUseCases:
                 message=f"your inventory is full ({bag_count}/{bag_capacity})! Use `!sell` to make room before mining.",
             )
 
-        # Check if using golden mushroom
-        using_mushroom = False
-        if use_item and use_item.lower() in [
-            "mushroom",
-            "golden mushroom",
-            "goldenmushroom",
-        ]:
-            if inventory["golden_mushroom"] <= 0:
-                return MineResult(
-                    success=False,
-                    message="You don't have any golden mushrooms!",
-                )
-            using_mushroom = True
-            # Remove mushroom from inventory
-            self.repo.update_user_inventory(
-                user_id, "golden_mushroom", inventory["golden_mushroom"] - 1
+        # Get active mine level and stamina cost
+        active_level = self.repo.get_active_mine_level(user_id)
+        stamina_cost = MINING_STAMINA_COST[active_level]
+
+        # Apply passive regen then check stamina
+        from cogs.combat.use_case.health import HealthUseCases
+        health_uc = HealthUseCases(self.repo)
+        status = health_uc.get_status(user_id)
+
+        if status.current_stamina < stamina_cost:
+            return MineResult(
+                success=False,
+                message=f"You need **{stamina_cost}** stamina to mine here, but you only have **{status.current_stamina}**! Use `!drink` to restore stamina.",
             )
 
-        # Get last mine time
-        last_mine = self.repo.get_last_mine(user_id)
-        now = datetime.now()
-
-        # Check cooldown (skip if using mushroom)
-        if not using_mushroom and last_mine is not None:
-            time_since = now - last_mine
-
-            use_lower = use_item.lower() if use_item else ""
-
-            # Check if using fossilized noodle
-            if use_lower in ["noodle", "fossilized noodle", "fossilizednoodle"]:
-                if inventory["fossilized_noodle"] <= 0:
-                    return MineResult(
-                        success=False,
-                        message="You don't have any fossilized noodles!",
-                    )
-
-                noodle_cd = MINING_NOODLE_RUNE_COOLDOWN if has_rune else MINING_NOODLE_COOLDOWN
-                if time_since < noodle_cd:
-                    remaining = noodle_cd - time_since
-                    return MineResult(
-                        success=False,
-                        message=f"Even with a fossilized noodle, you need to wait!\nCome back in **{format_time_remaining(remaining)}** to mine again!",
-                    )
-
-                # Consume noodle (and rune use if applicable)
-                self.repo.update_user_inventory(
-                    user_id, "fossilized_noodle", inventory["fossilized_noodle"] - 1
-                )
-                if has_rune:
-                    self.repo.update_user_inventory(
-                        user_id, "rune_fragment", inventory["rune_fragment"] - 1
-                    )
-
-            # Check if using potato
-            elif use_lower in ["potato", "raw potato", "rawpotato"]:
-                if inventory["raw_potato"] <= 0:
-                    return MineResult(
-                        success=False,
-                        message="You don't have any raw potatoes!",
-                    )
-
-                potato_cd = MINING_RUNE_POTATO_COOLDOWN if has_rune else MINING_POTATO_COOLDOWN
-                if time_since < potato_cd:
-                    remaining = potato_cd - time_since
-                    return MineResult(
-                        success=False,
-                        message=f"Even with a raw potato, you need to wait!\nCome back in **{format_time_remaining(remaining)}** to mine again!",
-                    )
-
-                # Remove potato from inventory (and rune use if applicable)
-                self.repo.update_user_inventory(
-                    user_id, "raw_potato", inventory["raw_potato"] - 1
-                )
-                if has_rune:
-                    self.repo.update_user_inventory(
-                        user_id, "rune_fragment", inventory["rune_fragment"] - 1
-                    )
-
-            else:
-                # Normal cooldown (reduced by rune fragment)
-                base_cd = MINING_RUNE_COOLDOWN if has_rune else MINING_BASE_COOLDOWN
-                if time_since < base_cd:
-                    remaining = base_cd - time_since
-                    return MineResult(
-                        success=False,
-                        message=f"You're too tired to mine right now!\nCome back in **{format_time_remaining(remaining)}** to mine again!\n*Use `!mine potato` to reduce cooldown or `!mine mushroom` (from farming harvests) to mine instantly!*",
-                    )
-
-                # Consume rune use for standard mine
-                if has_rune:
-                    self.repo.update_user_inventory(
-                        user_id, "rune_fragment", inventory["rune_fragment"] - 1
-                    )
-
-        # Get active mine level config
-        active_level = self.repo.get_active_mine_level(user_id)
+        # Deduct stamina
+        self.repo.update_stamina(user_id, status.current_stamina - stamina_cost)
         level_config = MINE_LEVELS[active_level]
 
         has_gold_pickaxe = inventory["gold_pickaxe"] > 0
@@ -194,7 +98,6 @@ class MiningUseCases:
         current_stars = self.repo.get_user_stars(user_id, username)
         new_stars = current_stars  # No star change from mining itself
 
-        self.repo.update_last_mine(user_id)
         mine_runs = self.repo.increment_achievement_progress(user_id, "mine_runs", 1)
         unlocked_mine_100 = False
         unlocked_mine_1000 = False
@@ -256,7 +159,7 @@ class MiningUseCases:
             cur_rune = self.repo.get_user_inventory(user_id)["rune_fragment"]
             self.repo.update_user_inventory(user_id, "rune_fragment", cur_rune + 30)
             result.found_items.append(
-                "**Rune Fragment** -- Reduces mining cooldowns for 30 uses!"
+                "**Rune Fragment** -- A mysterious glowing fragment! (30 uses)"
             )
 
         # 0.5% fossilized noodle
@@ -264,7 +167,7 @@ class MiningUseCases:
             cur_noodle = self.repo.get_user_inventory(user_id)["fossilized_noodle"]
             self.repo.update_user_inventory(user_id, "fossilized_noodle", cur_noodle + 30)
             result.found_items.append(
-                "**Fossilized Noodle** -- Use `!mine noodle` for a 1 min cooldown! (30 uses)"
+                "**Fossilized Noodle** -- Use `!drink fossilized noodle` for stamina! (30 uses)"
             )
 
         # 0.2% golden pickaxe

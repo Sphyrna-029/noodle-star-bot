@@ -15,11 +15,11 @@ class MiningCog(commands.Cog):
         self.mining = MiningUseCases()
 
     @commands.command(name="mine")
-    async def mine(self, ctx, use_item: str = ''):
+    async def mine(self, ctx):
         """Mine for minerals to earn noodle stars!"""
         if not await require_location(ctx, "crystal_cave"):
             return
-        result = self.mining.mine(ctx.author.id, str(ctx.author), use_item)
+        result = self.mining.mine(ctx.author.id, str(ctx.author))
 
         if not result.success:
             await ctx.send(f"⏰ {ctx.author.mention}, {result.message}")

@@ -4,8 +4,9 @@
 
 - **NEVER push to `main` without explicit user approval.** Pushing to main deploys to the live bot and can crash or corrupt the game for all players.
 - **Always push to `stage` first.** Stage is the testing branch.
-- When the user says "push", assume they mean `stage` unless they specifically say "main".
+- When the user says "push", assume they mean `stage` unless they specifically say "main" in that same message.
 - Always confirm before pushing to `main`: "Want me to push to main as well?"
+- **Approval to push to main does NOT carry over.** Each push requires its own explicit approval. A previous "yes push to main" does not authorize future pushes.
 
 ## Project Overview
 

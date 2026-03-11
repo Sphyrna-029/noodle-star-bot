@@ -20,7 +20,7 @@ SHOP_ITEMS: Final[dict[str, ShopItem]] = {
         consumable=True,
         emoji="🥔",
         display_name="Raw Potato",
-        description="Mine early after 5 min instead of waiting 30 min. Single use. Use: `!mine potato`",
+        description="Restores 3 stamina. Use: `!drink potato`",
         aliases=("raw potato", "potato"),
     ),
     "golden_mushroom": ShopItem(
@@ -29,7 +29,7 @@ SHOP_ITEMS: Final[dict[str, ShopItem]] = {
         consumable=True,
         emoji="🍄",
         display_name="Golden Mushroom",
-        description="Mine instantly with no cooldown! Single use. Gained from farming harvests.",
+        description="Restores 20 stamina. Gained from farming harvests. Use: `!drink mushroom`",
         aliases=("golden mushroom", "mushroom"),
     ),
     "fertilizer": ShopItem(
