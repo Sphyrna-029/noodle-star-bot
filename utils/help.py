@@ -564,11 +564,14 @@ def _economy_embed() -> discord.Embed:
     embed.add_field(
         name="📦 Safe Storage (Keep Your Items Safe!)",
         value=(
-            "`!storage` / `!vault` — View your stored items\n"
-            "`!stash <item>` — Move an item to safe storage\n"
-            "`!stash <item> 5` — Stash multiple items at once\n"
-            "`!unstash <item>` — Take an item out of storage\n"
-            "`!unstash <item> 5` — Unstash multiple items\n\n"
+            "`!storage` / `!vault` — View stored items (grouped by category)\n"
+            "`!stash` — Open stash menu (category dropdown)\n"
+            "`!stash minerals` — Stash all minerals at once\n"
+            "`!stash all` — Stash everything in your inventory\n"
+            "`!stash <item> [amount]` — Stash specific items\n"
+            "`!unstash` — Open withdraw menu (category dropdown)\n"
+            "`!unstash fish` — Withdraw all fish at once\n"
+            "`!unstash <item> [amount]` — Withdraw specific items\n\n"
             "Must be in **Noodle Town** to stash/unstash.\n"
             "Items in storage are **100% immune** to disasters, "
             "death, and alien abductions — but **can't be used** until withdrawn."

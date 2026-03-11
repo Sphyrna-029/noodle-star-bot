@@ -69,6 +69,58 @@ class StorageRepository(BaseRepository):
             )
             return dict(row)
 
+    def add_to_storage_bulk(self, user_id: int,
+                            items: list[tuple[str, str, int]]) -> None:
+        """Add multiple items to storage. Each tuple is (item_key, item_type, uses)."""
+        with self.db.get_cursor() as cursor:
+            cursor.executemany(
+                """INSERT INTO user_storage (user_id, item_key, item_type, uses)
+                   VALUES (?, ?, ?, ?)""",
+                [(user_id, key, itype, uses) for key, itype, uses in items],
+            )
+
+    def remove_from_storage_by_key(self, user_id: int, item_key: str,
+                                   item_type: str, amount: int) -> list[dict]:
+        """Remove up to `amount` items of a specific key from storage (oldest first).
+        Returns list of removed rows."""
+        with self.db.get_cursor() as cursor:
+            cursor.execute(
+                """SELECT id, item_key, item_type, uses FROM user_storage
+                   WHERE user_id = ? AND item_key = ? AND item_type = ?
+                   ORDER BY stored_at ASC LIMIT ?""",
+                (user_id, item_key, item_type, amount),
+            )
+            rows = [dict(r) for r in cursor.fetchall()]
+            if rows:
+                ids = [r["id"] for r in rows]
+                placeholders = ",".join("?" * len(ids))
+                cursor.execute(
+                    f"DELETE FROM user_storage WHERE id IN ({placeholders})",
+                    ids,
+                )
+            return rows
+
+    def remove_from_storage_by_category(self, user_id: int,
+                                        category_keys: set[str]) -> list[dict]:
+        """Remove all inventory items matching any of the given item_keys.
+        Returns list of removed rows."""
+        with self.db.get_cursor() as cursor:
+            cursor.execute(
+                """SELECT id, item_key, item_type, uses FROM user_storage
+                   WHERE user_id = ? AND item_type = 'inventory'
+                   ORDER BY item_key, stored_at""",
+                (user_id,),
+            )
+            rows = [dict(r) for r in cursor.fetchall() if r["item_key"] in category_keys]
+            if rows:
+                ids = [r["id"] for r in rows]
+                placeholders = ",".join("?" * len(ids))
+                cursor.execute(
+                    f"DELETE FROM user_storage WHERE id IN ({placeholders})",
+                    ids,
+                )
+            return rows
+
     def count_stored_item(self, user_id: int, item_key: str,
                           item_type: str = "inventory") -> int:
         """Count how many of a specific item are in storage."""
