@@ -131,6 +131,16 @@ class DuelUseCase(BaseGamblingUseCase):
         stamina_state = self.repo.get_duel_stamina_state(challenger_id)
         stamina_state = self._apply_duel_stamina_regen(stamina_state, now)
 
+        # Always save regen so it persists even if the duel is rejected
+        self.repo.update_duel_stamina_state(
+            challenger_id,
+            stamina=stamina_state["stamina"],
+            stamina_last_updated=stamina_state.get("stamina_last_updated") or now,
+            stamina_last_reset=stamina_state.get("stamina_last_reset") or now,
+            last_duel_amount=stamina_state.get("last_duel_amount", 0),
+            last_duel_at=stamina_state.get("last_duel_at"),
+        )
+
         stamina_cost = self._calculate_duel_stamina_cost(amount)
         stamina_before = stamina_state["stamina"]
 
