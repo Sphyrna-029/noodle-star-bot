@@ -42,6 +42,8 @@ class ModeratorCog(commands.Cog):
         """Error handler for moderator commands."""
         if isinstance(error, commands.CheckFailure):
             await ctx.send("❌ You need moderator permissions to use this command!")
+        elif isinstance(error, (commands.MemberNotFound, commands.MissingRequiredArgument, commands.BadArgument)):
+            await ctx.send(f"❌ Usage: `!addstar @user <amount>` or `!removestar @user <amount>`")
 
 
 async def setup(bot):
