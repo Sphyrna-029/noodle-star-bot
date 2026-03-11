@@ -1,16 +1,10 @@
 """Economy use-cases for balance management."""
 
-from datetime import datetime, timedelta
 from typing import List, Tuple
 
-from cogs.economy.constants import (
-    ACHIEVEMENT_DEFS,
-    BANKING_DEPOSIT_COOLDOWN_MINUTES,
-    BANKING_WITHDRAW_COOLDOWN_MINUTES,
-)
+from cogs.economy.constants import ACHIEVEMENT_DEFS
 from cogs.farming.constants import MAX_FARM_LEVEL, MAX_PLOTS, MAX_PRESERVER_LEVEL
 from database.repository import UserRepository
-from utils.formatters import format_time_remaining
 from ..dto import AchievementStatus, BalanceResult, EconomyStats, ProfileResult
 
 
@@ -170,20 +164,6 @@ class EconomyUseCases:
         current_stars = self.repo.get_user_stars(user_id, username)
         current_bank = self.repo.get_user_bank(user_id)
 
-        # Check deposit cooldown
-        last_deposit = self.repo.get_last_deposit(user_id)
-        if last_deposit is not None:
-            time_since = datetime.now() - last_deposit
-            cooldown = timedelta(minutes=BANKING_DEPOSIT_COOLDOWN_MINUTES)
-            if time_since < cooldown:
-                remaining = cooldown - time_since
-                return BalanceResult(
-                    success=False,
-                    message=f"You must wait **{format_time_remaining(remaining)}** before depositing again!",
-                    wallet=current_stars,
-                    bank=current_bank,
-                )
-
         # Handle "all" keyword
         if isinstance(amount, str) and amount.lower() == "all":
             if current_stars <= 0:
@@ -250,20 +230,6 @@ class EconomyUseCases:
         """
         current_stars = self.repo.get_user_stars(user_id, username)
         current_bank = self.repo.get_user_bank(user_id)
-
-        # Check withdraw cooldown
-        last_withdraw = self.repo.get_last_withdraw(user_id)
-        if last_withdraw is not None:
-            time_since = datetime.now() - last_withdraw
-            cooldown = timedelta(minutes=BANKING_WITHDRAW_COOLDOWN_MINUTES)
-            if time_since < cooldown:
-                remaining = cooldown - time_since
-                return BalanceResult(
-                    success=False,
-                    message=f"You must wait **{format_time_remaining(remaining)}** before withdrawing again!",
-                    wallet=current_stars,
-                    bank=current_bank,
-                )
 
         # Handle "all" keyword
         if isinstance(amount, str) and amount.lower() == "all":
