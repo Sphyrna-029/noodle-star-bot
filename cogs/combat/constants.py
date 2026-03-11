@@ -372,9 +372,16 @@ DEATH_PENALTIES: Final[dict[int, dict]] = {
 }
 
 # ---------------------------------------------------------------------------
-# Fish healing values — maps fish name to HP restored
-# 23 fish heal HP via !eat
+# HP recovery — fish, crops, and potions that restore HP via !consume
 # ---------------------------------------------------------------------------
+
+CROP_HEAL_VALUES: Final[dict[str, int]] = {
+    "wheat": 5,
+    "carrot": 10,
+    "corn": 15,
+    "tomato": 20,
+    "melon": 30,
+}
 
 FISH_HEAL_VALUES: Final[dict[str, int]] = {
     # Level 1 fish (keys match stored inventory format)

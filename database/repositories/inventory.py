@@ -43,8 +43,8 @@ class InventoryRepository(BaseRepository):
     }
 
     _CONSUMABLE_KEYS = {
-        "raw_potato", "golden_mushroom", "bait_worm", "bait_herring",
-        "bait_sturgeon", "fertilizer", "water",
+        "raw_potato", "golden_mushroom", "health_potion",
+        "bait_worm", "bait_herring", "bait_sturgeon", "fertilizer", "water",
     }
 
     _PROGRESSION_DEFAULTS = {

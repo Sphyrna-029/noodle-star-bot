@@ -209,6 +209,7 @@ _r("melon", "Melon", "🍉", "crop")
 # ── Consumables ─────────────────────────────────────────────
 _r("raw_potato", "Raw Potato", "🥔", "consumable")
 _r("golden_mushroom", "Golden Mushroom", "🍄", "consumable")
+_r("health_potion", "Health Potion", "❤️‍🩹", "consumable")
 _r("bait_worm", "Worm Bait", "🪱", "consumable")
 _r("bait_herring", "Herring Bait", "🐟", "consumable")
 _r("bait_sturgeon", "Sturgeon Bait", "🐋", "consumable")

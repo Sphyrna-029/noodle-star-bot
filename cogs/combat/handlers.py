@@ -1,4 +1,4 @@
-"""Combat commands cog — fight, eat, drink, equip, craft, gear, hp, stamina."""
+"""Combat commands cog — fight, consume, equip, craft, gear, hp, stamina."""
 
 import asyncio
 import traceback
@@ -7,15 +7,15 @@ import discord
 from discord.ext import commands
 
 from cogs.combat.constants import (
-    COMBAT_ITEMS, CRAFT_RECIPES, DEATH_PENALTIES, DUNGEON_LEVELS,
-    FISH_HEAL_VALUES, MOBS_BY_LEVEL, STAMINA_RECOVERY,
+    COMBAT_ITEMS, CRAFT_RECIPES, CROP_HEAL_VALUES, DEATH_PENALTIES,
+    DUNGEON_LEVELS, FISH_HEAL_VALUES, MOBS_BY_LEVEL, STAMINA_RECOVERY,
 )
 from cogs.shop.resources import get_resource
 from cogs.combat.dto import BattleState, BattleTurn
 from cogs.combat.use_case.combat import CombatUseCases
 from cogs.combat.use_case.crafting import CraftingUseCases
 from cogs.combat.use_case.equipment import EquipmentUseCases
-from cogs.combat.use_case.health import HealthUseCases
+from cogs.combat.use_case.health import HealthUseCases, HEALTH_POTION_HP
 from cogs.locations.check import require_location
 
 
@@ -542,11 +542,117 @@ class _RecipePageView(discord.ui.View):
 
 
 # ---------------------------------------------------------------------------
+# Consume View (unified eat/drink menu)
+# ---------------------------------------------------------------------------
+
+class _ConsumeHPSelect(discord.ui.Select):
+    """Dropdown for HP restoration items."""
+
+    def __init__(self, options: list[discord.SelectOption]):
+        super().__init__(
+            placeholder="🍖 Restore HP...",
+            options=options,
+            row=0,
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        view = self.view
+        if not isinstance(view, _ConsumeView) or interaction.user.id != view.author_id:
+            await interaction.response.send_message("Not your menu!", ephemeral=True)
+            return
+        item_key = self.values[0]
+        result = view.health_uc.eat_fish(view.author_id, item_key)
+        if result.success:
+            status = view.health_uc.get_status(view.author_id)
+            await interaction.response.edit_message(
+                embed=_consume_result_embed(
+                    f"🍖 {result.message}",
+                    f"❤️ **HP:** {result.current_hp}/{result.max_hp}\n"
+                    f"⚡ **Stamina:** {status.current_stamina}/{status.max_stamina}",
+                ),
+                view=None,
+            )
+        else:
+            await interaction.response.send_message(f"❌ {result.message}", ephemeral=True)
+
+
+class _ConsumeStaminaSelect(discord.ui.Select):
+    """Dropdown for stamina restoration items."""
+
+    def __init__(self, options: list[discord.SelectOption]):
+        super().__init__(
+            placeholder="⚡ Restore Stamina...",
+            options=options,
+            row=1,
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        view = self.view
+        if not isinstance(view, _ConsumeView) or interaction.user.id != view.author_id:
+            await interaction.response.send_message("Not your menu!", ephemeral=True)
+            return
+        item_key = self.values[0]
+        result = view.health_uc.drink(view.author_id, item_key)
+        if result.success:
+            status = view.health_uc.get_status(view.author_id)
+            await interaction.response.edit_message(
+                embed=_consume_result_embed(
+                    f"⚡ {result.message}",
+                    f"❤️ **HP:** {status.current_hp}/{status.max_hp}\n"
+                    f"⚡ **Stamina:** {result.current_stamina}/{result.max_stamina}",
+                ),
+                view=None,
+            )
+        else:
+            await interaction.response.send_message(f"❌ {result.message}", ephemeral=True)
+
+
+class _ConsumeView(discord.ui.View):
+    """Two-dropdown consume menu for HP and stamina items."""
+
+    def __init__(
+        self,
+        author_id: int,
+        health_uc: HealthUseCases,
+        repo,
+        hp_options: list[discord.SelectOption],
+        stam_options: list[discord.SelectOption],
+        timeout: float = 60,
+    ):
+        super().__init__(timeout=timeout)
+        self.author_id = author_id
+        self.health_uc = health_uc
+        self.repo = repo
+        self.message = None
+
+        if hp_options:
+            self.add_item(_ConsumeHPSelect(hp_options))
+        if stam_options:
+            self.add_item(_ConsumeStaminaSelect(stam_options))
+
+    async def on_timeout(self):
+        if self.message:
+            try:
+                await self.message.edit(view=None)
+            except Exception:
+                pass
+
+
+def _consume_result_embed(title: str, stats: str) -> discord.Embed:
+    embed = discord.Embed(
+        title="🍽️ Consumed!",
+        description=f"{title}\n\n{stats}",
+        color=discord.Color.green(),
+    )
+    return embed
+
+
+# ---------------------------------------------------------------------------
 # Cog
 # ---------------------------------------------------------------------------
 
 class CombatCog(commands.Cog):
-    """Combat commands — fight mobs, manage gear, eat, drink, craft."""
+    """Combat commands — fight mobs, manage gear, consume, craft."""
 
     def __init__(self, bot):
         self.bot = bot
@@ -642,56 +748,70 @@ class CombatCog(commands.Cog):
             f"⚡ **Stamina:** {status.current_stamina}/{status.max_stamina} {stam_bar}"
         )
 
-    @commands.command(name="eat")
-    async def eat(self, ctx, *, fish_name: str = None):
-        """Eat a fish to restore HP. Usage: !eat <fish name>"""
-        if not fish_name:
-            # Show healable fish list
-            lines = []
-            for key, hp in sorted(FISH_HEAL_VALUES.items(), key=lambda x: x[1]):
+    @commands.command(name="consume", aliases=["c", "eat", "drink"])
+    async def consume(self, ctx):
+        """Open the consume menu to restore HP or stamina from your inventory."""
+        health_uc = self.health_uc
+        repo = self.combat_uc.repo
+        user_id = ctx.author.id
+
+        # Gather inventory — all consumables are rows in user_inventory_items
+        items = repo.get_inventory_items(user_id)
+        item_counts: dict[str, int] = {}
+        for item in items:
+            key = item["item_key"]
+            item_counts[key] = item_counts.get(key, 0) + 1
+
+        # Build HP items list
+        hp_options = []
+        for key, count in sorted(item_counts.items()):
+            heal = health_uc.get_hp_value(key)
+            if heal and count > 0:
                 display = key.replace("_", " ").title()
-                lines.append(f"**{display}** → +{hp} HP")
-            embed = discord.Embed(
-                title="🍽️ Healing Fish",
-                description="Use `!eat <fish name>` to restore HP.\n\n" + "\n".join(lines),
-                color=discord.Color.green(),
-            )
-            await ctx.send(embed=embed)
+                res = get_resource(key)
+                emoji = res.emoji if res else "🍽️"
+                hp_options.append(
+                    discord.SelectOption(
+                        label=f"{display} (+{heal} HP) x{count}",
+                        value=key,
+                        emoji=emoji,
+                    )
+                )
+
+        # Build stamina items list
+        stam_options = []
+        for key, count in sorted(item_counts.items()):
+            recovery = STAMINA_RECOVERY.get(key)
+            if recovery and count > 0:
+                display = key.replace("_", " ").title()
+                res = get_resource(key)
+                emoji = res.emoji if res else "⚡"
+                stam_options.append(
+                    discord.SelectOption(
+                        label=f"{display} (+{recovery} stam) x{count}",
+                        value=key,
+                        emoji=emoji,
+                    )
+                )
+
+        if not hp_options and not stam_options:
+            await ctx.send(f"❌ {ctx.author.mention}, you don't have any consumable items!")
             return
 
-        result = self.health_uc.eat_fish(ctx.author.id, fish_name)
-        if result.success:
-            await ctx.send(
-                f"🍽️ {result.message}\n"
-                f"❤️ HP: **{result.current_hp}/{result.max_hp}**"
-            )
-        else:
-            await ctx.send(f"❌ {result.message}")
+        status = health_uc.get_status(user_id)
+        embed = discord.Embed(
+            title="🍽️ Consume Menu",
+            description=(
+                f"❤️ **HP:** {status.current_hp}/{status.max_hp}\n"
+                f"⚡ **Stamina:** {status.current_stamina}/{status.max_stamina}\n\n"
+                "Select an item from the dropdowns below."
+            ),
+            color=discord.Color.green(),
+        )
 
-    @commands.command(name="drink")
-    async def drink(self, ctx, *, item_name: str = None):
-        """Drink a stamina item. Usage: !drink <item name>"""
-        if not item_name:
-            lines = []
-            for key, stam in sorted(STAMINA_RECOVERY.items(), key=lambda x: x[1]):
-                display = key.replace("_", " ").title()
-                lines.append(f"**{display}** → +{stam} stamina")
-            embed = discord.Embed(
-                title="🧪 Stamina Recovery Items",
-                description="Use `!drink <item name>` to restore stamina.\n\n" + "\n".join(lines),
-                color=discord.Color.blue(),
-            )
-            await ctx.send(embed=embed)
-            return
-
-        result = self.health_uc.drink(ctx.author.id, item_name)
-        if result.success:
-            await ctx.send(
-                f"🧪 {result.message}\n"
-                f"⚡ Stamina: **{result.current_stamina}/{result.max_stamina}**"
-            )
-        else:
-            await ctx.send(f"❌ {result.message}")
+        view = _ConsumeView(ctx.author.id, health_uc, repo, hp_options, stam_options)
+        msg = await ctx.send(embed=embed, view=view)
+        view.message = msg
 
     # ── Equipment ─────────────────────────────────────────────
 

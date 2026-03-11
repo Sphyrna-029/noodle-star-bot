@@ -3,11 +3,15 @@
 from datetime import datetime
 
 from cogs.combat.constants import (
-    BASE_HP, BASE_STAMINA, FISH_HEAL_VALUES, STAMINA_RECOVERY,
-    HP_REGEN_PER_MINUTE, STAMINA_REGEN_PER_MINUTE, COMBAT_ITEMS,
+    BASE_HP, BASE_STAMINA, CROP_HEAL_VALUES, FISH_HEAL_VALUES,
+    STAMINA_RECOVERY, HP_REGEN_PER_MINUTE, STAMINA_REGEN_PER_MINUTE,
+    COMBAT_ITEMS,
 )
 from cogs.combat.dto import DrinkResult, EatResult, HealthStatus
 from database.repository import UserRepository
+
+# Health potion HP value (sold in shop)
+HEALTH_POTION_HP: int = 20
 
 
 class HealthUseCases:
@@ -82,27 +86,45 @@ class HealthUseCases:
             max_stamina=stats["max_stamina"],
         )
 
-    def eat_fish(self, user_id: int, fish_name: str) -> EatResult:
-        """Consume a fish from inventory to restore HP."""
-        # Normalize user input to stored key format (lowercase, underscores)
-        fish_key = fish_name.lower().replace(" ", "_").replace("'", "")
-        heal = FISH_HEAL_VALUES.get(fish_key)
+    def get_hp_value(self, item_key: str) -> int | None:
+        """Return HP restored by an item, or None if it's not an HP item."""
+        if item_key in FISH_HEAL_VALUES:
+            return FISH_HEAL_VALUES[item_key]
+        if item_key in CROP_HEAL_VALUES:
+            return CROP_HEAL_VALUES[item_key]
+        if item_key == "health_potion":
+            return HEALTH_POTION_HP
+        return None
+
+    def _find_and_remove(self, user_id: int, item_key: str) -> bool:
+        """Find one item in inventory and remove it. Returns False if not found."""
+        items = self.repo.get_inventory_items(user_id)
+        for item in items:
+            if item["item_key"] == item_key:
+                self.repo.remove_items_by_ids(user_id, [item["id"]])
+                return True
+        return False
+
+    def eat_fish(self, user_id: int, item_name: str) -> EatResult:
+        """Consume an HP item (fish, crop, or health potion) from inventory."""
+        item_key = item_name.lower().replace(" ", "_").replace("'", "")
+        heal = self.get_hp_value(item_key)
         if heal is None:
             return EatResult(
                 success=False,
-                message=f"**{fish_name}** can't be eaten for healing!",
+                message=f"**{item_name}** can't be consumed for healing!",
             )
 
-        # Check inventory for the fish
+        # Check if user has the item
         items = self.repo.get_inventory_items(user_id)
-        fish_row = None
+        item_row = None
         for item in items:
-            if item["item_key"] == fish_key:
-                fish_row = item
+            if item["item_key"] == item_key:
+                item_row = item
                 break
 
-        if not fish_row:
-            display = fish_key.replace("_", " ").title()
+        if not item_row:
+            display = item_key.replace("_", " ").title()
             return EatResult(
                 success=False,
                 message=f"You don't have any **{display}** in your inventory!",
@@ -118,18 +140,17 @@ class HealthUseCases:
                 max_hp=max_hp,
             )
 
-        # Remove the fish from inventory
-        self.repo.remove_items_by_ids(user_id, [fish_row["id"]])
+        self.repo.remove_items_by_ids(user_id, [item_row["id"]])
 
         old_hp = stats["current_hp"]
         new_hp = min(max_hp, old_hp + heal)
         actual_heal = new_hp - old_hp
         self.repo.update_hp(user_id, new_hp, max_hp)
 
-        display = fish_key.replace("_", " ").title()
+        display = item_key.replace("_", " ").title()
         return EatResult(
             success=True,
-            message=f"You ate **{display}** and restored **{actual_heal} HP**!",
+            message=f"You consumed **{display}** and restored **{actual_heal} HP**!",
             hp_restored=actual_heal,
             current_hp=new_hp,
             max_hp=max_hp,
@@ -137,7 +158,6 @@ class HealthUseCases:
 
     def drink(self, user_id: int, item_name: str) -> DrinkResult:
         """Consume a stamina item from inventory to restore stamina."""
-        # Normalize user input to stored key format (lowercase, underscores)
         item_key = item_name.lower().replace(" ", "_").replace("'", "")
         recovery = STAMINA_RECOVERY.get(item_key)
         if recovery is None:
@@ -146,7 +166,7 @@ class HealthUseCases:
                 message=f"**{item_name}** doesn't restore stamina!",
             )
 
-        # Check inventory
+        # Check if user has the item
         items = self.repo.get_inventory_items(user_id)
         item_row = None
         for item in items:
@@ -171,7 +191,6 @@ class HealthUseCases:
                 max_stamina=max_stam,
             )
 
-        # Remove the item
         self.repo.remove_items_by_ids(user_id, [item_row["id"]])
 
         old_stam = stats["current_stamina"]

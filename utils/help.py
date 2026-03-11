@@ -160,7 +160,7 @@ def _travel_embed() -> discord.Embed:
             "`!stars` `!profile` `!inventory` `!farm` `!crops`\n"
             "`!farm growbot ...` `!farm preserver ...`\n"
             "`!pet` `!fishlevel` `!baitshop` `!planets` `!where`\n"
-            "`!hp` `!stamina` `!gear` `!eat` `!drink` `!equip`\n"
+            "`!hp` `!stamina` `!gear` `!consume` `!equip`\n"
             "`!craft` `!recipes` `!recipe`"
         ),
         inline=False,
@@ -193,7 +193,7 @@ def _mining_embed() -> discord.Embed:
         value=(
             "**Step 1:** Type `!mine` — you'll find a mineral (added to your inventory)\n"
             "**Step 2:** Type `!sell all` to sell your minerals for stars\n"
-            "**Step 3:** Use `!drink` items to restore stamina, then mine again\n"
+            "**Step 3:** Use `!consume` to restore stamina, then mine again\n"
             "**Step 4:** When you have 500+ stars, buy a Gold Pickaxe from `!store`\n"
             "**Step 5:** Unlock deeper mines with `!unlock 2` for better loot"
         ),
@@ -217,7 +217,7 @@ def _mining_embed() -> discord.Embed:
             "🪨 **Lv3 Deep Tunnels** — 24 stamina, 14% ambush\n"
             "🌋 **Lv4 Molten Core** — 30 stamina, 16% ambush, **bank risk on defeat**\n"
             "🌑 **Lv5 The Abyss** — 36 stamina, 20% ambush, **bank risk on defeat**\n\n"
-            "Use `!drink potato` (+6) or `!drink mushroom` (+40) to restore stamina."
+            "Use `!consume` to restore stamina with potatoes (+6) or mushrooms (+40)."
         ),
         inline=False,
     )
@@ -418,7 +418,8 @@ def _farming_crops_embed() -> discord.Embed:
             "• Harvest value swings with quality, weather events, and soil condition\n"
             "• Replanting the same crop repeatedly on one plot drains soil faster\n"
             "• No cooldowns: plant and harvest as often as crops are ready\n"
-            "• Mushroom crops give Golden Mushrooms — use `!drink mushroom` for +40 stamina\n"
+            "• Mushroom crops give Golden Mushrooms — use `!consume` for +40 stamina\n"
+            "• Crops can be eaten for HP: Wheat +5, Carrot +10, Corn +15, Tomato +20, Melon +30\n"
             "• A plot must be empty before you plant into it"
         ),
         inline=False,
@@ -707,7 +708,7 @@ def _shop_embed() -> discord.Embed:
             "1. 🪱 **Worm Bait** (33 stars) — Needed to fish at all.\n"
             "2. ⛏️ **Gold Pickaxe** (500 stars) — One-time buy, "
             "permanently boosts mining luck.\n"
-            "3. 🥔 **Raw Potato** (2 stars) — Restores 3 stamina for mining.\n"
+            "3. 🥔 **Raw Potato** (2 stars) — Restores 6 stamina.\n"
             "4. ⚔️ **Combat Gear** — Equip weapons and armor to survive ambush encounters.\n"
             "5. 💸 **Bank Insurance** — Must-have for Lv4-5 "
             "mining/fishing/space."
@@ -717,8 +718,9 @@ def _shop_embed() -> discord.Embed:
     embed.add_field(
         name="Quick Item Reference",
         value=(
-            "🥔 Raw Potato (2) — `!drink potato` restores 3 stamina\n"
-            "🍄 Golden Mushroom (farm harvest) — `!drink mushroom` restores 20 stamina\n"
+            "🥔 Raw Potato (2) — `!consume` restores 6 stamina\n"
+            "🍄 Golden Mushroom (farm harvest) — `!consume` restores 40 stamina\n"
+            "❤️‍🩹 Health Potion (50) — `!consume` restores 20 HP\n"
             "💸 Bank Insurance (2000) — Protects your bank from 1 defeat\n"
             "📷 Telescope (200) — View a starfield (permanent, fun item)\n"
             "🪱 Worm (33) / 🐟 Herring (79) / 🐋 Sturgeon (110) — Fishing bait\n"
@@ -957,10 +959,7 @@ def _combat_embed() -> discord.Embed:
             "`!gear` — View your equipped combat gear\n"
             "`!equip <item>` — Equip a combat item\n"
             "`!unequip <slot>` — Unequip weapon/shield/armor\n"
-            "`!eat` — See healing fish list\n"
-            "`!eat <fish>` — Eat a fish to restore HP\n"
-            "`!drink` — See stamina recovery items\n"
-            "`!drink <item>` — Consume an item to restore stamina"
+            "`!consume` (or `!c`, `!eat`, `!drink`) — Open consume menu to restore HP or stamina"
         ),
         inline=False,
     )
@@ -981,7 +980,7 @@ def _combat_embed() -> discord.Embed:
             "• Every attack costs **8 stamina**, defending costs **3**\n"
             "• Lower stamina = lower damage (min 20% damage at 0 stamina)\n"
             "• Mobs also have stamina — defend to outlast them!\n"
-            "• Recover with `!drink` (junk fish, crafted potions)\n"
+            "• Recover with `!consume` (potatoes, mushrooms, crafted potions)\n"
             "• HP and stamina regen passively over time (1/min each)"
         ),
         inline=False,
