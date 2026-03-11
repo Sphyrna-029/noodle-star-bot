@@ -66,8 +66,40 @@ def is_in_battle(user_id: int) -> bool:
     return user_id in _active_battles
 
 
+class _BattleHPSelect(discord.ui.Select):
+    """Dropdown for HP restoration items during battle."""
+
+    def __init__(self, options: list[discord.SelectOption]):
+        super().__init__(placeholder="🍖 Consume HP item...", options=options, row=1)
+
+    async def callback(self, interaction: discord.Interaction):
+        view = self.view
+        if not isinstance(view, BattleView) or interaction.user.id != view.author_id:
+            await interaction.response.send_message("Not your fight!", ephemeral=True)
+            return
+        view._consume_selected_item = self.values[0]
+        view._consume_selected_type = "hp"
+        await view._do_consume(interaction)
+
+
+class _BattleStaminaSelect(discord.ui.Select):
+    """Dropdown for stamina restoration items during battle."""
+
+    def __init__(self, options: list[discord.SelectOption]):
+        super().__init__(placeholder="⚡ Consume stamina item...", options=options, row=2)
+
+    async def callback(self, interaction: discord.Interaction):
+        view = self.view
+        if not isinstance(view, BattleView) or interaction.user.id != view.author_id:
+            await interaction.response.send_message("Not your fight!", ephemeral=True)
+            return
+        view._consume_selected_item = self.values[0]
+        view._consume_selected_type = "stamina"
+        await view._do_consume(interaction)
+
+
 class BattleView(discord.ui.View):
-    """Interactive combat view with Attack/Defend/Flee buttons."""
+    """Interactive combat view with Attack/Defend/Flee buttons + consume items."""
 
     def __init__(self, battle: BattleState, combat_uc: CombatUseCases,
                  author_id: int, username: str):
@@ -79,8 +111,11 @@ class BattleView(discord.ui.View):
         self.message = None
         self._finish_lock = asyncio.Lock()
         _active_battles.add(author_id)
-        # Initialize flee lockout state
-        self._update_flee_button()
+        self._consume_selected_item: str | None = None
+        self._consume_selected_type: str | None = None
+        self._health_uc = HealthUseCases(self.combat_uc.repo)
+        # Build view with action buttons + consume dropdowns
+        self._rebuild_view()
 
     def _disable_buttons(self) -> None:
         for item in self.children:
@@ -160,9 +195,9 @@ class BattleView(discord.ui.View):
             rounds_done = b.turn // 2
             if b.ambush and rounds_done < b.ambush.flee_lockout_turns:
                 remaining = b.ambush.flee_lockout_turns - rounds_done
-                embed.set_footer(text=f"⚔️ Attack | 🛡️ Defend | 🏃 Flee (locked for {remaining} rounds)")
+                embed.set_footer(text=f"⚔️ Attack | 🛡️ Defend | 🏃 Flee (locked {remaining} rnd) | 🍽️ Consume (costs turn)")
             else:
-                embed.set_footer(text="⚔️ Attack | 🛡️ Defend | 🏃 Flee")
+                embed.set_footer(text="⚔️ Attack | 🛡️ Defend | 🏃 Flee | 🍽️ Consume (costs turn)")
 
         return embed
 
@@ -177,6 +212,162 @@ class BattleView(discord.ui.View):
         else:
             self.flee_button.label = "Flee"
             self.flee_button.disabled = False
+
+    def _build_consume_options(self) -> tuple[list, list]:
+        """Build HP and stamina dropdown options from current inventory."""
+        items = self.combat_uc.repo.get_inventory_items(self.author_id)
+        item_counts: dict[str, int] = {}
+        for item in items:
+            key = item["item_key"]
+            item_counts[key] = item_counts.get(key, 0) + 1
+
+        hp_options = []
+        stam_options = []
+
+        for key, count in sorted(item_counts.items()):
+            heal = self._health_uc.get_hp_value(key)
+            if heal and count > 0:
+                display = key.replace("_", " ").title()
+                res = get_resource(key)
+                emoji = res.emoji if res else "🍽️"
+                hp_options.append(discord.SelectOption(
+                    label=f"{display} (+{heal} HP) x{count}",
+                    value=key,
+                    emoji=emoji,
+                    default=(key == self._consume_selected_item and self._consume_selected_type == "hp"),
+                ))
+
+            recovery = STAMINA_RECOVERY.get(key)
+            if recovery and count > 0:
+                display = key.replace("_", " ").title()
+                res = get_resource(key)
+                emoji = res.emoji if res else "⚡"
+                stam_options.append(discord.SelectOption(
+                    label=f"{display} (+{recovery} stam) x{count}",
+                    value=key,
+                    emoji=emoji,
+                    default=(key == self._consume_selected_item and self._consume_selected_type == "stamina"),
+                ))
+
+        return hp_options, stam_options
+
+    def _rebuild_view(self):
+        """Rebuild all view components — action buttons + consume dropdowns."""
+        self.clear_items()
+        self.add_item(self.attack_button)
+        self.add_item(self.defend_button)
+        self.add_item(self.flee_button)
+
+        hp_opts, stam_opts = self._build_consume_options()
+        if hp_opts:
+            self.add_item(_BattleHPSelect(hp_opts))
+        if stam_opts:
+            self.add_item(_BattleStaminaSelect(stam_opts))
+        if hp_opts or stam_opts:
+            self.add_item(self.battle_consume_btn)
+
+        self._update_flee_button()
+
+    async def _do_consume(self, interaction: discord.Interaction):
+        """Consume the selected item during battle — takes a turn, mob attacks back."""
+        try:
+            await interaction.response.defer()
+            async with self._finish_lock:
+                if self.battle.finished:
+                    self._disable_buttons()
+                    await interaction.edit_original_response(view=self)
+                    return
+
+                item_key = self._consume_selected_item
+                consume_type = self._consume_selected_type
+                display = item_key.replace("_", " ").title()
+
+                if consume_type == "hp":
+                    heal = self._health_uc.get_hp_value(item_key)
+                    if not heal:
+                        return
+
+                    if self.battle.player_hp >= self.battle.player_max_hp:
+                        embed = self._create_embed()
+                        embed.set_footer(text="❌ You're already at full HP!")
+                        await interaction.edit_original_response(embed=embed, view=self)
+                        return
+
+                    if not self._health_uc._find_and_remove(self.author_id, item_key):
+                        self._rebuild_view()
+                        embed = self._create_embed()
+                        embed.set_footer(text=f"❌ No {display} in inventory!")
+                        await interaction.edit_original_response(embed=embed, view=self)
+                        return
+
+                    old_hp = self.battle.player_hp
+                    self.battle.player_hp = min(self.battle.player_max_hp, old_hp + heal)
+                    actual = self.battle.player_hp - old_hp
+
+                    self.battle.turn += 1
+                    turn = BattleTurn(
+                        turn_number=self.battle.turn,
+                        actor="player",
+                        action="consume",
+                        actor_hp=self.battle.player_hp,
+                        target_hp=self.battle.mob_hp,
+                        actor_stamina=self.battle.player_stamina,
+                        message=f"🍖 You consumed **{display}** and restored **{actual} HP**!",
+                    )
+                    self.battle.turns.append(turn)
+
+                else:
+                    recovery = STAMINA_RECOVERY.get(item_key)
+                    if not recovery:
+                        return
+
+                    if self.battle.player_stamina >= self.battle.player_max_stamina:
+                        embed = self._create_embed()
+                        embed.set_footer(text="❌ You're already at full stamina!")
+                        await interaction.edit_original_response(embed=embed, view=self)
+                        return
+
+                    if not self._health_uc._find_and_remove(self.author_id, item_key):
+                        self._rebuild_view()
+                        embed = self._create_embed()
+                        embed.set_footer(text=f"❌ No {display} in inventory!")
+                        await interaction.edit_original_response(embed=embed, view=self)
+                        return
+
+                    old_stam = self.battle.player_stamina
+                    self.battle.player_stamina = min(self.battle.player_max_stamina, old_stam + recovery)
+                    actual = self.battle.player_stamina - old_stam
+
+                    self.battle.turn += 1
+                    turn = BattleTurn(
+                        turn_number=self.battle.turn,
+                        actor="player",
+                        action="consume",
+                        actor_hp=self.battle.player_hp,
+                        target_hp=self.battle.mob_hp,
+                        actor_stamina=self.battle.player_stamina,
+                        message=f"⚡ You consumed **{display}** and restored **{actual} stamina**!",
+                    )
+                    self.battle.turns.append(turn)
+
+                # Update consume button for quick re-use
+                res = get_resource(item_key)
+                btn_emoji = res.emoji if res else "🍽️"
+                self.battle_consume_btn.label = f"Consume {display}"
+                self.battle_consume_btn.emoji = btn_emoji
+                self.battle_consume_btn.style = discord.ButtonStyle.success
+                self.battle_consume_btn.disabled = False
+
+                # Mob gets a free attack
+                await self._do_mob_turn(interaction, player_defended=False)
+
+                if not self.battle.finished:
+                    self._rebuild_view()
+                    embed = self._create_embed()
+                    await interaction.edit_original_response(embed=embed, view=self)
+
+        except Exception:
+            traceback.print_exc()
 
     async def _do_mob_turn(self, interaction: discord.Interaction, player_defended: bool):
         """Execute mob's turn and check for defeat."""
@@ -211,7 +402,7 @@ class BattleView(discord.ui.View):
             )
             await interaction.edit_original_response(embed=embed, view=self)
 
-    @discord.ui.button(label="Attack", style=discord.ButtonStyle.danger, emoji="⚔️")
+    @discord.ui.button(label="Attack", style=discord.ButtonStyle.danger, emoji="⚔️", row=0)
     async def attack_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
             await interaction.response.defer()
@@ -249,7 +440,7 @@ class BattleView(discord.ui.View):
         except Exception:
             traceback.print_exc()
 
-    @discord.ui.button(label="Defend", style=discord.ButtonStyle.primary, emoji="🛡️")
+    @discord.ui.button(label="Defend", style=discord.ButtonStyle.primary, emoji="🛡️", row=0)
     async def defend_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
             await interaction.response.defer()
@@ -273,7 +464,7 @@ class BattleView(discord.ui.View):
         except Exception:
             traceback.print_exc()
 
-    @discord.ui.button(label="Flee", style=discord.ButtonStyle.secondary, emoji="🏃")
+    @discord.ui.button(label="Flee", style=discord.ButtonStyle.secondary, emoji="🏃", row=0)
     async def flee_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
             await interaction.response.defer()
@@ -324,6 +515,16 @@ class BattleView(discord.ui.View):
 
         except Exception:
             traceback.print_exc()
+
+    @discord.ui.button(label="Select item first", emoji="🍽️", style=discord.ButtonStyle.secondary, disabled=True, row=3)
+    async def battle_consume_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message("Not your fight!", ephemeral=True)
+            return
+        if not self._consume_selected_item:
+            await interaction.response.send_message("Select an item from the dropdown first!", ephemeral=True)
+            return
+        await self._do_consume(interaction)
 
     async def on_timeout(self) -> None:
         async with self._finish_lock:

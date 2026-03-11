@@ -964,7 +964,8 @@ def _combat_embed() -> discord.Embed:
             "`!gear` — View your equipped combat gear\n"
             "`!equip <item>` — Equip a combat item\n"
             "`!unequip <slot>` — Unequip weapon/shield/armor\n"
-            "`!consume` (or `!c`, `!eat`, `!drink`) — Open consume menu to restore HP or stamina"
+            "`!consume` (or `!c`, `!eat`, `!drink`) — Open consume menu to restore HP or stamina\n"
+            "**In battle:** Use the dropdowns to consume items mid-fight (costs a turn!)"
         ),
         inline=False,
     )
@@ -985,7 +986,7 @@ def _combat_embed() -> discord.Embed:
             "• Every attack costs **8 stamina**, defending costs **3**\n"
             "• Lower stamina = lower damage (min 20% damage at 0 stamina)\n"
             "• Mobs also have stamina — defend to outlast them!\n"
-            "• Recover with `!consume` (potatoes, mushrooms, crafted potions)\n"
+            "• Recover with `!consume` or mid-battle dropdowns (costs a turn)\n"
             "• HP and stamina regen passively over time (1/min each)"
         ),
         inline=False,
