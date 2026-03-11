@@ -498,6 +498,49 @@ class GearView(discord.ui.View):
 
 
 # ---------------------------------------------------------------------------
+# Recipe page view — paginated tier navigation
+# ---------------------------------------------------------------------------
+
+class _RecipePageView(discord.ui.View):
+    """Paginated view for browsing crafting recipes by tier."""
+
+    def __init__(self, author_id: int, pages: list[tuple[str, discord.Embed]], timeout: float = 120):
+        super().__init__(timeout=timeout)
+        self.author_id = author_id
+        self.pages = pages  # list of (tier_label, embed)
+        self.current = 0
+        self.message = None
+        self._build_buttons()
+
+    def _build_buttons(self):
+        self.clear_items()
+        for i, (label, _) in enumerate(self.pages):
+            style = discord.ButtonStyle.primary if i == self.current else discord.ButtonStyle.secondary
+            btn = discord.ui.Button(label=label, style=style, row=0)
+            btn.callback = self._make_callback(i)
+            self.add_item(btn)
+
+    def _make_callback(self, index: int):
+        async def callback(interaction: discord.Interaction):
+            if interaction.user.id != self.author_id:
+                await interaction.response.send_message("Not your recipe book!", ephemeral=True)
+                return
+            self.current = index
+            self._build_buttons()
+            await interaction.response.edit_message(embed=self.pages[index][1], view=self)
+        return callback
+
+    async def on_timeout(self):
+        if self.message:
+            for child in self.children:
+                child.disabled = True
+            try:
+                await self.message.edit(view=self)
+            except discord.HTTPException:
+                pass
+
+
+# ---------------------------------------------------------------------------
 # Cog
 # ---------------------------------------------------------------------------
 
@@ -701,46 +744,76 @@ class CombatCog(commands.Cog):
 
     @commands.command(name="recipes", aliases=["recipelist"])
     async def recipes(self, ctx):
-        """View all crafting recipes."""
+        """View all crafting recipes grouped by tier."""
         recipe_list = self.craft_uc.get_recipes(ctx.author.id)
+        equipment = self.equip_uc.repo.get_user_equipment(ctx.author.id)
 
-        embed = discord.Embed(
-            title="🔨 Crafting Recipes",
-            description="Use `!craft <name>` to craft. Use `!recipe <name>` for details.",
-            color=discord.Color.dark_gold(),
-        )
-
-        # Group by type
-        weapons = []
-        shields = []
-        armor = []
-        potions = []
+        # Build recipe data grouped by tier/category
+        tiers: dict[str, list[str]] = {}
+        tier_order = ["Tier 2", "Tier 3", "Tier 4", "Tier 5", "Potions"]
 
         for r in recipe_list:
-            status = "✅" if r.can_craft else "❌"
-            line = f"{status} {r.emoji} **{r.name}**"
             key = _find_recipe_key(r.name)
+            ingredients = " + ".join(
+                f"{name.replace('_', ' ').title()} x{count}"
+                for name, count in r.ingredients
+            )
+
             if key and key in COMBAT_ITEMS:
                 item = COMBAT_ITEMS[key]
-                if item.slot == "weapon":
-                    weapons.append(line)
-                elif item.slot == "shield":
-                    shields.append(line)
+                tier_label = f"Tier {item.tier}"
+                # Stats summary
+                stats = []
+                if item.attack:
+                    stats.append(f"ATK +{item.attack}")
+                if item.defense:
+                    stats.append(f"DEF +{item.defense}")
+                if item.hp_bonus:
+                    stats.append(f"HP +{item.hp_bonus}")
+                stat_str = " | ".join(stats)
+                # Owned check
+                owned = equipment.get(key, 0) > 0
+                if owned:
+                    status = "📦"
+                elif r.can_craft:
+                    status = "✅"
                 else:
-                    armor.append(line)
+                    status = "❌"
+                line = f"{status} {r.emoji} **{r.name}** — {stat_str}\n> {ingredients}"
             else:
-                potions.append(line)
+                tier_label = "Potions"
+                status = "✅" if r.can_craft else "❌"
+                # Potion effect
+                from cogs.combat.constants import STAMINA_RECOVERY
+                stam = STAMINA_RECOVERY.get(key, 0)
+                effect = f"+{stam} stamina" if stam else ""
+                line = f"{status} {r.emoji} **{r.name}**"
+                if effect:
+                    line += f" — {effect}"
+                line += f"\n> {ingredients}"
 
-        if weapons:
-            embed.add_field(name="⚔️ Weapons", value="\n".join(weapons), inline=False)
-        if shields:
-            embed.add_field(name="🛡️ Shields", value="\n".join(shields), inline=False)
-        if armor:
-            embed.add_field(name="🦺 Armor", value="\n".join(armor), inline=False)
-        if potions:
-            embed.add_field(name="🧪 Potions", value="\n".join(potions), inline=False)
+            tiers.setdefault(tier_label, []).append(line)
 
-        await ctx.send(embed=embed)
+        # Build paginated embeds per tier
+        pages = []
+        for tier in tier_order:
+            lines = tiers.get(tier, [])
+            if not lines:
+                continue
+            embed = discord.Embed(
+                title=f"🔨 Crafting Recipes — {tier}",
+                description="✅ = can craft now | ❌ = missing materials | 📦 = already owned\nUse `!craft <name>` to craft.\n\n" + "\n\n".join(lines),
+                color=discord.Color.dark_gold(),
+            )
+            pages.append((tier, embed))
+
+        if not pages:
+            await ctx.send("No crafting recipes available.")
+            return
+
+        view = _RecipePageView(ctx.author.id, pages)
+        msg = await ctx.send(embed=pages[0][1], view=view)
+        view.message = msg
 
     @commands.command(name="recipe")
     async def recipe(self, ctx, *, recipe_name: str):
