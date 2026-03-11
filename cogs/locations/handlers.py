@@ -5,6 +5,30 @@ from discord.ext import commands
 
 from cogs.locations.constants import LOCATIONS
 from cogs.locations.use_case import LocationUseCases
+from database.repository import UserRepository
+
+
+def _get_location_mobs(user_id: int, location_key: str, repo: UserRepository = None) -> list:
+    """Return the ambush/dungeon mobs relevant to a location for gear checking."""
+    repo = repo or UserRepository()
+    if location_key == "crystal_cave":
+        from cogs.combat.ambush_constants import MINING_AMBUSH_MOBS
+        level = repo.get_active_mine_level(user_id)
+        return MINING_AMBUSH_MOBS.get(level, [])
+    elif location_key == "starfish_bay":
+        from cogs.combat.ambush_constants import FISHING_AMBUSH_MOBS
+        level = repo.get_active_fish_level(user_id)
+        return FISHING_AMBUSH_MOBS.get(level, [])
+    elif location_key == "starport_ziti":
+        from cogs.combat.ambush_constants import SPACE_AMBUSH_MOBS
+        planet = repo.get_active_space_planet(user_id)
+        return SPACE_AMBUSH_MOBS.get(planet, [])
+    elif location_key == "noodle_colosseum":
+        from cogs.combat.constants import MOBS_BY_LEVEL
+        stats = repo.get_combat_stats(user_id)
+        level = stats["active_combat_level"]
+        return MOBS_BY_LEVEL.get(level, [])
+    return []
 
 
 async def _check_abduction(bot, ctx_or_interaction, previous_location: str, new_location: str):
@@ -70,6 +94,13 @@ class TravelButton(discord.ui.Button):
         embed.set_footer(text=f"📍 You are now at {loc.name}")
         await interaction.response.edit_message(embed=embed, view=new_view)
         await _check_abduction(interaction.client, interaction, previous, self.location_key)
+
+        # Gear warning for dangerous locations
+        from cogs.combat.use_case.gear_check import gear_warning
+        mobs = _get_location_mobs(interaction.user.id, self.location_key)
+        warning = gear_warning(interaction.user.id, mobs)
+        if warning:
+            await interaction.followup.send(warning, ephemeral=True)
 
 
 class TravelView(discord.ui.View):
@@ -167,6 +198,13 @@ class LocationsCog(commands.Cog):
         loc = LOCATIONS[loc_key]
         await ctx.send(f"🚶 {ctx.author.mention} traveled to **{loc.name}** {loc.emoji}")
         await _check_abduction(self.bot, ctx, previous, loc_key)
+
+        # Gear warning for dangerous locations
+        from cogs.combat.use_case.gear_check import gear_warning
+        mobs = _get_location_mobs(ctx.author.id, loc_key)
+        warning = gear_warning(ctx.author.id, mobs)
+        if warning:
+            await ctx.send(warning)
 
     @commands.command(name="where")
     async def where(self, ctx, member: discord.Member = None):
