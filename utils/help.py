@@ -28,7 +28,8 @@ def _main_embed() -> discord.Embed:
             "4. Type `!deposit all` to keep your stars safe in the bank\n"
             "5. Use `!travel` to move between locations\n\n"
             "**Click a button below** to learn about each feature, "
-            "or type `!help <command>` for info on a specific command."
+            "or type `!help <command>` for info on a specific command.\n\n"
+            "**Tip:** Use `!action` (or `!a`) for a quick dashboard with your stats and actions!"
         ),
         color=discord.Color.blurple(),
     )
@@ -115,7 +116,8 @@ def _travel_embed() -> discord.Embed:
         value=(
             "`!travel` (or `!t`) — Open the travel menu with buttons\n"
             "`!where` — Check your current location\n"
-            "`!where @someone` — Check where another player is"
+            "`!where @someone` — Check where another player is\n"
+            "`!action` (or `!a`) — Dashboard with stats, timers, and quick actions"
         ),
         inline=False,
     )
@@ -161,7 +163,7 @@ def _travel_embed() -> discord.Embed:
             "`!farm growbot ...` `!farm preserver ...`\n"
             "`!pet` `!fishlevel` `!baitshop` `!planets` `!where`\n"
             "`!hp` `!stamina` `!gear` `!consume` `!equip`\n"
-            "`!craft` `!recipes` `!recipe`"
+            "`!craft` `!recipes` `!recipe` `!action`"
         ),
         inline=False,
     )
