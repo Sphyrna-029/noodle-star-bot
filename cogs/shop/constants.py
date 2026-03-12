@@ -68,6 +68,15 @@ SHOP_ITEMS: Final[dict[str, ShopItem]] = {
         description="Farm helper robot. Use `!farm growbot harvest|tend|plant` for bulk actions.",
         aliases=("growbot", "grow-bot", "grow bot", "agri bot"),
     ),
+    "stamina_elixir": ShopItem(
+        price=50,
+        db_column="stamina_elixir",
+        consumable=True,
+        emoji="⚗️",
+        display_name="Stamina Elixir",
+        description="Restores 18 stamina. A concentrated brew. Use `!consume` to drink.",
+        aliases=("stamina elixir", "elixir"),
+    ),
     "bait_worm": ShopItem(
         price=33,
         db_column="bait_worm",

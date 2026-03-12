@@ -213,6 +213,7 @@ _r("health_potion", "Health Potion", "❤️‍🩹", "consumable")
 _r("bait_worm", "Worm Bait", "🪱", "consumable")
 _r("bait_herring", "Herring Bait", "🐟", "consumable")
 _r("bait_sturgeon", "Sturgeon Bait", "🐋", "consumable")
+_r("stamina_elixir", "Stamina Elixir", "⚗️", "consumable")
 _r("fertilizer", "Fertilizer", "🧪", "consumable")
 _r("water", "Water", "💧", "consumable")
 
@@ -233,6 +234,11 @@ def _build_aliases() -> None:
             _ALIAS_INDEX[underscore_name] = key
 
 _build_aliases()
+
+# Short aliases that don't collide with other item keys
+_ALIAS_INDEX["worm"] = "bait_worm"
+_ALIAS_INDEX["herring"] = "bait_herring"
+_ALIAS_INDEX["elixir"] = "stamina_elixir"
 
 # ── Public API ──────────────────────────────────────────────
 

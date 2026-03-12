@@ -731,6 +731,7 @@ def _shop_embed() -> discord.Embed:
         name="Quick Item Reference",
         value=(
             "🥔 Raw Potato (2) — `!consume` restores 6 stamina\n"
+            "⚗️ Stamina Elixir (50) — `!consume` restores 18 stamina\n"
             "🍄 Golden Mushroom (farm harvest) — `!consume` restores 40 stamina\n"
             "❤️‍🩹 Health Potion (50) — `!consume` restores 20 HP\n"
             "💸 Bank Insurance (2000) — Protects your bank from 1 defeat\n"

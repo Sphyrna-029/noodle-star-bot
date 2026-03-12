@@ -421,6 +421,7 @@ FISH_HEAL_VALUES: Final[dict[str, int]] = {
 STAMINA_RECOVERY: Final[dict[str, int]] = {
     # Farming consumables
     "raw_potato": 6,
+    "stamina_elixir": 18,
     "golden_mushroom": 40,
     # Junk fish that restore stamina (keys match stored inventory format)
     "seaweed": 10,

@@ -7,7 +7,7 @@ from discord.ext import commands
 
 from cogs.locations.check import require_location
 from cogs.economy.use_case import EconomyUseCases
-from cogs.shop.resources import RESOURCES, get_resource
+from cogs.shop.resources import RESOURCES, get_resource, resolve_item
 from database.repository import UserRepository
 
 
@@ -503,6 +503,14 @@ class EconomyCog(commands.Cog):
         norm = name.lower().replace(" ", "_")
         matching = [i for i in inv_items if i["item_key"] == norm]
 
+        # Fallback: resolve alias (e.g. "worm" → "bait_worm")
+        if not matching:
+            resolved = resolve_item(name)
+            if resolved:
+                matching = [i for i in inv_items if i["item_key"] == resolved.item_key]
+                if matching:
+                    norm = resolved.item_key
+
         if matching:
             actual_key = matching[0]["item_key"]
             to_stash = min(amount, len(matching))
@@ -691,10 +699,18 @@ class EconomyCog(commands.Cog):
         if name.lower() in cat_map:
             return await self._unstash_category(ctx, cat_map[name.lower()])
 
-        # Find matching items in storage (exact key match only)
+        # Find matching items in storage (exact key match, then alias fallback)
         stored = self.repo.get_storage_items(ctx.author.id)
         norm = name.lower().replace(" ", "_")
         matching = [s for s in stored if s["item_key"] == norm]
+
+        # Fallback: resolve alias (e.g. "worm" → "bait_worm")
+        if not matching:
+            resolved = resolve_item(name)
+            if resolved:
+                matching = [s for s in stored if s["item_key"] == resolved.item_key]
+                if matching:
+                    norm = resolved.item_key
 
         if not matching:
             await ctx.send(f"\u274c No item called **{name}** found in your storage! Use the exact item name.")
