@@ -1020,13 +1020,27 @@ def _combat_embed() -> discord.Embed:
         inline=False,
     )
     embed.add_field(
+        name="🆘 Coop Fighting",
+        value=(
+            "Click **Request Help** during any fight to let others join!\n"
+            "• Up to **4 players** can team up against a mob\n"
+            "• **Round-based:** everyone picks their action, then all resolve at once\n"
+            "• Mob attacks all players (diminishing damage per target: 100%/50%/25%/12.5%)\n"
+            "• Star rewards are reduced per player (2p=70%, 3p=50%, 4p=40% each)\n"
+            "• Dead players get normal defeat penalties; others continue\n"
+            "• Joiners must be at the **Noodle Colosseum** with HP and stamina"
+        ),
+        inline=False,
+    )
+    embed.add_field(
         name="Pro Tips",
         value=(
             "• Defense builds can outlast mobs by waiting for their stamina to drop\n"
             "• Stock up on healing fish before entering L3+ dungeons\n"
             "• Each dungeon has a **boss** with extra HP and rewards\n"
             "• Win 5 fights at your combat level to level up\n"
-            "• Better gear = more attack, defense, and max HP"
+            "• Better gear = more attack, defense, and max HP\n"
+            "• Coop helps with survival but solo gives more stars per kill"
         ),
         inline=False,
     )

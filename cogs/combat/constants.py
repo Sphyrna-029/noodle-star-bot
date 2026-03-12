@@ -623,3 +623,17 @@ COMBAT_LEVEL_UNLOCK: Final[dict[int, dict]] = {
 
 # How many wins at current level to gain a combat level
 WINS_PER_COMBAT_LEVEL: Final[int] = 5
+
+# ---------------------------------------------------------------------------
+# Coop Fighting
+# ---------------------------------------------------------------------------
+COOP_MAX_PLAYERS: Final[int] = 4
+COOP_JOIN_TIMEOUT: Final[int] = 60       # seconds to wait for joiners
+COOP_ROUND_TIMEOUT: Final[int] = 120     # seconds per round before auto-resolve
+COOP_REWARD_MULTIPLIER: Final[dict[int, float]] = {
+    1: 1.0,    # solo (not used, just for reference)
+    2: 0.70,   # 70% each
+    3: 0.50,   # 50% each
+    4: 0.40,   # 40% each
+}
+COOP_MOB_DAMAGE_FALLOFF: Final[list[float]] = [1.0, 0.50, 0.25, 0.125]

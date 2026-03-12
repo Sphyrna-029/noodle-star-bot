@@ -137,6 +137,46 @@ class RecipeInfo:
     can_craft: bool = False
 
 
+@dataclass
+class CoopPlayer:
+    """One player in a coop battle."""
+    user_id: int
+    username: str
+    hp: int
+    max_hp: int
+    stamina: int
+    max_stamina: int
+    attack: int
+    defense: int
+    alive: bool = True
+    action: str | None = None       # "attack", "defend", "flee", "consume"
+    consume_item: str | None = None  # item_key if action == "consume"
+    consume_type: str | None = None  # "hp" or "stamina"
+    defending: bool = False
+
+
+@dataclass
+class CoopBattleState:
+    """Mutable state during a coop fight."""
+    mob_key: str
+    mob_name: str
+    mob_emoji: str
+    dungeon_level: int
+    players: list[CoopPlayer]
+    mob_hp: int
+    mob_max_hp: int
+    mob_attack: int
+    mob_defense: int
+    mob_stamina: int
+    mob_max_stamina: int
+    round: int = 0
+    turns: list[BattleTurn] = field(default_factory=list)
+    finished: bool = False
+    open_for_join: bool = False
+    ambush: Optional[AmbushContext] = None
+    original_user_id: int = 0
+
+
 @dataclass(slots=True)
 class DungeonUnlockResult:
     success: bool

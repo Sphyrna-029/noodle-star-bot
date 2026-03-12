@@ -7,12 +7,14 @@ import discord
 from discord.ext import commands
 
 from cogs.combat.constants import (
-    COMBAT_ITEMS, CRAFT_RECIPES, CROP_HEAL_VALUES, DEATH_PENALTIES,
+    COMBAT_ITEMS, COOP_JOIN_TIMEOUT, COOP_MAX_PLAYERS, COOP_ROUND_TIMEOUT,
+    CRAFT_RECIPES, CROP_HEAL_VALUES, DEATH_PENALTIES,
     DUNGEON_LEVELS, FISH_HEAL_VALUES, MOBS_BY_LEVEL, STAMINA_RECOVERY,
 )
 from cogs.shop.resources import get_resource
-from cogs.combat.dto import BattleState, BattleTurn
+from cogs.combat.dto import BattleState, BattleTurn, CoopBattleState, CoopPlayer
 from cogs.combat.use_case.combat import CombatUseCases
+from cogs.combat.use_case.coop import CoopCombatUseCases
 from cogs.combat.use_case.crafting import CraftingUseCases
 from cogs.combat.use_case.equipment import EquipmentUseCases
 from cogs.combat.use_case.health import HealthUseCases, HEALTH_POTION_HP
@@ -526,6 +528,58 @@ class BattleView(discord.ui.View):
             return
         await self._do_consume(interaction)
 
+    @discord.ui.button(label="Request Help", emoji="\U0001f198", style=discord.ButtonStyle.secondary, row=4)
+    async def request_help_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Convert to coop and post a join message."""
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message("Only the fighter can request help!", ephemeral=True)
+            return
+
+        try:
+            await interaction.response.defer()
+            async with self._finish_lock:
+                if self.battle.finished:
+                    return
+
+                # Disable this button
+                button.label = "Help Requested!"
+                button.disabled = True
+
+                # Convert to coop
+                coop_uc = CoopCombatUseCases(self.combat_uc.repo)
+                coop_state = coop_uc.convert_to_coop(self.battle, self.author_id, self.username)
+
+                # Disable all solo buttons
+                self._disable_buttons()
+                embed = self._create_embed()
+                embed.set_footer(text="Switching to coop mode... Waiting for allies!")
+                await interaction.edit_original_response(embed=embed, view=self)
+
+                # Send join message
+                join_view = JoinFightView(
+                    coop_state=coop_state,
+                    coop_uc=coop_uc,
+                    combat_uc=self.combat_uc,
+                    original_message=self.message,
+                    original_author_id=self.author_id,
+                )
+                mob_hp_text = f"{coop_state.mob_hp}/{coop_state.mob_max_hp}"
+                join_msg = await interaction.channel.send(
+                    f"\U0001f198 **{self.username} needs help fighting "
+                    f"{coop_state.mob_emoji} {coop_state.mob_name}!** "
+                    f"(HP: {mob_hp_text})\n"
+                    f"Click Join to help! ({COOP_JOIN_TIMEOUT}s)",
+                    view=join_view,
+                )
+                join_view.message = join_msg
+                # Remove original fighter from solo _active_battles — they'll be
+                # tracked via the coop view
+                _active_battles.discard(self.author_id)
+                _active_battles.add(self.author_id)
+
+        except Exception:
+            traceback.print_exc()
+
     async def on_timeout(self) -> None:
         async with self._finish_lock:
             if self.battle.finished:
@@ -570,6 +624,553 @@ def _progress_bar(pct: float, length: int = 10) -> str:
     """Create a text progress bar."""
     filled = int(pct * length)
     return "█" * filled + "░" * (length - filled)
+
+
+# ---------------------------------------------------------------------------
+# Coop — Join Fight View
+# ---------------------------------------------------------------------------
+
+class JoinFightView(discord.ui.View):
+    """Lobby view that lets other players join an existing fight."""
+
+    def __init__(self, coop_state: CoopBattleState, coop_uc: CoopCombatUseCases,
+                 combat_uc: CombatUseCases, original_message, original_author_id: int):
+        super().__init__(timeout=COOP_JOIN_TIMEOUT)
+        self.coop_state = coop_state
+        self.coop_uc = coop_uc
+        self.combat_uc = combat_uc
+        self.original_message = original_message
+        self.original_author_id = original_author_id
+        self.message = None
+
+    @discord.ui.button(label="Join Fight", emoji="⚔️", style=discord.ButtonStyle.success)
+    async def join_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        user_id = interaction.user.id
+
+        # Check not in battle/duel
+        if is_in_battle(user_id):
+            await interaction.response.send_message("You're already in a fight!", ephemeral=True)
+            return
+        from cogs.gambling.handlers import is_in_duel
+        if is_in_duel(user_id):
+            await interaction.response.send_message("You're in a PvP duel!", ephemeral=True)
+            return
+
+        # Check location
+        from cogs.locations.use_case import LocationUseCases
+        loc_uc = LocationUseCases()
+        if loc_uc.get_location(user_id) != "noodle_colosseum":
+            await interaction.response.send_message(
+                "You need to be at the **Noodle Colosseum** to join! Use `!travel`.",
+                ephemeral=True,
+            )
+            return
+
+        # Try to add player
+        error = self.coop_uc.add_player(self.coop_state, user_id, str(interaction.user))
+        if error:
+            await interaction.response.send_message(f"❌ {error}", ephemeral=True)
+            return
+
+        _active_battles.add(user_id)
+
+        # Update join message to show who's in
+        player_names = [p.username for p in self.coop_state.players]
+        player_list = ", ".join(player_names)
+        count = len(self.coop_state.players)
+
+        await interaction.response.edit_message(
+            content=(
+                f"\U0001f198 **Coop Fight vs {self.coop_state.mob_emoji} {self.coop_state.mob_name}!**\n"
+                f"Players ({count}/{COOP_MAX_PLAYERS}): {player_list}\n"
+                + ("Waiting for more players..." if count < COOP_MAX_PLAYERS else "Full! Starting...")
+            ),
+            view=self,
+        )
+
+        # If full (4 players), start immediately
+        if count >= COOP_MAX_PLAYERS:
+            await self._start_coop_battle(interaction)
+
+    async def _start_coop_battle(self, interaction: discord.Interaction):
+        """Transition from join phase to coop battle."""
+        self.coop_state.open_for_join = False
+
+        # Disable join button
+        for child in self.children:
+            child.disabled = True
+        if self.message:
+            try:
+                player_names = [p.username for p in self.coop_state.players]
+                await self.message.edit(
+                    content=f"⚔️ Coop battle started! Players: {', '.join(player_names)}",
+                    view=self,
+                )
+            except Exception:
+                pass
+
+        # Create coop battle view on the original message
+        coop_view = CoopBattleView(
+            coop_state=self.coop_state,
+            coop_uc=self.coop_uc,
+            combat_uc=self.combat_uc,
+        )
+        embed = coop_view.create_embed()
+        if self.original_message:
+            try:
+                await self.original_message.edit(embed=embed, view=coop_view)
+                coop_view.message = self.original_message
+            except Exception:
+                traceback.print_exc()
+
+        self.stop()
+
+    async def on_timeout(self):
+        """Timeout — start with whoever joined (even if just the original player)."""
+        self.coop_state.open_for_join = False
+
+        for child in self.children:
+            child.disabled = True
+        if self.message:
+            try:
+                await self.message.edit(
+                    content=f"⚔️ Join phase ended! Starting coop battle...",
+                    view=self,
+                )
+            except Exception:
+                pass
+
+        # Start coop battle with whoever is in
+        coop_view = CoopBattleView(
+            coop_state=self.coop_state,
+            coop_uc=self.coop_uc,
+            combat_uc=self.combat_uc,
+        )
+        embed = coop_view.create_embed()
+        if self.original_message:
+            try:
+                await self.original_message.edit(embed=embed, view=coop_view)
+                coop_view.message = self.original_message
+            except Exception:
+                traceback.print_exc()
+
+
+# ---------------------------------------------------------------------------
+# Coop — Battle View (round-based)
+# ---------------------------------------------------------------------------
+
+class _CoopHPSelect(discord.ui.Select):
+    """HP consume dropdown for coop battle — each player sees their own items."""
+
+    def __init__(self, options: list[discord.SelectOption]):
+        super().__init__(placeholder="🍖 Consume HP item...", options=options, row=1)
+
+    async def callback(self, interaction: discord.Interaction):
+        view = self.view
+        if not isinstance(view, CoopBattleView):
+            return
+        player = view._get_player(interaction.user.id)
+        if not player or not player.alive:
+            await interaction.response.send_message("You're not in this fight!", ephemeral=True)
+            return
+        view._pending_consume[interaction.user.id] = (self.values[0], "hp")
+        await interaction.response.send_message(
+            f"Selected **{self.values[0].replace('_', ' ').title()}** (HP). Click Consume to use it.",
+            ephemeral=True,
+        )
+
+
+class _CoopStaminaSelect(discord.ui.Select):
+    """Stamina consume dropdown for coop battle."""
+
+    def __init__(self, options: list[discord.SelectOption]):
+        super().__init__(placeholder="⚡ Consume stamina item...", options=options, row=2)
+
+    async def callback(self, interaction: discord.Interaction):
+        view = self.view
+        if not isinstance(view, CoopBattleView):
+            return
+        player = view._get_player(interaction.user.id)
+        if not player or not player.alive:
+            await interaction.response.send_message("You're not in this fight!", ephemeral=True)
+            return
+        view._pending_consume[interaction.user.id] = (self.values[0], "stamina")
+        await interaction.response.send_message(
+            f"Selected **{self.values[0].replace('_', ' ').title()}** (stamina). Click Consume to use it.",
+            ephemeral=True,
+        )
+
+
+class CoopBattleView(discord.ui.View):
+    """Round-based coop battle view. All players pick actions, then resolve."""
+
+    def __init__(self, coop_state: CoopBattleState, coop_uc: CoopCombatUseCases,
+                 combat_uc: CombatUseCases):
+        super().__init__(timeout=COOP_ROUND_TIMEOUT)
+        self.coop_state = coop_state
+        self.coop_uc = coop_uc
+        self.combat_uc = combat_uc
+        self.message = None
+        self._finish_lock = asyncio.Lock()
+        self._pending_consume: dict[int, tuple[str, str]] = {}  # user_id -> (item_key, type)
+        self._health_uc = HealthUseCases(self.combat_uc.repo)
+        self._rebuild_view()
+
+    def _get_player(self, user_id: int) -> CoopPlayer | None:
+        for p in self.coop_state.players:
+            if p.user_id == user_id:
+                return p
+        return None
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        """Allow any participant to interact."""
+        player = self._get_player(interaction.user.id)
+        if not player or not player.alive:
+            await interaction.response.send_message("You're not in this fight!", ephemeral=True)
+            return False
+        return True
+
+    def _rebuild_view(self):
+        """Rebuild view components."""
+        self.clear_items()
+        self.add_item(self.attack_button)
+        self.add_item(self.defend_button)
+        self.add_item(self.flee_button)
+        self.add_item(self.consume_button)
+
+    def create_embed(self) -> discord.Embed:
+        s = self.coop_state
+
+        if s.finished:
+            mob_dead = s.mob_hp <= 0
+            color = discord.Color.green() if mob_dead else discord.Color.red()
+        else:
+            color = discord.Color.orange()
+
+        dungeon_info = DUNGEON_LEVELS.get(s.dungeon_level, {})
+        dungeon_name = dungeon_info.get("name", f"Level {s.dungeon_level}")
+
+        if s.ambush:
+            title = f"⚔️ Coop Ambush — {s.mob_emoji} {s.mob_name}"
+        else:
+            title = f"⚔️ Coop Battle — {dungeon_name} (Level {s.dungeon_level})"
+
+        embed = discord.Embed(title=title, color=color)
+
+        # Player status lines
+        player_lines = []
+        for p in s.players:
+            if not p.alive:
+                player_lines.append(f"💀 **{p.username}** — OUT (defeated)")
+                continue
+
+            hp_pct = p.hp / p.max_hp if p.max_hp else 0
+            hp_bar = _progress_bar(hp_pct)
+            stam_pct = p.stamina / p.max_stamina if p.max_stamina else 0
+            stam_bar = _progress_bar(stam_pct)
+
+            action_icon = "✅" if p.action else "⏳"
+            action_text = ""
+            if p.action:
+                action_text = f" {p.action.title()}"
+
+            player_lines.append(
+                f"👤 **{p.username}** — ❤️ {p.hp}/{p.max_hp} {hp_bar} "
+                f"⚡ {p.stamina}/{p.max_stamina} {stam_bar} "
+                f"{action_icon}{action_text}"
+            )
+
+        embed.add_field(
+            name="Players",
+            value="\n".join(player_lines) or "No players",
+            inline=False,
+        )
+
+        # Mob stats
+        mob_hp_pct = s.mob_hp / s.mob_max_hp if s.mob_max_hp else 0
+        mob_hp_bar = _progress_bar(mob_hp_pct)
+
+        embed.add_field(
+            name=f"{s.mob_emoji} {s.mob_name}",
+            value=(
+                f"❤️ HP: {s.mob_hp}/{s.mob_max_hp} {mob_hp_bar}\n"
+                f"⚔️ ATK: {s.mob_attack}  🛡️ DEF: {s.mob_defense}"
+            ),
+            inline=False,
+        )
+
+        # Combat log — last 6 entries
+        recent = s.turns[-6:] if len(s.turns) > 6 else s.turns
+        if recent:
+            log_lines = [t.message for t in recent]
+            embed.add_field(
+                name=f"📜 Round {s.round}",
+                value="\n".join(log_lines),
+                inline=False,
+            )
+
+        alive_count = sum(1 for p in s.players if p.alive)
+        total = len(s.players)
+        if not s.finished:
+            embed.set_footer(
+                text=f"Round {s.round + 1} — Choose your action | \U0001f198 Coop ({alive_count}/{total} players)"
+            )
+
+        return embed
+
+    async def _try_resolve_round(self, interaction: discord.Interaction):
+        """If all actions are chosen, resolve the round."""
+        if not self.coop_uc.all_actions_chosen(self.coop_state):
+            return
+
+        async with self._finish_lock:
+            if self.coop_state.finished:
+                return
+
+            round_turns = self.coop_uc.resolve_round(self.coop_state)
+
+            if self.coop_state.finished:
+                # Check victory or defeat
+                if self.coop_state.mob_hp <= 0:
+                    rewards = self.coop_uc.resolve_coop_victory(self.coop_state)
+                    self._finish_coop_battle()
+                    embed = self.create_embed()
+                    reward_lines = []
+                    for uid, stars in rewards.items():
+                        p = self._get_player(uid)
+                        name = p.username if p else str(uid)
+                        if stars > 0:
+                            reward_lines.append(f"⭐ **{name}**: +{stars} stars")
+                        else:
+                            reward_lines.append(f"✅ **{name}**: survived!")
+                    embed.add_field(
+                        name="🏆 VICTORY",
+                        value="\n".join(reward_lines) if reward_lines else "No rewards.",
+                        inline=False,
+                    )
+                    await self._update_message(embed)
+                else:
+                    # All players dead
+                    self._finish_coop_battle()
+                    embed = self.create_embed()
+                    embed.add_field(
+                        name="💀 TOTAL DEFEAT",
+                        value="All players have been defeated!",
+                        inline=False,
+                    )
+                    await self._update_message(embed)
+            else:
+                # Round resolved but fight continues — reset timer
+                self.timeout = COOP_ROUND_TIMEOUT
+                embed = self.create_embed()
+                await self._update_message(embed)
+
+    def _finish_coop_battle(self):
+        """Clean up after coop battle ends."""
+        for p in self.coop_state.players:
+            _active_battles.discard(p.user_id)
+        self._disable_buttons()
+
+    def _disable_buttons(self):
+        for item in self.children:
+            item.disabled = True
+
+    async def _update_message(self, embed: discord.Embed):
+        if self.message:
+            try:
+                await self.message.edit(embed=embed, view=self)
+            except Exception:
+                traceback.print_exc()
+
+    @discord.ui.button(label="Attack", style=discord.ButtonStyle.danger, emoji="⚔️", row=0)
+    async def attack_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        player = self._get_player(interaction.user.id)
+        if player.action is not None:
+            await interaction.response.send_message("You already chose this round!", ephemeral=True)
+            return
+        player.action = "attack"
+        await interaction.response.defer()
+        embed = self.create_embed()
+        await self._update_message(embed)
+        await self._try_resolve_round(interaction)
+
+    @discord.ui.button(label="Defend", style=discord.ButtonStyle.primary, emoji="🛡️", row=0)
+    async def defend_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        player = self._get_player(interaction.user.id)
+        if player.action is not None:
+            await interaction.response.send_message("You already chose this round!", ephemeral=True)
+            return
+        player.action = "defend"
+        await interaction.response.defer()
+        embed = self.create_embed()
+        await self._update_message(embed)
+        await self._try_resolve_round(interaction)
+
+    @discord.ui.button(label="Flee", style=discord.ButtonStyle.secondary, emoji="🏃", row=0)
+    async def flee_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        player = self._get_player(interaction.user.id)
+        if player.action is not None:
+            await interaction.response.send_message("You already chose this round!", ephemeral=True)
+            return
+        player.action = "flee"
+        await interaction.response.defer()
+        embed = self.create_embed()
+        await self._update_message(embed)
+        await self._try_resolve_round(interaction)
+
+    @discord.ui.button(label="Consume", style=discord.ButtonStyle.success, emoji="🍽️", row=3)
+    async def consume_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        player = self._get_player(interaction.user.id)
+        if player.action is not None:
+            await interaction.response.send_message("You already chose this round!", ephemeral=True)
+            return
+
+        uid = interaction.user.id
+        pending = self._pending_consume.get(uid)
+
+        if not pending:
+            # Show item selection via ephemeral dropdowns
+            items = self.combat_uc.repo.get_inventory_items(uid)
+            item_counts: dict[str, int] = {}
+            for item in items:
+                key = item["item_key"]
+                item_counts[key] = item_counts.get(key, 0) + 1
+
+            hp_lines = []
+            stam_lines = []
+            for key, count in sorted(item_counts.items()):
+                heal = self._health_uc.get_hp_value(key)
+                if heal and count > 0:
+                    display = key.replace("_", " ").title()
+                    hp_lines.append(f"🍖 **{display}** (+{heal} HP) x{count} — type: `{key}`")
+                recovery = STAMINA_RECOVERY.get(key)
+                if recovery and count > 0:
+                    display = key.replace("_", " ").title()
+                    stam_lines.append(f"⚡ **{display}** (+{recovery} stam) x{count} — type: `{key}`")
+
+            if not hp_lines and not stam_lines:
+                await interaction.response.send_message("You have no consumable items!", ephemeral=True)
+                return
+
+            text = "**Select an item from the dropdowns above**, then click Consume again.\n\n"
+            if hp_lines:
+                text += "**HP Items:**\n" + "\n".join(hp_lines[:10]) + "\n\n"
+            if stam_lines:
+                text += "**Stamina Items:**\n" + "\n".join(stam_lines[:10])
+
+            # Build ephemeral view with selects
+            ephemeral_view = _CoopConsumeSelectView(self, uid)
+            await interaction.response.send_message(text, view=ephemeral_view, ephemeral=True)
+            return
+
+        # Consume the pending item
+        item_key, consume_type = pending
+        player.action = "consume"
+        player.consume_item = item_key
+        player.consume_type = consume_type
+        del self._pending_consume[uid]
+
+        await interaction.response.defer()
+        embed = self.create_embed()
+        await self._update_message(embed)
+        await self._try_resolve_round(interaction)
+
+    async def on_timeout(self):
+        """Auto-resolve: any player without an action defaults to defend."""
+        async with self._finish_lock:
+            if self.coop_state.finished:
+                return
+
+            for p in self.coop_state.players:
+                if p.alive and p.action is None:
+                    p.action = "defend"
+
+            round_turns = self.coop_uc.resolve_round(self.coop_state)
+
+            if self.coop_state.finished:
+                if self.coop_state.mob_hp <= 0:
+                    rewards = self.coop_uc.resolve_coop_victory(self.coop_state)
+                    self._finish_coop_battle()
+                    embed = self.create_embed()
+                    reward_lines = []
+                    for uid, stars in rewards.items():
+                        p = self._get_player(uid)
+                        name = p.username if p else str(uid)
+                        if stars > 0:
+                            reward_lines.append(f"⭐ **{name}**: +{stars} stars")
+                    embed.add_field(
+                        name="🏆 VICTORY",
+                        value="\n".join(reward_lines) if reward_lines else "No rewards.",
+                        inline=False,
+                    )
+                    await self._update_message(embed)
+                else:
+                    self._finish_coop_battle()
+                    embed = self.create_embed()
+                    embed.add_field(
+                        name="💀 TOTAL DEFEAT",
+                        value="All players have been defeated!",
+                        inline=False,
+                    )
+                    await self._update_message(embed)
+            else:
+                # Fight continues, but timed out — just show the result
+                embed = self.create_embed()
+                embed.set_footer(text="⏰ Round auto-resolved (idle players defended)")
+                await self._update_message(embed)
+                # Restart the timeout for next round
+                self.timeout = COOP_ROUND_TIMEOUT
+
+
+class _CoopConsumeSelectView(discord.ui.View):
+    """Ephemeral view for selecting a consume item in coop."""
+
+    def __init__(self, parent_view: CoopBattleView, user_id: int):
+        super().__init__(timeout=30)
+        self.parent_view = parent_view
+        self.user_id = user_id
+        self._build_selects()
+
+    def _build_selects(self):
+        items = self.parent_view.combat_uc.repo.get_inventory_items(self.user_id)
+        item_counts: dict[str, int] = {}
+        for item in items:
+            key = item["item_key"]
+            item_counts[key] = item_counts.get(key, 0) + 1
+
+        hp_opts = []
+        stam_opts = []
+        health_uc = self.parent_view._health_uc
+
+        for key, count in sorted(item_counts.items()):
+            heal = health_uc.get_hp_value(key)
+            if heal and count > 0:
+                display = key.replace("_", " ").title()
+                res = get_resource(key)
+                emoji = res.emoji if res else "🍽️"
+                hp_opts.append(discord.SelectOption(
+                    label=f"{display} (+{heal} HP) x{count}",
+                    value=key,
+                    emoji=emoji,
+                ))
+            recovery = STAMINA_RECOVERY.get(key)
+            if recovery and count > 0:
+                display = key.replace("_", " ").title()
+                res = get_resource(key)
+                emoji = res.emoji if res else "⚡"
+                stam_opts.append(discord.SelectOption(
+                    label=f"{display} (+{recovery} stam) x{count}",
+                    value=key,
+                    emoji=emoji,
+                ))
+
+        if hp_opts:
+            self.add_item(_CoopHPSelect(hp_opts[:25]))
+        if stam_opts:
+            self.add_item(_CoopStaminaSelect(stam_opts[:25]))
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        return interaction.user.id == self.user_id
 
 
 # ---------------------------------------------------------------------------
