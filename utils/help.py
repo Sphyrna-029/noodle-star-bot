@@ -289,10 +289,10 @@ def _fishing_embed() -> discord.Embed:
         name="Bait Comparison",
         value=(
             "🪱 **Worm** (33 stars) — Bites in 7-30 sec, 45 sec to pull — **Best for beginners**\n"
-            "🐟 **Herring** (79 stars) — Bites in 45-90 sec, 27 sec to pull — 2x better catches\n"
-            "🐋 **Sturgeon** (110 stars) — Bites in 2.5-4 min, only 15 sec to pull — 10x better catches\n\n"
-            "**Higher tier bait** = longer wait but WAY better fish.\n"
-            "Fishing now costs **stamina** — higher levels and better bait cost more.\n"
+            "🐟 **Herring** (79 stars) — Bites in 45-90 sec, 27 sec to pull — Better rare catches\n"
+            "🐋 **Sturgeon** (110 stars) — Bites in 2.5-4 min, only 15 sec to pull — Best rare catches\n\n"
+            "**Higher tier bait** = longer wait but better rare/legendary odds.\n"
+            "Fishing costs **stamina** — higher levels and better bait cost more.\n"
             "**Be careful with Sturgeon** — you only get 15 seconds to type `!pull`!"
         ),
         inline=False,

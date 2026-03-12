@@ -7,12 +7,16 @@ __all__ = [
     "FISHING_COOLDOWN",
     "FISHING_BAIT_TIERS",
     "FISHING_STAMINA_COST",
+    "FISHING_REWARD_SCALE",
     "FISHING_CATCH_TABLE",
     "CATCH_TABLES",
     "FISH_LEVELS",
 ]
 
-FISHING_COOLDOWN: Final[timedelta] = timedelta(seconds=120)
+FISHING_COOLDOWN: Final[timedelta] = timedelta(seconds=0)  # stamina gates fishing now
+
+# Reward multiplier — scales all catch star values to balance with mining
+FISHING_REWARD_SCALE: Final[float] = 0.40
 
 FISHING_BAIT_TIERS: Final[dict[str, BaitTier]] = {
     "worm": BaitTier(
@@ -21,7 +25,7 @@ FISHING_BAIT_TIERS: Final[dict[str, BaitTier]] = {
         bite_wait_min=timedelta(seconds=7),
         bite_wait_max=timedelta(seconds=30),
         pull_window=timedelta(seconds=45),
-        rare_boost=0.4924,
+        rare_boost=1.0,
     ),
     "herring": BaitTier(
         emoji="🐟",
@@ -29,7 +33,7 @@ FISHING_BAIT_TIERS: Final[dict[str, BaitTier]] = {
         bite_wait_min=timedelta(seconds=45),
         bite_wait_max=timedelta(seconds=90),
         pull_window=timedelta(seconds=27),
-        rare_boost=2.009,
+        rare_boost=1.8,
     ),
     "sturgeon": BaitTier(
         emoji="🐋",
@@ -37,7 +41,7 @@ FISHING_BAIT_TIERS: Final[dict[str, BaitTier]] = {
         bite_wait_min=timedelta(minutes=2, seconds=30),
         bite_wait_max=timedelta(minutes=4),
         pull_window=timedelta(seconds=15),
-        rare_boost=9.964,
+        rare_boost=3.0,
     ),
 }
 

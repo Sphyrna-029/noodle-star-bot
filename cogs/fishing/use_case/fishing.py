@@ -35,6 +35,7 @@ from cogs.fishing.constants import (
     FISH_LEVELS,
     FISHING_BAIT_TIERS,
     FISHING_COOLDOWN,
+    FISHING_REWARD_SCALE,
     FISHING_STAMINA_COST,
 )
 from database.repository import UserRepository
@@ -465,8 +466,8 @@ class FishingUseCases:
             # Read inventory for item effects
             inventory = self.repo.get_user_inventory(user_id)
 
-            # Calculate reward value (keep Star Magnet boost)
-            reward = catch["stars"]
+            # Calculate reward value (scaled, then Star Magnet boost)
+            reward = int(catch["stars"] * FISHING_REWARD_SCALE)
             star_magnet_uses = inventory["star_magnet"]
             if star_magnet_uses > 0 and reward > 0:
                 reward = math.ceil(reward * 1.15)
