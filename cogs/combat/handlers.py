@@ -268,6 +268,7 @@ class BattleView(discord.ui.View):
         if hp_opts or stam_opts:
             self.add_item(self.battle_consume_btn)
 
+        self.add_item(self.request_help_button)
         self._update_flee_button()
 
     async def _do_consume(self, interaction: discord.Interaction):
