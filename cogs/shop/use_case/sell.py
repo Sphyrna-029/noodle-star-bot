@@ -13,6 +13,73 @@ from cogs.shop.dto import SellResult, TrashResult
 from database.repository import UserRepository
 
 
+def _build_default_sell_values() -> dict[str, int]:
+    """Build a fallback sell-value map from mineral/fish/ore/crop constants.
+
+    Used to fix items that lost their sell value (e.g. unstashed from old storage).
+    """
+    values: dict[str, int] = {}
+
+    # Mining minerals
+    try:
+        from cogs.mining.constants import MINERAL_TABLES
+        for _level, tables in MINERAL_TABLES.items():
+            for table_key in ("normal", "gold"):
+                for m in tables.get(table_key, []):
+                    key = m.name.lower().replace(" ", "_").replace("'", "")
+                    if key not in values:
+                        values[key] = m.stars
+    except Exception:
+        pass
+
+    # Fishing catches
+    try:
+        from cogs.fishing.constants import CATCH_TABLES
+        for _level, buckets in CATCH_TABLES.items():
+            for _rarity, bucket in buckets.items():
+                for c in bucket.catches:
+                    key = c.name.lower().replace(" ", "_").replace("'", "")
+                    if key not in values:
+                        values[key] = c.stars
+    except Exception:
+        pass
+
+    # Space ores
+    try:
+        from cogs.space.constants import SPACE_MINERAL_TABLES
+        for _planet, tables in SPACE_MINERAL_TABLES.items():
+            for table_key in ("normal", "gold"):
+                for m in tables.get(table_key, []):
+                    key = m.name.lower().replace(" ", "_").replace("'", "")
+                    if key not in values:
+                        values[key] = m.stars
+    except Exception:
+        pass
+
+    # Farming crops
+    try:
+        from cogs.farming.constants import CROPS
+        for c in CROPS.values():
+            key = c.name.lower().replace(" ", "_")
+            if key not in values and c.sell_price > 0:
+                values[key] = c.sell_price
+    except Exception:
+        pass
+
+    return values
+
+
+_DEFAULT_SELL_VALUES: dict[str, int] = {}
+
+
+def _get_default_sell_value(item_key: str) -> int:
+    """Return a default sell value for items with base_sell_value=0."""
+    global _DEFAULT_SELL_VALUES
+    if not _DEFAULT_SELL_VALUES:
+        _DEFAULT_SELL_VALUES = _build_default_sell_values()
+    return _DEFAULT_SELL_VALUES.get(item_key, 0)
+
+
 class SellUseCases:
     """Handles selling and trashing inventory items."""
 
@@ -79,6 +146,16 @@ class SellUseCases:
 
         return self._sell_item(user_id, username, resource.item_key, count)
 
+    @staticmethod
+    def _fix_sell_values(items: list[dict]) -> list[dict]:
+        """Fix items with base_sell_value=0 using default sell values."""
+        for item in items:
+            if item.get("base_sell_value", 0) <= 0:
+                default = _get_default_sell_value(item["item_key"])
+                if default > 0:
+                    item["base_sell_value"] = default
+        return items
+
     def _sell_item(self, user_id: int, username: str, item_key: str, count: int) -> SellResult:
         """Sell a specific item type."""
         # Get items from inventory
@@ -91,7 +168,8 @@ class SellUseCases:
                 message=f"You don't have any **{name}** to sell.",
             )
 
-        # Filter out zero-value items
+        # Fix zero-value items (e.g. from broken unstash) and filter
+        self._fix_sell_values(items)
         sellable = [i for i in items if i["base_sell_value"] > 0]
         if not sellable:
             resource = get_resource(item_key)
@@ -110,6 +188,7 @@ class SellUseCases:
     def _sell_category(self, user_id: int, username: str, category: str) -> SellResult:
         """Sell all items in a category."""
         items = self.repo.get_items_by_category(user_id, category)
+        self._fix_sell_values(items)
         sellable = [i for i in items if i["base_sell_value"] > 0]
         if not sellable:
             return SellResult(
@@ -121,6 +200,7 @@ class SellUseCases:
     def _sell_all(self, user_id: int, username: str) -> SellResult:
         """Sell everything with value > 0."""
         all_items = self.repo.get_inventory_items(user_id)
+        self._fix_sell_values(all_items)
         sellable = [i for i in all_items if i["base_sell_value"] > 0]
         if not sellable:
             return SellResult(

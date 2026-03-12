@@ -1,12 +1,18 @@
 # Noodle Star Bot - Project Instructions
 
-## CRITICAL: Git Branch Rules
+## CRITICAL: Git Branch Rules — READ THIS FIRST
 
-- **NEVER push to `main` without explicit user approval.** Pushing to main deploys to the live bot and can crash or corrupt the game for all players.
-- **Always push to `stage` first.** Stage is the testing branch.
-- When the user says "push", assume they mean `stage` unless they specifically say "main" in that same message.
-- Always confirm before pushing to `main`: "Want me to push to main as well?"
-- **Approval to push to main does NOT carry over.** Each push requires its own explicit approval. A previous "yes push to main" does not authorize future pushes.
+**DEFAULT BEHAVIOR: Every `git push` goes to `stage` ONLY. Never touch `main` unless the user says "main" in that specific message.**
+
+Pushing to main deploys to the live bot and can crash or corrupt the game for all players.
+
+Rules:
+1. **Always push to `stage` only.** This is the default for every commit. Do `git push origin stage` and STOP.
+2. **NEVER push to `main` unless the user explicitly says "main" or "push to main" in the CURRENT message.** Not a previous message — the current one.
+3. **After pushing to stage, ask:** "Want me to push to main as well?" — then WAIT for the user to respond. Do NOT push to main in the same command.
+4. **"Push to main" approval is single-use.** It authorizes ONE push. The next commit goes to stage only, and you must ask again.
+5. When the user says "push" with no branch specified, that means `stage`.
+6. When the user says "push to main", push stage to main with: `git push origin stage:main` — but ONLY after stage is up to date.
 
 ## Project Overview
 
