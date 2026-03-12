@@ -18,6 +18,7 @@ from cogs.gambling.use_cases import (
     CoinflipUseCase,
     DuelUseCase,
     BlackJackUseCase,
+    PickpocketUseCase,
     RouletteUseCase,
 )
 from cogs.gambling.dto import BlackJackGameState, BlackJackResult, DuelState
@@ -737,6 +738,7 @@ class GamblingCog(commands.Cog):
         self.gamble_use_case = GambleUseCase()
         self.coinflip_use_case = CoinflipUseCase()
         self.duel_use_case = DuelUseCase()
+        self.pickpocket_use_case = PickpocketUseCase()
         self.blackjack_use_case = BlackJackUseCase()
         self.roulette_use_case = RouletteUseCase()
         self.roulette_use_case.set_game_callback(self._on_roulette_event)
@@ -843,6 +845,69 @@ class GamblingCog(commands.Cog):
                 f"**YOU LOSE!** You lost **{result.amount_changed}** noodle stars!\n"
                 f"New balance: **{result.new_balance}** stars! \U0001f622"
             )
+
+    @commands.command(name="pickpocket", aliases=["pp"])
+    async def pickpocket(self, ctx, opponent: discord.Member = None, amount: int = 0):
+        """Try to pickpocket another player's stars! Both roll a D20."""
+        if not self._has_lucky_dice(ctx.author.id):
+            if not await require_location(ctx, "noodle_town"):
+                return
+        if opponent is None or amount is None:
+            await ctx.send(
+                f"\u274c {ctx.author.mention}, please specify a target and amount! "
+                f"Usage: `!pickpocket @user <amount>`"
+            )
+            return
+
+        if opponent.bot:
+            await ctx.send(f"\u274c {ctx.author.mention}, you can't pickpocket a bot!")
+            return
+
+        result = self.pickpocket_use_case.execute(
+            ctx.author.id,
+            str(ctx.author),
+            opponent.id,
+            str(opponent),
+            amount,
+        )
+
+        if not result.success:
+            await ctx.send(f"\u274c {ctx.author.mention}, {result.message}")
+            return
+
+        await ctx.send(
+            f"\U0001f9b9 **PICKPOCKET!** \U0001f9b9\n"
+            f"{ctx.author.mention} tries to pickpocket {opponent.mention} for **{amount}** stars!\n"
+            f"\U0001f4aa Stamina: **{result.challenger_stamina_before}** \u2192 **{result.challenger_stamina_after}** "
+            f"(cost **{result.stamina_cost}**)\n\n"
+            f"\U0001f3b2 Rolling..."
+        )
+
+        if result.winner_id == ctx.author.id:
+            winner = ctx.author
+            loser = opponent
+        else:
+            winner = opponent
+            loser = ctx.author
+
+        await ctx.send(
+            f"\U0001f3b2 {ctx.author.mention} rolled **{result.challenger_roll}**\n"
+            f"\U0001f3b2 {opponent.mention} rolled **{result.opponent_roll}**\n\n"
+            f"\U0001f3c6 **{winner.mention} WINS!** \U0001f3c6\n"
+            f"{winner.mention} took **{amount}** noodle stars from {loser.mention}!\n\n"
+            f"{ctx.author.mention}'s balance: **{result.challenger_new_balance}** stars\n"
+            f"{opponent.mention}'s balance: **{result.opponent_new_balance}** stars"
+        )
+        if result.unlocked_achievement_keys:
+            lines = _format_achievement_lines(
+                [(result.winner_id, key) for key in result.unlocked_achievement_keys],
+                {
+                    ctx.author.id: ctx.author.mention,
+                    opponent.id: opponent.mention,
+                },
+            )
+            if lines:
+                await ctx.send("\n".join(lines))
 
     @commands.command(name="duel")
     async def duel(self, ctx, opponent: discord.Member = None, amount: int = 0):

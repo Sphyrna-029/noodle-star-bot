@@ -138,7 +138,7 @@ def _travel_embed() -> discord.Embed:
         value=(
             "**🏘️ Noodle Town**\n"
             "`!deposit` `!withdraw` `!store` `!buy` `!trade`\n"
-            "`!gamble` `!coinflip` `!blackjack` `!duel` `!russian`\n\n"
+            "`!gamble` `!coinflip` `!blackjack` `!pickpocket` `!duel` `!russian`\n\n"
             "**⛏️ Crystal Cave** — `!mine` `!minelevel`\n"
             "**🎣 Starfish Bay** — `!fish` `!pull` `!fishing`\n"
             "**🌾 Fusilli Farms** — `!plant` `!harvest` `!tend`\n"
@@ -623,6 +623,9 @@ def _gambling_embed() -> discord.Embed:
             "**🃏 Blackjack** — `!blackjack 50` (or `!bj 50`)\n"
             "Play cards vs the dealer. Use the Hit/Stand buttons. "
             "Natural 21 pays 1.5x. Min bet: 20 stars. 30 sec cooldown.\n\n"
+            "**🦹 Pickpocket** — `!pickpocket @player 50` (or `!pp`)\n"
+            "Both roll a D20 — highest roll wins! Uses its own stamina system. "
+            "Quick and simple PvP.\n\n"
             "**⚔️ PvP Duel** — `!duel @player 50`\n"
             "Turn-based PvP combat at the **Noodle Colosseum**! "
             "Uses your real gear, HP, and stamina. Attack, defend, or consume items each turn. "
@@ -640,10 +643,11 @@ def _gambling_embed() -> discord.Embed:
         name="Which Game Should I Play?",
         value=(
             "⚔️ **Duel** — Fairest game (0% house edge), uses your real combat stats\n"
+            "🦹 **Pickpocket** — Fair dice roll (0% house edge), quick and simple\n"
             "🃏 **Blackjack** — Almost fair (~1% house edge), fun card game\n"
             "🪙 **Coinflip** — Simple and quick (2.5% house edge)\n"
             "🎲 **Gamble** — You'll probably lose (46% house edge) but jackpots are huge\n\n"
-            "**If you want to make money:** Duel or Blackjack\n"
+            "**If you want to make money:** Duel, Pickpocket, or Blackjack\n"
             "**If you want excitement:** Gamble (but expect to lose!)"
         ),
         inline=False,
@@ -665,7 +669,7 @@ def _gambling_embed() -> discord.Embed:
         value=(
             "Normally you must be in **Noodle Town** to gamble.\n"
             "Buy **Lucky Dice** from `!store` (500 stars) to gamble from anywhere!\n"
-            "*(Note: Duels always require the Colosseum)*"
+            "*(Note: PvP Duels always require the Colosseum)*"
         ),
         inline=False,
     )

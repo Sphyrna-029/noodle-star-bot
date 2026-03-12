@@ -25,7 +25,8 @@ class HealthUseCases:
         Returns the updated combat stats dict."""
         stats = self.repo.get_combat_stats(user_id)
         now = datetime.utcnow()
-        changed = False
+        hp_changed = False
+        stamina_changed = False
 
         # Initialize timestamps for first-time users so regen can start
         if stats["current_hp"] is not None and stats["hp_updated_at"] is None:
@@ -39,7 +40,7 @@ class HealthUseCases:
             regen = int(minutes * HP_REGEN_PER_MINUTE)
             if regen > 0:
                 stats["current_hp"] = min(stats["max_hp"], stats["current_hp"] + regen)
-                changed = True
+                hp_changed = True
 
         # Initialize timestamps for first-time users so regen can start
         if stats["current_stamina"] is not None and stats["stamina_updated_at"] is None:
@@ -53,10 +54,11 @@ class HealthUseCases:
             regen = int(minutes * STAMINA_REGEN_PER_MINUTE)
             if regen > 0:
                 stats["current_stamina"] = min(stats["max_stamina"], stats["current_stamina"] + regen)
-                changed = True
+                stamina_changed = True
 
-        if changed:
+        if hp_changed:
             self.repo.update_hp(user_id, stats["current_hp"])
+        if stamina_changed:
             self.repo.update_stamina(user_id, stats["current_stamina"])
 
         return stats

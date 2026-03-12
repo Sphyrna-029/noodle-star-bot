@@ -83,6 +83,28 @@ class DuelResult:
 
 
 @dataclass(slots=True)
+class PickpocketResult:
+    """Result of a pickpocket attempt (D20 dice roll)."""
+
+    success: bool
+    message: str
+    challenger_roll: int = 0
+    opponent_roll: int = 0
+    winner_id: Optional[int] = None
+    amount: int = 0
+    challenger_new_balance: int = 0
+    opponent_new_balance: int = 0
+    stamina_cost: int = 0
+    challenger_stamina_before: int = 0
+    challenger_stamina_after: int = 0
+    unlocked_achievement_keys: list[str] = None
+
+    def __post_init__(self):
+        if self.unlocked_achievement_keys is None:
+            self.unlocked_achievement_keys = []
+
+
+@dataclass(slots=True)
 class RouletteInviteResult:
     """Result payload for PvP invite actions."""
 
