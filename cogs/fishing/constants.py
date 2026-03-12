@@ -7,7 +7,7 @@ __all__ = [
     "FISHING_COOLDOWN",
     "FISHING_BAIT_TIERS",
     "FISHING_STAMINA_COST",
-    "FISHING_REWARD_SCALE",
+    "FISHING_BAIT_MULTIPLIER",
     "FISHING_CATCH_TABLE",
     "CATCH_TABLES",
     "FISH_LEVELS",
@@ -15,8 +15,15 @@ __all__ = [
 
 FISHING_COOLDOWN: Final[timedelta] = timedelta(seconds=0)  # stamina gates fishing now
 
-# Reward multiplier — scales all catch star values to balance with mining
-FISHING_REWARD_SCALE: Final[float] = 0.40
+# Bait-specific reward multiplier applied to catch star value
+# Worm: food fish, fast/cheap but low value per catch
+# Herring: balanced baseline
+# Sturgeon: high roller, slow/expensive but huge payouts
+FISHING_BAIT_MULTIPLIER: Final[dict[str, float]] = {
+    "worm": 0.40,
+    "herring": 1.0,
+    "sturgeon": 2.3,
+}
 
 FISHING_BAIT_TIERS: Final[dict[str, BaitTier]] = {
     "worm": BaitTier(
@@ -65,28 +72,28 @@ FISHING_CATCH_TABLE: Final[dict[str, CatchBucket]] = {
             Catch("Old Boot", "🥾", 0, 15),
             Catch("Seaweed", "🌿", 0, 15),
             Catch("Tin Can", "🥫", 0, 10),
-            Catch("Small Fish", "🐟", 8, 25),
-            Catch("Crab", "🦀", 12, 20),
-            Catch("Shrimp", "🦐", 15, 15),
+            Catch("Small Fish", "🐟", 30, 25),
+            Catch("Crab", "🦀", 50, 20),
+            Catch("Shrimp", "🦐", 60, 15),
         ),
     ),
     "rare": CatchBucket(
         weight=25,
         catches=(
-            Catch("Salmon", "🐠", 40, 30),
-            Catch("Tuna", "🐟", 65, 25),
-            Catch("Lobster", "🦞", 90, 20),
-            Catch("Octopus", "🐙", 130, 15),
-            Catch("Treasure Chest", "📦", 200, 10),
+            Catch("Salmon", "🐠", 160, 30),
+            Catch("Tuna", "🐟", 260, 25),
+            Catch("Lobster", "🦞", 360, 20),
+            Catch("Octopus", "🐙", 520, 15),
+            Catch("Treasure Chest", "📦", 805, 10),
         ),
     ),
     "legendary": CatchBucket(
         weight=5,
         catches=(
-            Catch("Golden Fish", "✨", 500, 40),
-            Catch("Giant Squid", "🦑", 800, 30),
-            Catch("Ancient Artifact", "🏺", 1200, 20),
-            Catch("Mermaid's Pearl", "🔮", 2000, 10),
+            Catch("Golden Fish", "✨", 2005, 40),
+            Catch("Giant Squid", "🦑", 3210, 30),
+            Catch("Ancient Artifact", "🏺", 4815, 20),
+            Catch("Mermaid's Pearl", "🔮", 8025, 10),
         ),
     ),
 }
@@ -103,29 +110,29 @@ _L2_CATCHES: Final[dict[str, CatchBucket]] = {
         catches=(
             Catch("Driftwood", "🪵", 0, 15),
             Catch("River Stone", "🪨", 0, 15),
-            Catch("Crawdad", "🦐", 5, 10),
-            Catch("Trout", "🐟", 12, 25),
-            Catch("Catfish", "🐈", 18, 20),
-            Catch("Bass", "🐠", 25, 15),
+            Catch("Crawdad", "🦐", 20, 10),
+            Catch("Trout", "🐟", 45, 25),
+            Catch("Catfish", "🐈", 65, 20),
+            Catch("Bass", "🐠", 95, 15),
         ),
     ),
     "rare": CatchBucket(
         weight=25,
         catches=(
-            Catch("River Salmon", "🐠", 60, 30),
-            Catch("Sturgeon", "🐋", 100, 25),
-            Catch("Snapping Turtle", "🐢", 150, 20),
-            Catch("Giant Catfish", "🐟", 200, 15),
-            Catch("River Chest", "📦", 300, 10),
+            Catch("River Salmon", "🐠", 225, 30),
+            Catch("Sturgeon", "🐋", 375, 25),
+            Catch("Snapping Turtle", "🐢", 560, 20),
+            Catch("Giant Catfish", "🐟", 750, 15),
+            Catch("River Chest", "📦", 1120, 10),
         ),
     ),
     "legendary": CatchBucket(
         weight=5,
         catches=(
-            Catch("Platinum Trout", "✨", 750, 40),
-            Catch("River Dragon", "🐉", 1200, 30),
-            Catch("Lost Crown", "👑", 2000, 20),
-            Catch("River Spirit Gem", "💎", 3000, 10),
+            Catch("Platinum Trout", "✨", 2805, 40),
+            Catch("River Dragon", "🐉", 4485, 30),
+            Catch("Lost Crown", "👑", 7480, 20),
+            Catch("River Spirit Gem", "💎", 11220, 10),
         ),
     ),
 }
@@ -139,30 +146,30 @@ _L3_CATCHES: Final[dict[str, CatchBucket]] = {
         weight=70,
         catches=(
             Catch("Sea Sponge", "🧽", 0, 15),
-            Catch("Starfish", "⭐", 5, 15),
-            Catch("Clownfish", "🐠", 10, 10),
-            Catch("Parrotfish", "🦜", 20, 25),
-            Catch("Sea Urchin", "🟣", 30, 20),
-            Catch("Moray Eel", "🐍", 40, 15),
+            Catch("Starfish", "⭐", 20, 15),
+            Catch("Clownfish", "🐠", 35, 10),
+            Catch("Parrotfish", "🦜", 75, 25),
+            Catch("Sea Urchin", "🟣", 110, 20),
+            Catch("Moray Eel", "🐍", 145, 15),
         ),
     ),
     "rare": CatchBucket(
         weight=25,
         catches=(
-            Catch("Reef Shark", "🦈", 80, 30),
-            Catch("Giant Clam", "🐚", 150, 25),
-            Catch("Manta Ray", "🦅", 250, 20),
-            Catch("Sea Turtle", "🐢", 350, 15),
-            Catch("Sunken Treasure", "💰", 450, 10),
+            Catch("Reef Shark", "🦈", 295, 30),
+            Catch("Giant Clam", "🐚", 550, 25),
+            Catch("Manta Ray", "🦅", 915, 20),
+            Catch("Sea Turtle", "🐢", 1280, 15),
+            Catch("Sunken Treasure", "💰", 1650, 10),
         ),
     ),
     "legendary": CatchBucket(
         weight=5,
         catches=(
-            Catch("Golden Seahorse", "✨", 1000, 40),
-            Catch("Coral Golem", "🪸", 2000, 30),
-            Catch("Neptune's Trident", "🔱", 3500, 20),
-            Catch("Pearl of the Deep", "🔮", 5000, 10),
+            Catch("Golden Seahorse", "✨", 3665, 40),
+            Catch("Coral Golem", "🪸", 7325, 30),
+            Catch("Neptune's Trident", "🔱", 12820, 20),
+            Catch("Pearl of the Deep", "🔮", 18315, 10),
         ),
     ),
 }
@@ -176,30 +183,30 @@ _L4_CATCHES: Final[dict[str, CatchBucket]] = {
         weight=70,
         catches=(
             Catch("Barnacle Cluster", "🪨", 0, 15),
-            Catch("Rusty Anchor", "⚓", 5, 15),
-            Catch("Anglerfish", "🐡", 15, 10),
-            Catch("Barracuda", "🐟", 30, 25),
-            Catch("Swordfish", "⚔️", 45, 20),
-            Catch("Electric Eel", "⚡", 60, 15),
+            Catch("Rusty Anchor", "⚓", 15, 15),
+            Catch("Anglerfish", "🐡", 50, 10),
+            Catch("Barracuda", "🐟", 105, 25),
+            Catch("Swordfish", "⚔️", 155, 20),
+            Catch("Electric Eel", "⚡", 210, 15),
         ),
     ),
     "rare": CatchBucket(
         weight=25,
         catches=(
-            Catch("Hammerhead Shark", "🦈", 120, 30),
-            Catch("Giant Octopus", "🐙", 250, 25),
-            Catch("Sunken Cannon", "💣", 400, 20),
-            Catch("Ghost Ship Wheel", "☠️", 500, 15),
-            Catch("Pirate's Hoard", "💰", 650, 10),
+            Catch("Hammerhead Shark", "🦈", 415, 30),
+            Catch("Giant Octopus", "🐙", 870, 25),
+            Catch("Sunken Cannon", "💣", 1390, 20),
+            Catch("Ghost Ship Wheel", "☠️", 1735, 15),
+            Catch("Pirate's Hoard", "💰", 2255, 10),
         ),
     ),
     "legendary": CatchBucket(
         weight=5,
         catches=(
-            Catch("Phantom Captain", "👻", 1500, 40),
-            Catch("Diamond Anchor", "💎", 3000, 30),
-            Catch("Cursed Gold", "🏴‍☠️", 5500, 20),
-            Catch("Davy Jones' Chest", "📦", 8000, 10),
+            Catch("Phantom Captain", "👻", 5210, 40),
+            Catch("Diamond Anchor", "💎", 10420, 30),
+            Catch("Cursed Gold", "🏴‍☠️", 19100, 20),
+            Catch("Davy Jones' Chest", "📦", 27780, 10),
         ),
     ),
 }
@@ -213,30 +220,30 @@ _L5_CATCHES: Final[dict[str, CatchBucket]] = {
         weight=70,
         catches=(
             Catch("Void Coral", "🖤", 0, 15),
-            Catch("Bioluminescent Jelly", "🪼", 10, 15),
-            Catch("Abyssal Crab", "🦀", 20, 10),
-            Catch("Vampire Squid", "🦑", 40, 25),
-            Catch("Gulper Eel", "🐍", 60, 20),
-            Catch("Dragonfish", "🐉", 90, 15),
+            Catch("Bioluminescent Jelly", "🪼", 35, 15),
+            Catch("Abyssal Crab", "🦀", 75, 10),
+            Catch("Vampire Squid", "🦑", 150, 25),
+            Catch("Gulper Eel", "🐍", 225, 20),
+            Catch("Dragonfish", "🐉", 335, 15),
         ),
     ),
     "rare": CatchBucket(
         weight=25,
         catches=(
-            Catch("Colossal Squid", "🦑", 180, 30),
-            Catch("Megalodon Tooth", "🦷", 350, 25),
-            Catch("Abyssal Pearl", "⚪", 550, 20),
-            Catch("Deep Sea Crown", "👑", 750, 15),
-            Catch("Trench Treasure", "💰", 1000, 10),
+            Catch("Colossal Squid", "🦑", 670, 30),
+            Catch("Megalodon Tooth", "🦷", 1300, 25),
+            Catch("Abyssal Pearl", "⚪", 2040, 20),
+            Catch("Deep Sea Crown", "👑", 2785, 15),
+            Catch("Trench Treasure", "💰", 3715, 10),
         ),
     ),
     "legendary": CatchBucket(
         weight=5,
         catches=(
-            Catch("Leviathan Scale", "🐲", 2500, 40),
-            Catch("Poseidon's Eye", "🔮", 5000, 30),
-            Catch("World Serpent Fang", "🐍", 8000, 20),
-            Catch("Heart of the Abyss", "💜", 12000, 10),
+            Catch("Leviathan Scale", "🐲", 9280, 40),
+            Catch("Poseidon's Eye", "🔮", 18565, 30),
+            Catch("World Serpent Fang", "🐍", 29705, 20),
+            Catch("Heart of the Abyss", "💜", 44555, 10),
         ),
     ),
 }

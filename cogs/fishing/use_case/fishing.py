@@ -1,16 +1,16 @@
 """Fishing use-cases for the fishing minigame.
 
-Average Returns (per fish, varies by bait):
-    Level 1 (Stream):    Worm: 35 | Herring: 45 | Sturgeon: 52 stars
-    Level 2 (River):     Worm: 83 | Herring: 106 | Sturgeon: 123 stars
-    Level 3 (Coral):     Worm: 158 | Herring: 201 | Sturgeon: 235 stars
-    Level 4 (Shipwreck): Worm: 269 | Herring: 342 | Sturgeon: 399 stars  Bank risk: 10%
-    Level 5 (Abyss):     Worm: 408 | Herring: 521 | Sturgeon: 607 stars  Bank risk: 20%
+Average Returns (per fish, after bait multiplier):
+    Level 1 (Pond):      Worm: 112 | Herring: 396 | Sturgeon: 1,158 stars
+    Level 2 (River):     Worm: 163 | Herring: 573 | Sturgeon: 1,674 stars
+    Level 3 (Coral):     Worm: 257 | Herring: 902 | Sturgeon: 2,633 stars
+    Level 4 (Shipwreck): Worm: 374 | Herring: 1,313 | Sturgeon: 3,835 stars
+    Level 5 (Abyss):     Worm: 607 | Herring: 2,136 | Sturgeon: 6,247 stars
 
 Bait Effects:
-    - Worm (33 stars):     Base odds (1.0x rare boost)
-    - Herring (79 stars):  1.5x rare/legendary boost
-    - Sturgeon (110 stars): 2.0x rare/legendary boost
+    - Worm (33 stars):      1.0x rare boost, 0.40x reward — food fish, fast
+    - Herring (79 stars):   1.8x rare boost, 1.0x reward — balanced
+    - Sturgeon (110 stars): 3.0x rare boost, 2.3x reward — high roller
 
 Ambush encounters trigger after catching with level-scaled chance (halved by Lucky Charm).
 
@@ -33,9 +33,9 @@ from typing import Callable, Dict, Optional
 from cogs.fishing.constants import (
     CATCH_TABLES,
     FISH_LEVELS,
+    FISHING_BAIT_MULTIPLIER,
     FISHING_BAIT_TIERS,
     FISHING_COOLDOWN,
-    FISHING_REWARD_SCALE,
     FISHING_STAMINA_COST,
 )
 from database.repository import UserRepository
@@ -466,8 +466,8 @@ class FishingUseCases:
             # Read inventory for item effects
             inventory = self.repo.get_user_inventory(user_id)
 
-            # Calculate reward value (scaled, then Star Magnet boost)
-            reward = int(catch["stars"] * FISHING_REWARD_SCALE)
+            # Calculate reward value (bait multiplier, then Star Magnet boost)
+            reward = int(catch["stars"] * FISHING_BAIT_MULTIPLIER.get(bait_type, 1.0))
             star_magnet_uses = inventory["star_magnet"]
             if star_magnet_uses > 0 and reward > 0:
                 reward = math.ceil(reward * 1.15)
