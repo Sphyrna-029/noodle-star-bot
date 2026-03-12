@@ -311,6 +311,221 @@ class StoreCategoryView(discord.ui.View):
 
 
 # ---------------------------------------------------------------------------
+# Inventory view — toggle between Backpack and Storage
+# ---------------------------------------------------------------------------
+
+class InventoryView(discord.ui.View):
+    """Togglable inventory view with Backpack / Storage tabs."""
+
+    def __init__(self, member: discord.Member, shop: ShopUseCases, *, author_id: int):
+        super().__init__(timeout=120)
+        self.member = member
+        self.shop = shop
+        self.author_id = author_id  # who invoked the command
+        self.page = "backpack"  # "backpack" or "storage"
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message("Not your inventory view!", ephemeral=True)
+            return False
+        return True
+
+    def build_embed(self) -> discord.Embed:
+        if self.page == "backpack":
+            return self._build_backpack_embed()
+        return self._build_storage_embed()
+
+    def _build_backpack_embed(self) -> discord.Embed:
+        data = self.shop.get_full_inventory(self.member.id)
+        equipment = data["equipment"]
+        items_summary = data["items_summary"]
+        bag_count = data["bag_count"]
+        bag_capacity = data["bag_capacity"]
+        progression = data["progression"]
+
+        if bag_capacity > 0:
+            fill_pct = bag_count / bag_capacity
+        else:
+            fill_pct = 0
+        if fill_pct >= 1.0:
+            embed_color = discord.Color.red()
+        elif fill_pct >= 0.9:
+            embed_color = discord.Color.orange()
+        else:
+            embed_color = discord.Color.blue()
+
+        embed = discord.Embed(
+            title=f"\U0001f392 {self.member.display_name}'s Inventory",
+            color=embed_color,
+        )
+
+        equip_lines = ShopCog._build_equipment_lines(equipment, progression)
+        if equip_lines:
+            embed.add_field(
+                name="\u2500\u2500 EQUIPMENT \u2500\u2500",
+                value="\n".join(equip_lines),
+                inline=False,
+            )
+
+        category_order = [
+            ("mineral", "\u26cf\ufe0f Minerals"),
+            ("fish", "\U0001f3a3 Fish"),
+            ("ore", "\U0001f680 Space Ores"),
+            ("crop", "\U0001f33e Crops"),
+            ("consumable", "\U0001f9ea Supplies"),
+        ]
+        inv_parts = []
+        for cat_key, cat_header in category_order:
+            cat_items = items_summary.get(cat_key, [])
+            if not cat_items:
+                continue
+            item_strs = []
+            for entry in cat_items:
+                resource = get_resource(entry["item_key"])
+                if resource:
+                    emoji = resource.emoji
+                    name = resource.display_name
+                else:
+                    emoji = ""
+                    name = entry["item_key"].replace("_", " ").title()
+                quality = entry.get("quality")
+                if quality and quality != "Normal":
+                    item_strs.append(f"{emoji} {name} ({quality}) x{entry['count']}")
+                else:
+                    item_strs.append(f"{emoji} {name} x{entry['count']}")
+            joined = " \u00b7 ".join(item_strs)
+            inv_parts.append(f"**{cat_header}**\n{joined}")
+
+        if inv_parts:
+            inv_header = f"\u2500\u2500 INVENTORY ({bag_count}/{bag_capacity}) \u2500\u2500"
+            inv_body = "\n\n".join(inv_parts)
+            inv_body += f"\n\nBag: {bag_count}/{bag_capacity} slots | Upgrade at `!store`"
+            embed.add_field(name=inv_header, value=inv_body, inline=False)
+        else:
+            inv_header = f"\u2500\u2500 INVENTORY ({bag_count}/{bag_capacity}) \u2500\u2500"
+            embed.add_field(
+                name=inv_header,
+                value=f"*Empty \u2014 gather resources or visit `!store`!*\n\nBag: {bag_count}/{bag_capacity} slots | Upgrade at `!store`",
+                inline=False,
+            )
+
+        if not equip_lines and not inv_parts:
+            embed.description = "*Nothing here yet \u2014 visit the `!store` to get started!*"
+
+        return embed
+
+    def _build_storage_embed(self) -> discord.Embed:
+        items = self.shop.repo.get_storage_summary(self.member.id)
+
+        embed = discord.Embed(
+            title=f"\U0001f4e6 {self.member.display_name}'s Storage",
+            description=(
+                "Items here are **100% safe** \u2014 immune to disasters, "
+                "death penalties, and alien abductions.\n"
+                "Use `!stash` / `!unstash` to manage."
+            ),
+            color=discord.Color.dark_teal(),
+        )
+
+        if not items:
+            embed.add_field(
+                name="\u2500\u2500 VAULT \u2500\u2500",
+                value="*Empty \u2014 use `!stash` in **Noodle Town** to store items safely.*",
+                inline=False,
+            )
+            return embed
+
+        equip_lines = []
+        categories: dict[str, list[str]] = {}
+
+        for row in items:
+            key = row["item_key"]
+            count = row["count"]
+            item_type = row["item_type"]
+
+            if item_type == "equipment":
+                uses = row["total_uses"]
+                res = get_resource(key)
+                display = res.display_name if res else key.replace("_", " ").title()
+                emoji = res.emoji if res else "\U0001f527"
+                if uses > 1:
+                    equip_lines.append(f"{emoji} **{display}** ({uses} uses)")
+                else:
+                    equip_lines.append(f"{emoji} **{display}**")
+            else:
+                res = get_resource(key)
+                cat = res.category if res else "other"
+                display = res.display_name if res else key.replace("_", " ").title()
+                emoji = res.emoji if res else "\U0001f4e6"
+                line = f"{emoji} **{display}**"
+                if count > 1:
+                    line += f" x{count}"
+                categories.setdefault(cat, []).append(line)
+
+        if equip_lines:
+            embed.add_field(
+                name="\U0001f527 Equipment",
+                value="\n".join(equip_lines),
+                inline=False,
+            )
+
+        cat_headers = {
+            "mineral": "\U0001f48e Minerals",
+            "fish": "\U0001f41f Fish",
+            "ore": "\U0001f680 Space Ores",
+            "crop": "\U0001f33e Crops",
+            "consumable": "\U0001f37c Consumables",
+            "other": "\U0001f4e6 Other",
+        }
+        for cat_key in ("mineral", "fish", "ore", "crop", "consumable", "other"):
+            lines = categories.get(cat_key, [])
+            if lines:
+                header = cat_headers.get(cat_key, "\U0001f4e6 Items")
+                if len(lines) > 15:
+                    shown = lines[:14]
+                    shown.append(f"*...and {len(lines) - 14} more*")
+                    lines = shown
+                embed.add_field(
+                    name=header,
+                    value="\n".join(lines),
+                    inline=False,
+                )
+
+        return embed
+
+    def _update_buttons(self):
+        self.backpack_button.style = (
+            discord.ButtonStyle.primary if self.page == "backpack"
+            else discord.ButtonStyle.secondary
+        )
+        self.storage_button.style = (
+            discord.ButtonStyle.primary if self.page == "storage"
+            else discord.ButtonStyle.secondary
+        )
+
+    @discord.ui.button(label="Backpack", emoji="\U0001f392", style=discord.ButtonStyle.primary, row=0)
+    async def backpack_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.page = "backpack"
+        self._update_buttons()
+        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+
+    @discord.ui.button(label="Storage", emoji="\U0001f4e6", style=discord.ButtonStyle.secondary, row=0)
+    async def storage_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.page = "storage"
+        self._update_buttons()
+        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        if self.message:
+            try:
+                await self.message.edit(view=self)
+            except Exception:
+                pass
+
+
+# ---------------------------------------------------------------------------
 # Shop cog
 # ---------------------------------------------------------------------------
 
@@ -371,89 +586,14 @@ class ShopCog(commands.Cog):
 
     @commands.command(name="inventory")
     async def inventory(self, ctx, member: discord.Member = None):
-        """Check your inventory"""
+        """Check your inventory (backpack & storage)."""
         if member is None:
             member = ctx.author
 
-        data = self.shop.get_full_inventory(member.id)
-        equipment = data["equipment"]
-        items_summary = data["items_summary"]
-        bag_count = data["bag_count"]
-        bag_capacity = data["bag_capacity"]
-        progression = data["progression"]
-
-        # ── Color based on bag fullness ──
-        if bag_capacity > 0:
-            fill_pct = bag_count / bag_capacity
-        else:
-            fill_pct = 0
-        if fill_pct >= 1.0:
-            embed_color = discord.Color.red()
-        elif fill_pct >= 0.9:
-            embed_color = discord.Color.orange()
-        else:
-            embed_color = discord.Color.blue()
-
-        embed = discord.Embed(
-            title=f"🎒 {member.display_name}'s Inventory",
-            color=embed_color,
-        )
-
-        # ── Equipment Section ──
-        equip_lines = self._build_equipment_lines(equipment, progression)
-        if equip_lines:
-            embed.add_field(
-                name="── EQUIPMENT ──",
-                value="\n".join(equip_lines),
-                inline=False,
-            )
-
-        # ── Inventory Section ──
-        category_order = [
-            ("mineral", "⛏️ Minerals"),
-            ("fish", "🎣 Fish"),
-            ("ore", "🚀 Space Ores"),
-            ("crop", "🌾 Crops"),
-            ("consumable", "🧪 Supplies"),
-        ]
-        inv_parts = []
-        for cat_key, cat_header in category_order:
-            cat_items = items_summary.get(cat_key, [])
-            if not cat_items:
-                continue
-            item_strs = []
-            for entry in cat_items:
-                resource = get_resource(entry["item_key"])
-                if resource:
-                    emoji = resource.emoji
-                    name = resource.display_name
-                else:
-                    emoji = ""
-                    name = entry["item_key"].replace("_", " ").title()
-                quality = entry.get("quality")
-                if quality and quality != "Normal":
-                    item_strs.append(f"{emoji} {name} ({quality}) x{entry['count']}")
-                else:
-                    item_strs.append(f"{emoji} {name} x{entry['count']}")
-            inv_parts.append(f"**{cat_header}**\n{' · '.join(item_strs)}")
-
-        if inv_parts:
-            inv_header = f"── INVENTORY ({bag_count}/{bag_capacity}) ──"
-            inv_body = "\n\n".join(inv_parts)
-            inv_body += f"\n\nBag: {bag_count}/{bag_capacity} slots | Upgrade at `!store`"
-            embed.add_field(name=inv_header, value=inv_body, inline=False)
-        else:
-            inv_header = f"── INVENTORY ({bag_count}/{bag_capacity}) ──"
-            embed.add_field(
-                name=inv_header,
-                value=f"*Empty — gather resources or visit `!store`!*\n\nBag: {bag_count}/{bag_capacity} slots | Upgrade at `!store`",
-                inline=False,
-            )
-
-        if not equip_lines and not inv_parts:
-            embed.description = "*Nothing here yet — visit the `!store` to get started!*"
-
-        await ctx.send(embed=embed)
+        view = InventoryView(member, self.shop, author_id=ctx.author.id)
+        embed = view.build_embed()
+        msg = await ctx.send(embed=embed, view=view)
+        view.message = msg
 
     @staticmethod
     def _build_equipment_lines(equipment: dict, progression: dict) -> list[str]:

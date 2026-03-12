@@ -191,9 +191,6 @@ class CombatUseCases:
         if current_hp <= 0:
             return None, "You were too weak to fight back!"
 
-        if current_stamina < STAMINA_PER_ATTACK:
-            return None, "You had no stamina to fight back!"
-
         # Calculate player stats from equipment
         player_atk = 5 + atk_bonus
         player_def = 2
