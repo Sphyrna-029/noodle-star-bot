@@ -1031,7 +1031,12 @@ class _StashSelect(discord.ui.Select):
 
         ids = [m["id"] for m in matching]
         repo.remove_items_by_ids(user_id, ids)
-        bulk = [(m["item_key"], "inventory", 1) for m in matching]
+        bulk = [
+            (m["item_key"], "inventory", 1,
+             m.get("category", "consumable"),
+             m.get("base_sell_value", 0))
+            for m in matching
+        ]
         repo.add_to_storage_bulk(user_id, bulk)
 
         cat_labels = {
@@ -1116,14 +1121,22 @@ class _UnstashSelect(discord.ui.Select):
                 removed = repo.remove_from_storage_by_category(user_id, keys)
                 for row in removed:
                     if inv_added < available:
-                        repo.add_item(user_id, row["item_key"])
+                        cat = row.get("category", "consumable")
+                        sell = row.get("base_sell_value", 0)
+                        if cat == "consumable" and sell == 0:
+                            res = get_resource(row["item_key"])
+                            if res and res.category != "consumable":
+                                cat = res.category
+                        repo.add_item(user_id, row["item_key"], cat, sell)
                         inv_added += 1
                     else:
                         inv_leftover.append(row)
                 if inv_leftover:
                     repo.add_to_storage_bulk(
                         user_id,
-                        [(r["item_key"], r["item_type"], r["uses"]) for r in inv_leftover],
+                        [(r["item_key"], r["item_type"], r.get("uses", 1),
+                          r.get("category", "consumable"), r.get("base_sell_value", 0))
+                         for r in inv_leftover],
                     )
             for item in equip_items:
                 row = repo.remove_from_storage(user_id, item["item_key"], "equipment")
@@ -1162,14 +1175,22 @@ class _UnstashSelect(discord.ui.Select):
         leftover = []
         for row in removed:
             if added < available:
-                repo.add_item(user_id, row["item_key"])
+                cat = row.get("category", "consumable")
+                sell = row.get("base_sell_value", 0)
+                if cat == "consumable" and sell == 0:
+                    res = get_resource(row["item_key"])
+                    if res and res.category != "consumable":
+                        cat = res.category
+                repo.add_item(user_id, row["item_key"], cat, sell)
                 added += 1
             else:
                 leftover.append(row)
         if leftover:
             repo.add_to_storage_bulk(
                 user_id,
-                [(r["item_key"], r["item_type"], r["uses"]) for r in leftover],
+                [(r["item_key"], r["item_type"], r.get("uses", 1),
+                  r.get("category", "consumable"), r.get("base_sell_value", 0))
+                 for r in leftover],
             )
 
         cat_labels = {
