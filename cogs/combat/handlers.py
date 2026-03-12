@@ -105,7 +105,7 @@ class BattleView(discord.ui.View):
 
     def __init__(self, battle: BattleState, combat_uc: CombatUseCases,
                  author_id: int, username: str):
-        super().__init__(timeout=180)
+        super().__init__(timeout=900)
         self.battle = battle
         self.combat_uc = combat_uc
         self.author_id = author_id
@@ -701,15 +701,11 @@ class JoinFightView(discord.ui.View):
         await interaction.response.edit_message(
             content=(
                 f"\U0001f198 **Coop Fight vs {self.coop_state.mob_emoji} {self.coop_state.mob_name}!**\n"
-                f"Players ({count}/{COOP_MAX_PLAYERS}): {player_list}\n"
-                + ("Waiting for more players..." if count < COOP_MAX_PLAYERS else "Full! Starting...")
+                f"Players ({count}): {player_list}\n"
+                "Waiting for more players..."
             ),
             view=self,
         )
-
-        # If full (4 players), start immediately
-        if count >= COOP_MAX_PLAYERS:
-            await self._start_coop_battle(interaction)
 
     async def _start_coop_battle(self, interaction: discord.Interaction):
         """Transition from join phase to coop battle."""

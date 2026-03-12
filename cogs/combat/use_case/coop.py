@@ -66,10 +66,6 @@ class CoopCombatUseCases:
 
         Returns None on success, or an error string on failure.
         """
-        alive_count = sum(1 for p in state.players if p.alive)
-        if alive_count >= COOP_MAX_PLAYERS:
-            return "This fight is already full!"
-
         if any(p.user_id == user_id for p in state.players):
             return "You're already in this fight!"
 
