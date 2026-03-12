@@ -575,7 +575,7 @@ class BattleView(discord.ui.View):
                     f"\U0001f198 **{self.username} needs help fighting "
                     f"{coop_state.mob_emoji} {coop_state.mob_name}!** "
                     f"(HP: {mob_hp_text})\n"
-                    f"Click Join to help! ({COOP_JOIN_TIMEOUT}s)",
+                    f"Click **Join** to help, then **Start Fight** when ready! ({COOP_JOIN_TIMEOUT}s)",
                     view=join_view,
                 )
                 join_view.message = join_msg
@@ -702,10 +702,20 @@ class JoinFightView(discord.ui.View):
             content=(
                 f"\U0001f198 **Coop Fight vs {self.coop_state.mob_emoji} {self.coop_state.mob_name}!**\n"
                 f"Players ({count}): {player_list}\n"
-                "Waiting for more players..."
+                "Click **Start Fight** when ready or wait for more players to join."
             ),
             view=self,
         )
+
+    @discord.ui.button(label="Start Fight", emoji="\u2694\ufe0f", style=discord.ButtonStyle.primary)
+    async def start_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.original_author_id:
+            await interaction.response.send_message(
+                "Only the player who requested help can start the fight!", ephemeral=True
+            )
+            return
+        await interaction.response.defer()
+        await self._start_coop_battle(interaction)
 
     async def _start_coop_battle(self, interaction: discord.Interaction):
         """Transition from join phase to coop battle."""
