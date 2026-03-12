@@ -35,6 +35,7 @@ from cogs.fishing.constants import (
     FISH_LEVELS,
     FISHING_BAIT_TIERS,
     FISHING_COOLDOWN,
+    FISHING_STAMINA_COST,
 )
 from database.repository import UserRepository
 
@@ -265,6 +266,21 @@ class FishingUseCases:
                 f"Buy some from the `!store` or equip different bait with `!use bait <type>`.",
             )
 
+        # Get the user's active fishing level
+        active_level = self.repo.get_active_fish_level(user_id)
+
+        # Check stamina (apply passive regen first)
+        stamina_cost = FISHING_STAMINA_COST.get(active_level, {}).get(equipped_bait, 10)
+        from cogs.combat.use_case.health import HealthUseCases
+        health_uc = HealthUseCases(self.repo)
+        status = health_uc.get_status(user_id)
+        if status.current_stamina < stamina_cost:
+            return CastResult(
+                success=False,
+                message=f"You need **{stamina_cost}** stamina to fish here but only have **{status.current_stamina}**! "
+                f"Use `!consume` to restore stamina.",
+            )
+
         # Check inventory space before consuming bait
         bag_count = self.repo.get_inventory_count(user_id)
         bag_capacity = self.repo.get_inventory_capacity(user_id)
@@ -275,11 +291,9 @@ class FishingUseCases:
                 inventory_full=True,
             )
 
-        # Consume the bait
+        # Consume bait and stamina
         self.repo.consume_bait(user_id, equipped_bait)
-
-        # Get the user's active fishing level
-        active_level = self.repo.get_active_fish_level(user_id)
+        self.repo.update_stamina(user_id, status.current_stamina - stamina_cost)
 
         # Check and consume jig_active flag
         inventory = self.repo.get_user_inventory(user_id)

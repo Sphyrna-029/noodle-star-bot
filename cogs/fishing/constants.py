@@ -6,6 +6,7 @@ from config.models import BaitTier, Catch, CatchBucket, MineHazard
 __all__ = [
     "FISHING_COOLDOWN",
     "FISHING_BAIT_TIERS",
+    "FISHING_STAMINA_COST",
     "FISHING_CATCH_TABLE",
     "CATCH_TABLES",
     "FISH_LEVELS",
@@ -17,27 +18,36 @@ FISHING_BAIT_TIERS: Final[dict[str, BaitTier]] = {
     "worm": BaitTier(
         emoji="🪱",
         display_name="Worm",
-        bite_wait_min=timedelta(seconds=11),
-        bite_wait_max=timedelta(seconds=45),
-        pull_window=timedelta(seconds=60),
+        bite_wait_min=timedelta(seconds=7),
+        bite_wait_max=timedelta(seconds=30),
+        pull_window=timedelta(seconds=45),
         rare_boost=0.4924,
     ),
     "herring": BaitTier(
         emoji="🐟",
         display_name="Herring",
-        bite_wait_min=timedelta(seconds=68),
-        bite_wait_max=timedelta(seconds=135),
-        pull_window=timedelta(seconds=36),
+        bite_wait_min=timedelta(seconds=45),
+        bite_wait_max=timedelta(seconds=90),
+        pull_window=timedelta(seconds=27),
         rare_boost=2.009,
     ),
     "sturgeon": BaitTier(
         emoji="🐋",
         display_name="Sturgeon",
-        bite_wait_min=timedelta(minutes=3, seconds=45),
-        bite_wait_max=timedelta(minutes=6),
-        pull_window=timedelta(seconds=20),
+        bite_wait_min=timedelta(minutes=2, seconds=30),
+        bite_wait_max=timedelta(minutes=4),
+        pull_window=timedelta(seconds=15),
         rare_boost=9.964,
     ),
+}
+
+# Stamina cost per cast: FISHING_STAMINA_COST[level][bait_type]
+FISHING_STAMINA_COST: Final[dict[int, dict[str, int]]] = {
+    1: {"worm": 6,  "herring": 8,  "sturgeon": 10},
+    2: {"worm": 10, "herring": 14, "sturgeon": 18},
+    3: {"worm": 16, "herring": 20, "sturgeon": 26},
+    4: {"worm": 22, "herring": 28, "sturgeon": 34},
+    5: {"worm": 28, "herring": 34, "sturgeon": 40},
 }
 
 # ---------------------------------------------------------------------------
