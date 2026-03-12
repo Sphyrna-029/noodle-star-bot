@@ -87,7 +87,7 @@ class InventoryRepository(BaseRepository):
                           farm_level, farm_plots, first_weather_bonus,
                           inventory_capacity, equipped_bait, jig_active,
                           preserver_level, preserver_pending_stars, preserver_ready_ts,
-                          growbot_level
+                          growbot_level, starter_claimed
                    FROM user_progression WHERE user_id = ?""",
                 (user_id,),
             )
