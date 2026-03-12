@@ -1,6 +1,6 @@
 """DTOs for gambling use-cases."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import IntEnum
 from typing import Optional
 
@@ -31,20 +31,50 @@ class CoinflipResult:
 
 
 @dataclass(slots=True)
+class DuelState:
+    """Mutable state during a PvP duel."""
+
+    p1_id: int
+    p1_name: str
+    p2_id: int
+    p2_name: str
+    wager: int
+    # P1 combat stats
+    p1_hp: int
+    p1_max_hp: int
+    p1_stamina: int
+    p1_max_stamina: int
+    p1_attack: int
+    p1_defense: int
+    # P2 combat stats
+    p2_hp: int
+    p2_max_hp: int
+    p2_stamina: int
+    p2_max_stamina: int
+    p2_attack: int
+    p2_defense: int
+    # Tracking
+    turn: int = 0
+    turns: list = field(default_factory=list)
+    active_player: int = 0  # user ID of whose turn it is
+    finished: bool = False
+    winner_id: int | None = None
+    # Defend flags — cleared after opponent's next attack
+    p1_defending: bool = False
+    p2_defending: bool = False
+
+
+@dataclass(slots=True)
 class DuelResult:
-    """Result of a duel."""
+    """Result of a completed PvP duel."""
 
     success: bool
     message: str
-    challenger_roll: int = 0
-    opponent_roll: int = 0
-    winner_id: Optional[int] = None
+    winner_id: int | None = None
+    loser_id: int | None = None
     amount: int = 0
-    challenger_new_balance: int = 0
-    opponent_new_balance: int = 0
-    stamina_cost: int = 0
-    challenger_stamina_before: int = 0
-    challenger_stamina_after: int = 0
+    winner_new_balance: int = 0
+    loser_new_balance: int = 0
     unlocked_achievement_keys: list[str] = None
 
     def __post_init__(self):

@@ -575,3 +575,140 @@ class GamblingRepository(BaseRepository):
                 "opponent_wallet": opponent_wallet,
                 "opponent_bank": opponent_bank,
             }
+
+    # ------------------------------------------------------------------
+    # PvP Duel — wallet-only wager locking & payout
+    # ------------------------------------------------------------------
+
+    def lock_duel_bet(
+        self,
+        challenger_id: int,
+        challenger_name: str,
+        opponent_id: int,
+        opponent_name: str,
+        amount: int,
+    ) -> Optional[dict]:
+        """Deduct wager from each player's wallet (wallet-only). Returns None if either can't afford."""
+        with self.db.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT user_id, stars FROM noodle_stars WHERE user_id IN (?, ?)",
+                (challenger_id, opponent_id),
+            )
+            rows = cursor.fetchall()
+            if len(rows) != 2:
+                return None
+
+            by_id = {row["user_id"]: row for row in rows}
+            challenger = by_id.get(challenger_id)
+            opponent = by_id.get(opponent_id)
+            if challenger is None or opponent is None:
+                return None
+
+            c_wallet = challenger["stars"] or 0
+            o_wallet = opponent["stars"] or 0
+
+            if c_wallet < amount or o_wallet < amount:
+                return None
+
+            c_wallet -= amount
+            o_wallet -= amount
+
+            cursor.execute(
+                "UPDATE noodle_stars SET stars = ?, username = ? WHERE user_id = ?",
+                (c_wallet, challenger_name, challenger_id),
+            )
+            cursor.execute(
+                "UPDATE noodle_stars SET stars = ?, username = ? WHERE user_id = ?",
+                (o_wallet, opponent_name, opponent_id),
+            )
+
+            try:
+                for uid in (challenger_id, opponent_id):
+                    cursor.execute(
+                        """
+                        UPDATE star_ledger
+                        SET source = ?, reason = ?
+                        WHERE id = (
+                            SELECT id FROM star_ledger
+                            WHERE user_id = ?
+                            ORDER BY id DESC
+                            LIMIT 1
+                        )
+                        """,
+                        ("gambling", "duel_pvp_lock", uid),
+                    )
+            except Exception:
+                pass
+
+            return {
+                "challenger_wallet": c_wallet,
+                "opponent_wallet": o_wallet,
+            }
+
+    def payout_duel_winner(
+        self,
+        challenger_id: int,
+        challenger_name: str,
+        opponent_id: int,
+        opponent_name: str,
+        winner_id: int,
+        pot_amount: int,
+    ) -> Optional[dict]:
+        """Pay the locked pot to the winner's wallet. Returns both balances."""
+        with self.db.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT user_id, stars FROM noodle_stars WHERE user_id IN (?, ?)",
+                (challenger_id, opponent_id),
+            )
+            rows = cursor.fetchall()
+            if len(rows) != 2:
+                return None
+
+            by_id = {row["user_id"]: row for row in rows}
+            challenger = by_id.get(challenger_id)
+            opponent = by_id.get(opponent_id)
+            if challenger is None or opponent is None:
+                return None
+
+            c_wallet = challenger["stars"] or 0
+            o_wallet = opponent["stars"] or 0
+
+            if winner_id == challenger_id:
+                c_wallet += pot_amount
+            elif winner_id == opponent_id:
+                o_wallet += pot_amount
+            else:
+                return None
+
+            cursor.execute(
+                "UPDATE noodle_stars SET stars = ?, username = ? WHERE user_id = ?",
+                (c_wallet, challenger_name, challenger_id),
+            )
+            cursor.execute(
+                "UPDATE noodle_stars SET stars = ?, username = ? WHERE user_id = ?",
+                (o_wallet, opponent_name, opponent_id),
+            )
+
+            try:
+                cursor.execute(
+                    """
+                    UPDATE star_ledger
+                    SET source = ?, reason = ?
+                    WHERE id = (
+                        SELECT id FROM star_ledger
+                        WHERE user_id = ?
+                        ORDER BY id DESC
+                        LIMIT 1
+                    )
+                    """,
+                    ("gambling", "duel_pvp_result", winner_id),
+                )
+            except Exception:
+                pass
+
+            return {
+                "challenger_wallet": c_wallet,
+                "opponent_wallet": o_wallet,
+            }

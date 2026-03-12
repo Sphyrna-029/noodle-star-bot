@@ -1,228 +1,364 @@
+"""PvP turn-based duel use case."""
+
 import random
-from datetime import datetime, timedelta
-from math import ceil
 from typing import Optional
 
-from cogs.gambling.constants import (
-    DUEL_DICE_SIDES,
-    DUEL_STAMINA_BASE_COST,
-    DUEL_STAMINA_COST_PER_50,
-    DUEL_STAMINA_MAX,
-    DUEL_STAMINA_REGEN_AMOUNT_DIVISOR,
-    DUEL_STAMINA_REGEN_BASE_MINUTES,
-    DUEL_STAMINA_REGEN_MAX_EXTRA_MINUTES,
+from cogs.combat.constants import (
+    BASE_HP,
+    BASE_STAMINA,
+    COMBAT_ITEMS,
+    DAMAGE_FLOOR,
+    STAMINA_PER_ATTACK,
+    STAMINA_PER_DEFEND,
+    STAMINA_RECOVERY,
 )
-from cogs.gambling.dto import DuelResult
+from cogs.combat.dto import BattleTurn
+from cogs.combat.use_case.health import HealthUseCases
+from cogs.gambling.dto import DuelResult, DuelState
 from .base import BaseGamblingUseCase
 
 
 class DuelUseCase(BaseGamblingUseCase):
-    """Handles the duel game logic."""
+    """Handles PvP turn-based duel logic."""
 
-    def _calculate_duel_stamina_cost(self, amount: int) -> int:
-        return DUEL_STAMINA_BASE_COST + ceil(amount / DUEL_STAMINA_COST_PER_50)
+    def __init__(self, repository=None):
+        super().__init__(repository)
+        self._health_uc = HealthUseCases(self.repo)
 
-    def _duel_stamina_regen_interval_minutes(self, last_duel_amount: int) -> int:
-        extra = min(
-            DUEL_STAMINA_REGEN_MAX_EXTRA_MINUTES,
-            last_duel_amount // DUEL_STAMINA_REGEN_AMOUNT_DIVISOR,
-        )
-        return DUEL_STAMINA_REGEN_BASE_MINUTES + extra
+    # ── Initialization ─────────────────────────────────────
 
-    def _apply_duel_stamina_regen(self, stamina_state: dict, now: datetime) -> dict:
-        last_reset = stamina_state.get("stamina_last_reset")
-        if last_reset is None or last_reset.date() != now.date():
-            stamina_state["stamina"] = DUEL_STAMINA_MAX
-            stamina_state["stamina_last_reset"] = now
-            stamina_state["stamina_last_updated"] = now
-
-        stamina = stamina_state.get("stamina", 0)
-        if stamina >= DUEL_STAMINA_MAX:
-            stamina_state["stamina"] = DUEL_STAMINA_MAX
-            return stamina_state
-
-        last_updated = stamina_state.get("stamina_last_updated") or now
-        interval_minutes = self._duel_stamina_regen_interval_minutes(
-            stamina_state.get("last_duel_amount", 0)
-        )
-        elapsed_intervals = int(
-            (now - last_updated).total_seconds() // (interval_minutes * 60)
-        )
-        if elapsed_intervals > 0:
-            regen = min(elapsed_intervals, DUEL_STAMINA_MAX - stamina)
-            stamina += regen
-            last_updated = last_updated + timedelta(minutes=regen * interval_minutes)
-
-        stamina_state["stamina"] = stamina
-        stamina_state["stamina_last_updated"] = last_updated
-        return stamina_state
-
-    def execute(
+    def validate_and_create_state(
         self,
-        challenger_id: int,
-        challenger_name: str,
-        opponent_id: int,
-        opponent_name: str,
-        amount: Optional[int],
-    ) -> DuelResult:
+        p1_id: int,
+        p1_name: str,
+        p2_id: int,
+        p2_name: str,
+        amount: int,
+    ) -> tuple[Optional[DuelState], str]:
+        """Validate both players and create a DuelState.
+
+        Returns (DuelState, "") on success, or (None, error_message) on failure.
         """
-        Execute a duel between two players.
+        # Check wallets
+        p1_stars = self.repo.get_user_stars(p1_id, p1_name)
+        p2_stars = self.repo.get_user_stars(p2_id, p2_name)
 
-        Args:
-            challenger_id: Challenger's Discord user ID
-            challenger_name: Challenger's username
-            opponent_id: Opponent's Discord user ID
-            opponent_name: Opponent's username
-            amount: Amount to bet
+        if p1_stars < amount:
+            return None, f"You only have **{p1_stars}** stars in your wallet!"
+        if p2_stars < amount:
+            return None, f"Your opponent only has **{p2_stars}** stars in their wallet!"
 
-        Returns:
-            DuelResult with outcome
-        """
-        # Validation
-        if opponent_id is None or amount is None:
-            return DuelResult(
-                success=False,
-                message="Please specify an opponent and amount! Usage: `!duel @user <amount>`",
-            )
+        # Load combat stats for both
+        p1_stats = self.repo.get_combat_stats(p1_id)
+        p2_stats = self.repo.get_combat_stats(p2_id)
 
-        if opponent_id == challenger_id:
-            return DuelResult(
-                success=False,
-                message="You can't duel yourself!",
-            )
+        p1_hp = p1_stats["current_hp"] or BASE_HP
+        p1_max_hp = p1_stats["max_hp"] or BASE_HP
+        p1_stamina = p1_stats["current_stamina"] or BASE_STAMINA
+        p1_max_stamina = p1_stats["max_stamina"] or BASE_STAMINA
 
-        if amount <= 0:
-            return DuelResult(
-                success=False,
-                message="You must bet at least 1 noodle star!",
-            )
+        p2_hp = p2_stats["current_hp"] or BASE_HP
+        p2_max_hp = p2_stats["max_hp"] or BASE_HP
+        p2_stamina = p2_stats["current_stamina"] or BASE_STAMINA
+        p2_max_stamina = p2_stats["max_stamina"] or BASE_STAMINA
 
-        # Get both users' stars
-        challenger_stars = self.repo.get_user_stars(challenger_id, challenger_name)
-        opponent_stars = self.repo.get_user_stars(opponent_id, opponent_name)
+        if p1_hp <= 0:
+            return None, "You're out of HP! Eat some food with `!eat` to recover."
+        if p2_hp <= 0:
+            return None, "Your opponent is out of HP and can't fight!"
+        if p1_stamina < STAMINA_PER_ATTACK:
+            return None, f"You need at least **{STAMINA_PER_ATTACK} stamina** to duel!"
+        if p2_stamina < STAMINA_PER_ATTACK:
+            return None, f"Your opponent needs at least **{STAMINA_PER_ATTACK} stamina** to duel!"
 
-        # Check challenger balance
-        if challenger_stars <= 0:
-            return DuelResult(
-                success=False,
-                message=f"You need at least 1 noodle star to duel! Current balance: **{challenger_stars}** stars",
-            )
+        # Calculate attack/defense from equipment
+        p1_atk, p1_def = self._calc_combat_stats(p1_stats)
+        p2_atk, p2_def = self._calc_combat_stats(p2_stats)
 
-        if amount > challenger_stars:
-            return DuelResult(
-                success=False,
-                message=f"You only have **{challenger_stars}** stars! You can't bet **{amount}** stars!",
-            )
-
-        # Check opponent balance
-        if opponent_stars <= 0:
-            return DuelResult(
-                success=False,
-                message=f"Opponent doesn't have any noodle stars to duel with! Their balance: **{opponent_stars}** stars",
-            )
-
-        if amount > opponent_stars:
-            return DuelResult(
-                success=False,
-                message=f"Opponent only has **{opponent_stars}** stars! They can't match a bet of **{amount}** stars!",
-            )
-
-        now = datetime.now()
-        stamina_state = self.repo.get_duel_stamina_state(challenger_id)
-        stamina_state = self._apply_duel_stamina_regen(stamina_state, now)
-
-        # Always save regen so it persists even if the duel is rejected
-        self.repo.update_duel_stamina_state(
-            challenger_id,
-            stamina=stamina_state["stamina"],
-            stamina_last_updated=stamina_state.get("stamina_last_updated") or now,
-            stamina_last_reset=stamina_state.get("stamina_last_reset") or now,
-            last_duel_amount=stamina_state.get("last_duel_amount", 0),
-            last_duel_at=stamina_state.get("last_duel_at"),
+        # Lock wager from both wallets
+        lock_result = self.repo.lock_duel_bet(
+            p1_id, p1_name, p2_id, p2_name, amount
         )
+        if lock_result is None:
+            return None, "One of you can't afford the wager!"
 
-        stamina_cost = self._calculate_duel_stamina_cost(amount)
-        stamina_before = stamina_state["stamina"]
-
-        if stamina_before < stamina_cost:
-            return DuelResult(
-                success=False,
-                message=(
-                    "You don't have enough stamina to duel! "
-                    f"Required: **{stamina_cost}**, available: **{stamina_before}**."
-                ),
-                stamina_cost=stamina_cost,
-                challenger_stamina_before=stamina_before,
-                challenger_stamina_after=stamina_before,
-            )
-
-        stamina_after = stamina_before - stamina_cost
-        stamina_state["stamina"] = stamina_after
-        stamina_state["stamina_last_updated"] = now
-        stamina_state["last_duel_amount"] = amount
-        stamina_state["last_duel_at"] = now
-        if stamina_state.get("stamina_last_reset") is None:
-            stamina_state["stamina_last_reset"] = now
-
-        self.repo.update_duel_stamina_state(
-            challenger_id,
-            stamina=stamina_state["stamina"],
-            stamina_last_updated=stamina_state["stamina_last_updated"],
-            stamina_last_reset=stamina_state["stamina_last_reset"],
-            last_duel_amount=stamina_state["last_duel_amount"],
-            last_duel_at=stamina_state["last_duel_at"],
+        state = DuelState(
+            p1_id=p1_id,
+            p1_name=p1_name,
+            p2_id=p2_id,
+            p2_name=p2_name,
+            wager=amount,
+            p1_hp=p1_hp,
+            p1_max_hp=p1_max_hp,
+            p1_stamina=p1_stamina,
+            p1_max_stamina=p1_max_stamina,
+            p1_attack=p1_atk,
+            p1_defense=p1_def,
+            p2_hp=p2_hp,
+            p2_max_hp=p2_max_hp,
+            p2_stamina=p2_stamina,
+            p2_max_stamina=p2_max_stamina,
+            p2_attack=p2_atk,
+            p2_defense=p2_def,
+            active_player=p1_id,
         )
+        return state, ""
 
-        # Roll the dice
-        challenger_roll = random.randint(1, DUEL_DICE_SIDES)
-        opponent_roll = random.randint(1, DUEL_DICE_SIDES)
+    def _calc_combat_stats(self, stats: dict) -> tuple[int, int]:
+        """Calculate attack and defense from equipment."""
+        atk = 5  # base attack
+        defense = 2  # base defense
+        for slot in ("equipped_weapon", "equipped_shield", "equipped_armor"):
+            key = stats.get(slot)
+            if key and key in COMBAT_ITEMS:
+                item = COMBAT_ITEMS[key]
+                atk += item.attack
+                defense += item.defense
+        return atk, defense
 
-        # Handle ties by re-rolling
-        while challenger_roll == opponent_roll:
-            challenger_roll = random.randint(1, DUEL_DICE_SIDES)
-            opponent_roll = random.randint(1, DUEL_DICE_SIDES)
+    # ── Helpers to get attacker/defender stats ──────────────
 
-        # Determine winner
-        if challenger_roll > opponent_roll:
-            winner_id = challenger_id
-            new_challenger_stars = challenger_stars + amount
-            new_opponent_stars = opponent_stars - amount
+    def _get_attacker_stats(self, state: DuelState):
+        """Returns (atk, stam, max_stam, target_hp, target_defending)."""
+        if state.active_player == state.p1_id:
+            return (state.p1_attack, state.p1_stamina, state.p1_max_stamina,
+                    state.p2_hp, state.p2_defending)
+        return (state.p2_attack, state.p2_stamina, state.p2_max_stamina,
+                state.p1_hp, state.p1_defending)
+
+    def _get_defender_defense(self, state: DuelState) -> int:
+        if state.active_player == state.p1_id:
+            return state.p2_defense
+        return state.p1_defense
+
+    # ── Turn actions ───────────────────────────────────────
+
+    def execute_attack(self, state: DuelState) -> BattleTurn:
+        """Active player attacks the opponent."""
+        state.turn += 1
+        is_p1 = state.active_player == state.p1_id
+
+        if is_p1:
+            atk, stam, max_stam = state.p1_attack, state.p1_stamina, state.p1_max_stamina
+            target_def = state.p2_defense
+            target_defending = state.p2_defending
+            attacker_name = state.p1_name
+            defender_name = state.p2_name
         else:
-            winner_id = opponent_id
-            new_challenger_stars = challenger_stars - amount
-            new_opponent_stars = opponent_stars + amount
+            atk, stam, max_stam = state.p2_attack, state.p2_stamina, state.p2_max_stamina
+            target_def = state.p1_defense
+            target_defending = state.p1_defending
+            attacker_name = state.p2_name
+            defender_name = state.p1_name
 
-        # Update balances
-        self.repo.update_user_stars(
-            challenger_id,
-            challenger_name,
-            new_challenger_stars,
-            reason="gambling:duel_result",
+        # Damage formula (same as PvE)
+        stam_ratio = max(DAMAGE_FLOOR, stam / max_stam) if max_stam > 0 else DAMAGE_FLOOR
+        base_dmg = max(1, atk - target_def // 2)
+        damage = max(1, int(base_dmg * stam_ratio * random.uniform(0.85, 1.15)))
+
+        # Extra reduction if defender is defending
+        if target_defending:
+            damage = max(1, damage - target_def)
+
+        # Consume stamina
+        if is_p1:
+            state.p1_stamina = max(0, state.p1_stamina - STAMINA_PER_ATTACK)
+            state.p2_hp = max(0, state.p2_hp - damage)
+            state.p2_defending = False  # clear defend flag after being attacked
+            actor_hp = state.p1_hp
+            target_hp = state.p2_hp
+            actor_stamina = state.p1_stamina
+        else:
+            state.p2_stamina = max(0, state.p2_stamina - STAMINA_PER_ATTACK)
+            state.p1_hp = max(0, state.p1_hp - damage)
+            state.p1_defending = False
+            actor_hp = state.p2_hp
+            target_hp = state.p1_hp
+            actor_stamina = state.p2_stamina
+
+        turn = BattleTurn(
+            turn_number=state.turn,
+            actor=attacker_name,
+            action="attack",
+            damage_dealt=damage,
+            actor_hp=actor_hp,
+            target_hp=target_hp,
+            actor_stamina=actor_stamina,
+            message=f"⚔️ **{attacker_name}** attacks **{defender_name}** for **{damage}** damage!",
         )
-        self.repo.update_user_stars(
-            opponent_id,
-            opponent_name,
-            new_opponent_stars,
-            reason="gambling:duel_result",
+        state.turns.append(turn)
+
+        # Check for KO
+        if target_hp <= 0:
+            state.finished = True
+            state.winner_id = state.active_player
+
+        # Switch turn
+        self._switch_turn(state)
+        return turn
+
+    def execute_defend(self, state: DuelState) -> BattleTurn:
+        """Active player raises their guard."""
+        state.turn += 1
+        is_p1 = state.active_player == state.p1_id
+
+        if is_p1:
+            state.p1_defending = True
+            state.p1_stamina = max(0, state.p1_stamina - STAMINA_PER_DEFEND)
+            player_name = state.p1_name
+            actor_hp = state.p1_hp
+            actor_stamina = state.p1_stamina
+            target_hp = state.p2_hp
+        else:
+            state.p2_defending = True
+            state.p2_stamina = max(0, state.p2_stamina - STAMINA_PER_DEFEND)
+            player_name = state.p2_name
+            actor_hp = state.p2_hp
+            actor_stamina = state.p2_stamina
+            target_hp = state.p1_hp
+
+        turn = BattleTurn(
+            turn_number=state.turn,
+            actor=player_name,
+            action="defend",
+            actor_hp=actor_hp,
+            target_hp=target_hp,
+            actor_stamina=actor_stamina,
+            message=f"🛡️ **{player_name}** raises their guard!",
         )
+        state.turns.append(turn)
+        self._switch_turn(state)
+        return turn
+
+    def execute_consume(
+        self, state: DuelState, user_id: int, item_key: str, consume_type: str
+    ) -> Optional[BattleTurn]:
+        """Consume an HP or stamina item mid-duel. Returns None on failure."""
+        is_p1 = user_id == state.p1_id
+
+        if consume_type == "hp":
+            heal = self._health_uc.get_hp_value(item_key)
+            if not heal:
+                return None
+            current_hp = state.p1_hp if is_p1 else state.p2_hp
+            max_hp = state.p1_max_hp if is_p1 else state.p2_max_hp
+            if current_hp >= max_hp:
+                return None
+        else:
+            recovery = STAMINA_RECOVERY.get(item_key)
+            if not recovery:
+                return None
+            current_stam = state.p1_stamina if is_p1 else state.p2_stamina
+            max_stam = state.p1_max_stamina if is_p1 else state.p2_max_stamina
+            if current_stam >= max_stam:
+                return None
+
+        # Remove item from inventory
+        if not self._health_uc._find_and_remove(user_id, item_key):
+            return None
+
+        state.turn += 1
+        display = item_key.replace("_", " ").title()
+        player_name = state.p1_name if is_p1 else state.p2_name
+
+        if consume_type == "hp":
+            if is_p1:
+                old = state.p1_hp
+                state.p1_hp = min(state.p1_max_hp, old + heal)
+                actual = state.p1_hp - old
+            else:
+                old = state.p2_hp
+                state.p2_hp = min(state.p2_max_hp, old + heal)
+                actual = state.p2_hp - old
+            msg = f"🍖 **{player_name}** consumed **{display}** and restored **{actual} HP**!"
+        else:
+            if is_p1:
+                old = state.p1_stamina
+                state.p1_stamina = min(state.p1_max_stamina, old + recovery)
+                actual = state.p1_stamina - old
+            else:
+                old = state.p2_stamina
+                state.p2_stamina = min(state.p2_max_stamina, old + recovery)
+                actual = state.p2_stamina - old
+            msg = f"⚡ **{player_name}** consumed **{display}** and restored **{actual} stamina**!"
+
+        turn = BattleTurn(
+            turn_number=state.turn,
+            actor=player_name,
+            action="consume",
+            actor_hp=state.p1_hp if is_p1 else state.p2_hp,
+            target_hp=state.p2_hp if is_p1 else state.p1_hp,
+            actor_stamina=state.p1_stamina if is_p1 else state.p2_stamina,
+            message=msg,
+        )
+        state.turns.append(turn)
+        self._switch_turn(state)
+        return turn
+
+    def _switch_turn(self, state: DuelState) -> None:
+        """Switch active player."""
+        if not state.finished:
+            if state.active_player == state.p1_id:
+                state.active_player = state.p2_id
+            else:
+                state.active_player = state.p1_id
+
+    # ── Resolution ─────────────────────────────────────────
+
+    def resolve_duel(self, state: DuelState) -> DuelResult:
+        """Pay out winner and save post-fight stats."""
+        winner_id = state.winner_id
+        loser_id = state.p2_id if winner_id == state.p1_id else state.p1_id
+        winner_name = state.p1_name if winner_id == state.p1_id else state.p2_name
+        loser_name = state.p1_name if loser_id == state.p1_id else state.p2_name
+
+        pot = state.wager * 2
+        payout = self.repo.payout_duel_winner(
+            state.p1_id, state.p1_name,
+            state.p2_id, state.p2_name,
+            winner_id, pot,
+        )
+
+        # Save post-fight HP/stamina for both players
+        self.repo.update_hp(state.p1_id, state.p1_hp)
+        self.repo.update_stamina(state.p1_id, state.p1_stamina)
+        self.repo.update_hp(state.p2_id, state.p2_hp)
+        self.repo.update_stamina(state.p2_id, state.p2_stamina)
+
+        # Achievement tracking
+        unlocked: list[str] = []
         duel_wins = self.repo.increment_achievement_progress(winner_id, "duel_wins", 1)
-        unlocked_achievement_keys: list[str] = []
         if duel_wins >= 1 and self.repo.unlock_achievement(winner_id, "duel_first_blood"):
-            unlocked_achievement_keys.append("duel_first_blood")
+            unlocked.append("duel_first_blood")
         if duel_wins >= 50 and self.repo.unlock_achievement(winner_id, "duel_warlord"):
-            unlocked_achievement_keys.append("duel_warlord")
+            unlocked.append("duel_warlord")
+
+        winner_bal = 0
+        loser_bal = 0
+        if payout:
+            if winner_id == state.p1_id:
+                winner_bal = payout["challenger_wallet"]
+                loser_bal = payout["opponent_wallet"]
+            else:
+                winner_bal = payout["opponent_wallet"]
+                loser_bal = payout["challenger_wallet"]
 
         return DuelResult(
             success=True,
             message="DUEL_COMPLETE",
-            challenger_roll=challenger_roll,
-            opponent_roll=opponent_roll,
             winner_id=winner_id,
-            amount=amount,
-            challenger_new_balance=new_challenger_stars,
-            opponent_new_balance=new_opponent_stars,
-            stamina_cost=stamina_cost,
-            challenger_stamina_before=stamina_before,
-            challenger_stamina_after=stamina_after,
-            unlocked_achievement_keys=unlocked_achievement_keys,
+            loser_id=loser_id,
+            amount=state.wager,
+            winner_new_balance=winner_bal,
+            loser_new_balance=loser_bal,
+            unlocked_achievement_keys=unlocked,
         )
+
+    def resolve_timeout(self, state: DuelState) -> DuelResult:
+        """Idle player (active_player) forfeits."""
+        state.finished = True
+        # The idle player loses
+        loser_id = state.active_player
+        winner_id = state.p2_id if loser_id == state.p1_id else state.p1_id
+        state.winner_id = winner_id
+        return self.resolve_duel(state)

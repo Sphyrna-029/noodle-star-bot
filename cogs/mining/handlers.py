@@ -158,8 +158,9 @@ async def _handle_ambush(ctx_or_interaction, result, user_id: int, username: str
     from cogs.combat.ambush_constants import MINING_AMBUSH_MOBS, AMBUSH_DEFEAT_PENALTIES, AMBUSH_FLEE_LOCKOUT
     from cogs.combat.use_case.combat import CombatUseCases
     from cogs.combat.handlers import BattleView, is_in_battle
+    from cogs.gambling.handlers import is_in_duel
 
-    if is_in_battle(user_id):
+    if is_in_battle(user_id) or is_in_duel(user_id):
         return
 
     mobs = MINING_AMBUSH_MOBS.get(result.ambush_level, [])

@@ -974,6 +974,11 @@ class CombatCog(commands.Cog):
             await ctx.send(f"❌ {ctx.author.mention}, you're already in a fight! Finish it first.")
             return
 
+        from cogs.gambling.handlers import is_in_duel
+        if is_in_duel(ctx.author.id):
+            await ctx.send(f"❌ {ctx.author.mention}, you're in a PvP duel! Finish it first.")
+            return
+
         # Gear warning
         from cogs.combat.use_case.gear_check import gear_warning
         stats = self.combat_uc.repo.get_combat_stats(ctx.author.id)

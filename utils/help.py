@@ -623,9 +623,10 @@ def _gambling_embed() -> discord.Embed:
             "**🃏 Blackjack** — `!blackjack 50` (or `!bj 50`)\n"
             "Play cards vs the dealer. Use the Hit/Stand buttons. "
             "Natural 21 pays 1.5x. Min bet: 20 stars. 30 sec cooldown.\n\n"
-            "**⚔️ Duel** — `!duel @player 50`\n"
-            "Both roll a d20, higher roll wins. Completely fair (50/50). "
-            "Costs stamina.\n\n"
+            "**⚔️ PvP Duel** — `!duel @player 50`\n"
+            "Turn-based PvP combat at the **Noodle Colosseum**! "
+            "Uses your real gear, HP, and stamina. Attack, defend, or consume items each turn. "
+            "Winner takes the star wager. Damage persists after the fight.\n\n"
             "**🔫 Russian Roulette** — `!russian @player 100` (or `!rr`)\n"
             "PvP only: challenge another player, they accept, then each turn pick a chamber with "
             "`!russian fire <1-6>`. You have **1 hour** per turn or you forfeit.\n\n"
@@ -638,7 +639,7 @@ def _gambling_embed() -> discord.Embed:
     embed.add_field(
         name="Which Game Should I Play?",
         value=(
-            "⚔️ **Duel** — Fairest game (0% house edge), but costs stamina\n"
+            "⚔️ **Duel** — Fairest game (0% house edge), uses your real combat stats\n"
             "🃏 **Blackjack** — Almost fair (~1% house edge), fun card game\n"
             "🪙 **Coinflip** — Simple and quick (2.5% house edge)\n"
             "🎲 **Gamble** — You'll probably lose (46% house edge) but jackpots are huge\n\n"
@@ -648,13 +649,14 @@ def _gambling_embed() -> discord.Embed:
         inline=False,
     )
     embed.add_field(
-        name="Duel Stamina Explained",
+        name="⚔️ PvP Duel Details",
         value=(
-            "Duels cost stamina so you can't spam them.\n"
-            "• You have **100 stamina**, resets daily\n"
-            "• Small bets cost ~10 stamina, big bets cost more\n"
-            "• Stamina regenerates slowly over time\n"
-            "• Check your stamina when you `!duel`"
+            "• Must be at the **Noodle Colosseum** (`!travel`)\n"
+            "• Uses your equipped gear, real HP, and real stamina\n"
+            "• Take turns: Attack, Defend, or Consume an item (costs a turn)\n"
+            "• Winner takes the star wager from both players' wallets\n"
+            "• Damage persists — both players keep post-fight HP/stamina\n"
+            "• 5 minute turn timer — idle player forfeits"
         ),
         inline=False,
     )
@@ -662,7 +664,8 @@ def _gambling_embed() -> discord.Embed:
         name="🎲 Lucky Dice",
         value=(
             "Normally you must be in **Noodle Town** to gamble.\n"
-            "Buy **Lucky Dice** from `!store` (500 stars) to gamble from anywhere!"
+            "Buy **Lucky Dice** from `!store` (500 stars) to gamble from anywhere!\n"
+            "*(Note: Duels always require the Colosseum)*"
         ),
         inline=False,
     )

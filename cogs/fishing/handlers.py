@@ -83,8 +83,9 @@ class PullButtonView(discord.ui.View):
             from cogs.combat.ambush_constants import FISHING_AMBUSH_MOBS, AMBUSH_DEFEAT_PENALTIES, AMBUSH_FLEE_LOCKOUT
             from cogs.combat.use_case.combat import CombatUseCases
             from cogs.combat.handlers import BattleView, is_in_battle
+            from cogs.gambling.handlers import is_in_duel
 
-            if not is_in_battle(interaction.user.id):
+            if not is_in_battle(interaction.user.id) and not is_in_duel(interaction.user.id):
                 mobs = FISHING_AMBUSH_MOBS.get(result.ambush_level, [])
                 mob = next((m for m in mobs if m.key == result.ambush_mob_key), None)
                 if mob:
@@ -304,8 +305,9 @@ class FishingCog(commands.Cog):
             from cogs.combat.ambush_constants import FISHING_AMBUSH_MOBS, AMBUSH_DEFEAT_PENALTIES, AMBUSH_FLEE_LOCKOUT
             from cogs.combat.use_case.combat import CombatUseCases
             from cogs.combat.handlers import BattleView, is_in_battle
+            from cogs.gambling.handlers import is_in_duel
 
-            if not is_in_battle(ctx.author.id):
+            if not is_in_battle(ctx.author.id) and not is_in_duel(ctx.author.id):
                 mobs = FISHING_AMBUSH_MOBS.get(result.ambush_level, [])
                 mob = next((m for m in mobs if m.key == result.ambush_mob_key), None)
                 if mob:
