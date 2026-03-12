@@ -434,9 +434,9 @@ STAMINA_RECOVERY: Final[dict[str, int]] = {
     "barnacle_cluster": 12,
     "old_boot": 6,
     # Crafted potions
-    "minor_stamina_brew": 30,
-    "stamina_tonic": 50,
-    "void_energy_flask": 80,
+    "minor_stamina_brew": 50,
+    "stamina_tonic": 80,
+    "void_energy_flask": 100,
 }
 
 # ---------------------------------------------------------------------------
@@ -583,17 +583,17 @@ CRAFT_RECIPES: Final[dict[str, CraftRecipe]] = {
     # ── Stamina potions ───────────────────────────────────────
     "minor_stamina_brew": CraftRecipe(
         result_key="minor_stamina_brew", result_name="Minor Stamina Brew", result_emoji="🧪",
-        ingredients=(("seaweed", 3), ("coal", 1)),
-        description="A simple brew that restores a little stamina.",
+        ingredients=(("seaweed", 1), ("coal", 1)),
+        description="A simple brew that restores 50 stamina.",
     ),
     "stamina_tonic": CraftRecipe(
         result_key="stamina_tonic", result_name="Stamina Tonic", result_emoji="🧴",
-        ingredients=(("bioluminescent_jelly", 2), ("tin", 1), ("golden_seahorse", 1)),
-        description="A potent tonic that restores a good deal of stamina.",
+        ingredients=(("bioluminescent_jelly", 1),),
+        description="A potent tonic that restores 80 stamina.",
     ),
     "void_energy_flask": CraftRecipe(
         result_key="void_energy_flask", result_name="Void Energy Flask", result_emoji="⚗️",
-        ingredients=(("void_coral", 3), ("dark_matter", 1), ("coral_golem", 1)),
+        ingredients=(("void_coral", 1), ("coral_golem", 1)),
         description="Pure concentrated void energy. Full stamina restoration.",
     ),
 }
