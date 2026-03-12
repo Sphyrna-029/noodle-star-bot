@@ -10,7 +10,7 @@ class StorageRepository(BaseRepository):
         """Return all stored items for a user."""
         with self.db.get_cursor() as cursor:
             cursor.execute(
-                """SELECT id, item_key, item_type, uses, stored_at
+                """SELECT id, item_key, item_type, uses, category, base_sell_value, stored_at
                    FROM user_storage WHERE user_id = ?
                    ORDER BY item_key, stored_at""",
                 (user_id,),
@@ -41,13 +41,14 @@ class StorageRepository(BaseRepository):
             return cursor.fetchone()["cnt"]
 
     def add_to_storage(self, user_id: int, item_key: str,
-                       item_type: str = "inventory", uses: int = 1) -> None:
+                       item_type: str = "inventory", uses: int = 1,
+                       category: str = "consumable", base_sell_value: int = 0) -> None:
         """Add an item to storage."""
         with self.db.get_cursor() as cursor:
             cursor.execute(
-                """INSERT INTO user_storage (user_id, item_key, item_type, uses)
-                   VALUES (?, ?, ?, ?)""",
-                (user_id, item_key, item_type, uses),
+                """INSERT INTO user_storage (user_id, item_key, item_type, uses, category, base_sell_value)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (user_id, item_key, item_type, uses, category, base_sell_value),
             )
 
     def remove_from_storage(self, user_id: int, item_key: str,
@@ -55,7 +56,8 @@ class StorageRepository(BaseRepository):
         """Remove one item from storage (oldest first). Returns the removed row or None."""
         with self.db.get_cursor() as cursor:
             cursor.execute(
-                """SELECT id, item_key, item_type, uses FROM user_storage
+                """SELECT id, item_key, item_type, uses, category, base_sell_value
+                   FROM user_storage
                    WHERE user_id = ? AND item_key = ? AND item_type = ?
                    ORDER BY stored_at ASC LIMIT 1""",
                 (user_id, item_key, item_type),
@@ -70,14 +72,25 @@ class StorageRepository(BaseRepository):
             return dict(row)
 
     def add_to_storage_bulk(self, user_id: int,
-                            items: list[tuple[str, str, int]]) -> None:
-        """Add multiple items to storage. Each tuple is (item_key, item_type, uses)."""
+                            items: list[tuple]) -> None:
+        """Add multiple items to storage.
+
+        Each tuple is (item_key, item_type, uses) or
+        (item_key, item_type, uses, category, base_sell_value).
+        """
         with self.db.get_cursor() as cursor:
-            cursor.executemany(
-                """INSERT INTO user_storage (user_id, item_key, item_type, uses)
-                   VALUES (?, ?, ?, ?)""",
-                [(user_id, key, itype, uses) for key, itype, uses in items],
-            )
+            for t in items:
+                if len(t) >= 5:
+                    key, itype, uses, cat, sell = t[0], t[1], t[2], t[3], t[4]
+                else:
+                    key, itype, uses = t[0], t[1], t[2]
+                    cat, sell = "consumable", 0
+                cursor.execute(
+                    """INSERT INTO user_storage
+                       (user_id, item_key, item_type, uses, category, base_sell_value)
+                       VALUES (?, ?, ?, ?, ?, ?)""",
+                    (user_id, key, itype, uses, cat, sell),
+                )
 
     def remove_from_storage_by_key(self, user_id: int, item_key: str,
                                    item_type: str, amount: int) -> list[dict]:
@@ -85,7 +98,8 @@ class StorageRepository(BaseRepository):
         Returns list of removed rows."""
         with self.db.get_cursor() as cursor:
             cursor.execute(
-                """SELECT id, item_key, item_type, uses FROM user_storage
+                """SELECT id, item_key, item_type, uses, category, base_sell_value
+                   FROM user_storage
                    WHERE user_id = ? AND item_key = ? AND item_type = ?
                    ORDER BY stored_at ASC LIMIT ?""",
                 (user_id, item_key, item_type, amount),
@@ -106,7 +120,8 @@ class StorageRepository(BaseRepository):
         Returns list of removed rows."""
         with self.db.get_cursor() as cursor:
             cursor.execute(
-                """SELECT id, item_key, item_type, uses FROM user_storage
+                """SELECT id, item_key, item_type, uses, category, base_sell_value
+                   FROM user_storage
                    WHERE user_id = ? AND item_type = 'inventory'
                    ORDER BY item_key, stored_at""",
                 (user_id,),

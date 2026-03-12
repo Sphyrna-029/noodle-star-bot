@@ -498,14 +498,39 @@ class EconomyCog(commands.Cog):
         if name.lower() in cat_map:
             return await self._stash_category(ctx, cat_map[name.lower()])
 
-        # Try equipment first
+        # Try inventory items first (exact match on normalized key)
+        inv_items = self.repo.get_inventory_items(ctx.author.id)
+        norm = name.lower().replace(" ", "_")
+        matching = [i for i in inv_items if i["item_key"] == norm]
+
+        if matching:
+            actual_key = matching[0]["item_key"]
+            to_stash = min(amount, len(matching))
+            items_to_stash = matching[:to_stash]
+            ids_to_remove = [m["id"] for m in items_to_stash]
+
+            self.repo.remove_items_by_ids(ctx.author.id, ids_to_remove)
+            bulk = [
+                (m["item_key"], "inventory", 1,
+                 m.get("category", "consumable"),
+                 m.get("base_sell_value", 0))
+                for m in items_to_stash
+            ]
+            self.repo.add_to_storage_bulk(ctx.author.id, bulk)
+
+            display = _display_name(actual_key)
+            label = f"x{to_stash}" if to_stash > 1 else ""
+            await ctx.send(f"\U0001f4e6 Stashed **{display}** {label} into safe storage!")
+            return
+
+        # Try equipment (exact key match only)
         equip = self.repo.get_user_equipment(ctx.author.id)
-        equip_key = _resolve_equip_key(name, equip)
+        equip_key = norm if norm in equip else None
 
         if equip_key:
             uses = equip.get(equip_key, 0)
             if uses <= 0:
-                await ctx.send(f"❌ You don't own **{_display_name(equip_key)}**!")
+                await ctx.send(f"\u274c You don't own **{_display_name(equip_key)}**!")
                 return
 
             stats = self.repo.get_combat_stats(ctx.author.id)
@@ -518,33 +543,10 @@ class EconomyCog(commands.Cog):
 
             display = _display_name(equip_key)
             label = f"({uses} uses)" if uses > 1 else ""
-            await ctx.send(f"📦 Stashed **{display}** {label} into safe storage!")
+            await ctx.send(f"\U0001f4e6 Stashed **{display}** {label} into safe storage!")
             return
 
-        # Try inventory items
-        inv_items = self.repo.get_inventory_items(ctx.author.id)
-        norm = name.lower().replace(" ", "_")
-        matching = [i for i in inv_items if i["item_key"] == norm]
-        if not matching:
-            matching = [i for i in inv_items if i["item_key"].lower() == name.lower()]
-        if not matching:
-            matching = [i for i in inv_items if norm in i["item_key"].lower()]
-
-        if not matching:
-            await ctx.send(f"❌ No item called **{name}** found in your inventory or equipment!")
-            return
-
-        actual_key = matching[0]["item_key"]
-        to_stash = min(amount, len(matching))
-        ids_to_remove = [m["id"] for m in matching[:to_stash]]
-
-        self.repo.remove_items_by_ids(ctx.author.id, ids_to_remove)
-        bulk = [(actual_key, "inventory", 1) for _ in range(to_stash)]
-        self.repo.add_to_storage_bulk(ctx.author.id, bulk)
-
-        display = _display_name(actual_key)
-        label = f"x{to_stash}" if to_stash > 1 else ""
-        await ctx.send(f"📦 Stashed **{display}** {label} into safe storage!")
+        await ctx.send(f"\u274c No item called **{name}** found in your inventory or equipment! Use the exact item name.")
 
     async def _stash_menu(self, ctx):
         """Show the stash category dropdown menu."""
@@ -638,7 +640,12 @@ class EconomyCog(commands.Cog):
 
         ids = [m["id"] for m in matching]
         self.repo.remove_items_by_ids(ctx.author.id, ids)
-        bulk = [(m["item_key"], "inventory", 1) for m in matching]
+        bulk = [
+            (m["item_key"], "inventory", 1,
+             m.get("category", "consumable"),
+             m.get("base_sell_value", 0))
+            for m in matching
+        ]
         self.repo.add_to_storage_bulk(ctx.author.id, bulk)
 
         cat_labels = {
@@ -684,17 +691,13 @@ class EconomyCog(commands.Cog):
         if name.lower() in cat_map:
             return await self._unstash_category(ctx, cat_map[name.lower()])
 
-        # Find matching items in storage
+        # Find matching items in storage (exact key match only)
         stored = self.repo.get_storage_items(ctx.author.id)
         norm = name.lower().replace(" ", "_")
         matching = [s for s in stored if s["item_key"] == norm]
-        if not matching:
-            matching = [s for s in stored if s["item_key"].lower() == name.lower()]
-        if not matching:
-            matching = [s for s in stored if norm in s["item_key"].lower()]
 
         if not matching:
-            await ctx.send(f"❌ No item called **{name}** found in your storage!")
+            await ctx.send(f"\u274c No item called **{name}** found in your storage! Use the exact item name.")
             return
 
         actual_key = matching[0]["item_key"]
@@ -703,7 +706,7 @@ class EconomyCog(commands.Cog):
         if item_type == "equipment":
             row = self.repo.remove_from_storage(ctx.author.id, actual_key, "equipment")
             if not row:
-                await ctx.send(f"❌ Failed to retrieve **{_display_name(actual_key)}** from storage!")
+                await ctx.send(f"\u274c Failed to retrieve **{_display_name(actual_key)}** from storage!")
                 return
 
             uses = row["uses"]
@@ -712,25 +715,33 @@ class EconomyCog(commands.Cog):
 
             display = _display_name(actual_key)
             label = f"({uses} uses)" if uses > 1 else ""
-            await ctx.send(f"📦 Retrieved **{display}** {label} from storage!")
+            await ctx.send(f"\U0001f4e6 Retrieved **{display}** {label} from storage!")
         else:
             # Check inventory space before removing from storage
             bag_count = self.repo.get_inventory_count(ctx.author.id)
             bag_capacity = self.repo.get_inventory_capacity(ctx.author.id)
             available = bag_capacity - bag_count
             if available <= 0:
-                await ctx.send(f"❌ {ctx.author.mention}, your inventory is full ({bag_count}/{bag_capacity})! Make room before unstashing.")
+                await ctx.send(f"\u274c {ctx.author.mention}, your inventory is full ({bag_count}/{bag_capacity})! Make room before unstashing.")
                 return
             to_unstash = min(amount, len(matching), available)
             removed = self.repo.remove_from_storage_by_key(
                 ctx.author.id, actual_key, "inventory", to_unstash
             )
-            for _ in removed:
-                self.repo.add_item(ctx.author.id, actual_key)
+            for row in removed:
+                # Restore original category and sell value
+                cat = row.get("category", "consumable")
+                sell = row.get("base_sell_value", 0)
+                # Fall back to resource catalog if storage had no data
+                if cat == "consumable" and sell == 0:
+                    res = get_resource(actual_key)
+                    if res and res.category != "consumable":
+                        cat = res.category
+                self.repo.add_item(ctx.author.id, actual_key, cat, sell)
 
             display = _display_name(actual_key)
             label = f"x{len(removed)}" if len(removed) > 1 else ""
-            await ctx.send(f"📦 Retrieved **{display}** {label} from storage!")
+            await ctx.send(f"\U0001f4e6 Retrieved **{display}** {label} from storage!")
 
     async def _unstash_menu(self, ctx):
         """Show the unstash category dropdown menu."""
@@ -834,7 +845,13 @@ class EconomyCog(commands.Cog):
                 leftover = []
                 for row in removed:
                     if added < available:
-                        self.repo.add_item(ctx.author.id, row["item_key"])
+                        cat = row.get("category", "consumable")
+                        sell = row.get("base_sell_value", 0)
+                        if cat == "consumable" and sell == 0:
+                            res = get_resource(row["item_key"])
+                            if res and res.category != "consumable":
+                                cat = res.category
+                        self.repo.add_item(ctx.author.id, row["item_key"], cat, sell)
                         added += 1
                     else:
                         leftover.append(row)
@@ -842,7 +859,9 @@ class EconomyCog(commands.Cog):
                 if leftover:
                     self.repo.add_to_storage_bulk(
                         ctx.author.id,
-                        [(r["item_key"], r["item_type"], r["uses"]) for r in leftover],
+                        [(r["item_key"], r["item_type"], r.get("uses", 1),
+                          r.get("category", "consumable"), r.get("base_sell_value", 0))
+                         for r in leftover],
                     )
             # Unstash equipment
             for item in equip_items:
@@ -882,7 +901,13 @@ class EconomyCog(commands.Cog):
         leftover = []
         for row in removed:
             if added < available:
-                self.repo.add_item(ctx.author.id, row["item_key"])
+                cat = row.get("category", "consumable")
+                sell = row.get("base_sell_value", 0)
+                if cat == "consumable" and sell == 0:
+                    res = get_resource(row["item_key"])
+                    if res and res.category != "consumable":
+                        cat = res.category
+                self.repo.add_item(ctx.author.id, row["item_key"], cat, sell)
                 added += 1
             else:
                 leftover.append(row)
@@ -890,7 +915,9 @@ class EconomyCog(commands.Cog):
         if leftover:
             self.repo.add_to_storage_bulk(
                 ctx.author.id,
-                [(r["item_key"], r["item_type"], r["uses"]) for r in leftover],
+                [(r["item_key"], r["item_type"], r.get("uses", 1),
+                  r.get("category", "consumable"), r.get("base_sell_value", 0))
+                 for r in leftover],
             )
 
         cat_labels = {
