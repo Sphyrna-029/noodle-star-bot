@@ -11,6 +11,143 @@ from cogs.shop.resources import RESOURCES, get_resource
 from database.repository import UserRepository
 
 
+# ---------------------------------------------------------------------------
+# Starter tutorial view
+# ---------------------------------------------------------------------------
+
+_TUTORIAL_PAGES = [
+    discord.Embed(
+        title="\u2728 Welcome to Noodle Star Bot!",
+        description=(
+            "You've claimed your **Starter Kit**:\n"
+            "\u2022 \U0001f5e1\ufe0f **Wooden Sword** \u2014 +8 Attack\n"
+            "\u2022 \U0001f6e1\ufe0f **Wooden Shield** \u2014 +6 Defense\n"
+            "\u2022 \u2764\ufe0f\u200d\U0001fa79 **Health Potion** x5 \u2014 Restores 20 HP each\n\n"
+            "These will help you survive your first fights! "
+            "Let\u2019s walk you through the basics.\n\n"
+            "*Use the buttons below to navigate.*"
+        ),
+        color=discord.Color.green(),
+    ),
+    discord.Embed(
+        title="\u26cf\ufe0f Mining \u2014 Your Main Income",
+        description=(
+            "Type `!mine` to dig for minerals. They go into your **backpack**.\n\n"
+            "When your bag has items, sell them:\n"
+            "\u2022 `!sell all` \u2014 Sell everything at once\n"
+            "\u2022 `!sell <item>` \u2014 Sell a specific item\n\n"
+            "Stars are your currency \u2014 use them to buy upgrades, gear, and more.\n\n"
+            "**Tip:** Use `!deposit all` to store stars in the bank. "
+            "Banked stars are safer if you die in combat!\n\n"
+            "**Watch out!** Mobs can ambush you while mining. "
+            "That\u2019s what your starter gear is for."
+        ),
+        color=discord.Color.orange(),
+    ),
+    discord.Embed(
+        title="\u2694\ufe0f Combat \u2014 Fighting Mobs",
+        description=(
+            "Travel to the **Noodle Colosseum** with `!travel` and type `!fight` to battle mobs.\n\n"
+            "During a fight you can:\n"
+            "\u2022 **Attack** \u2014 Deal damage (costs 8 stamina)\n"
+            "\u2022 **Defend** \u2014 Reduce incoming damage (costs 3 stamina)\n"
+            "\u2022 **Flee** \u2014 Try to escape (may fail)\n"
+            "\u2022 **Consume** \u2014 Use an item mid-fight (food for HP, drinks for stamina)\n\n"
+            "**Equipping Gear:**\n"
+            "\u2022 `!equip wooden sword` \u2014 Equip your weapon\n"
+            "\u2022 `!equip wooden shield` \u2014 Equip your shield\n"
+            "\u2022 `!gear` \u2014 See what you have equipped and your ATK/DEF stats\n\n"
+            "**Important:** Gear must be equipped to work! Check `!gear` to make sure."
+        ),
+        color=discord.Color.red(),
+    ),
+    discord.Embed(
+        title="\u2764\ufe0f HP & Stamina",
+        description=(
+            "You have two resources:\n"
+            "\u2022 \u2764\ufe0f **HP** \u2014 Drops when mobs hit you. At 0 HP, you\u2019re defeated and lose stuff!\n"
+            "\u2022 \u26a1 **Stamina** \u2014 Used for attacking and defending. Low stamina = weaker hits.\n\n"
+            "**Recovering:**\n"
+            "\u2022 `!consume health potion` \u2014 Use a health potion (+20 HP)\n"
+            "\u2022 `!eat <fish>` \u2014 Eat fish from your inventory to restore HP\n"
+            "\u2022 `!drink <item>` \u2014 Drink beverages to restore stamina\n"
+            "\u2022 Stamina regenerates slowly over time\n\n"
+            "**Tip:** You can also consume items mid-fight using the Consume button!"
+        ),
+        color=discord.Color.purple(),
+    ),
+    discord.Embed(
+        title="\U0001f680 What\u2019s Next?",
+        description=(
+            "You\u2019re ready to go! Here\u2019s what to explore:\n\n"
+            "\u2022 `!mine` \u2014 Start earning stars at the **Crystal Cave**\n"
+            "\u2022 `!store` \u2014 Browse upgrades and gear\n"
+            "\u2022 `!fish` \u2014 Try fishing at the **Noodle Pier**\n"
+            "\u2022 `!fight` \u2014 Battle mobs at the **Noodle Colosseum**\n"
+            "\u2022 `!travel` \u2014 Move between locations\n"
+            "\u2022 `!action` \u2014 Quick dashboard with your stats and available actions\n"
+            "\u2022 `!help` \u2014 Full help menu with all features\n\n"
+            "**Pro Tips:**\n"
+            "\u2022 Sell resources often \u2014 a full bag means you can\u2019t pick up new finds\n"
+            "\u2022 Deposit stars in the bank to protect them\n"
+            "\u2022 Upgrade your gear at the `!store` as you earn more stars\n"
+            "\u2022 Type `!help` anytime if you\u2019re stuck"
+        ),
+        color=discord.Color.blurple(),
+    ),
+]
+
+# Set footers on all pages
+for _i, _page in enumerate(_TUTORIAL_PAGES):
+    _page.set_footer(text=f"Page {_i + 1}/{len(_TUTORIAL_PAGES)}")
+
+
+class _TutorialView(discord.ui.View):
+    """Paginated tutorial shown after !start."""
+
+    def __init__(self, author_id: int):
+        super().__init__(timeout=180)
+        self.author_id = author_id
+        self.page = 0
+        self.message = None
+        self._update_buttons()
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message("Not your tutorial!", ephemeral=True)
+            return False
+        return True
+
+    def _update_buttons(self):
+        self.prev_button.disabled = self.page == 0
+        self.next_button.disabled = self.page == len(_TUTORIAL_PAGES) - 1
+
+    @discord.ui.button(label="Back", style=discord.ButtonStyle.secondary)
+    async def prev_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.page = max(0, self.page - 1)
+        self._update_buttons()
+        await interaction.response.edit_message(embed=_TUTORIAL_PAGES[self.page], view=self)
+
+    @discord.ui.button(label="Next", style=discord.ButtonStyle.primary)
+    async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.page = min(len(_TUTORIAL_PAGES) - 1, self.page + 1)
+        self._update_buttons()
+        await interaction.response.edit_message(embed=_TUTORIAL_PAGES[self.page], view=self)
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        if self.message:
+            try:
+                await self.message.edit(view=self)
+            except Exception:
+                pass
+
+
+# ---------------------------------------------------------------------------
+# Economy cog
+# ---------------------------------------------------------------------------
+
 class EconomyCog(commands.Cog):
     """Commands for checking and managing star balances."""
 
@@ -18,6 +155,32 @@ class EconomyCog(commands.Cog):
         self.bot = bot
         self.repo = UserRepository()
         self.economy = EconomyUseCases(self.repo)
+
+    # ── Starter kit ──────────────────────────────────────────
+
+    @commands.command(name="start")
+    async def start(self, ctx):
+        """Claim your one-time starter kit and learn the basics!"""
+        inventory = self.repo.get_user_inventory(ctx.author.id)
+        if inventory.get("starter_claimed", 0):
+            await ctx.send(
+                f"\u274c {ctx.author.mention}, you've already claimed your starter kit! "
+                f"Use `!help` if you need a refresher."
+            )
+            return
+
+        # Grant items
+        self.repo.update_user_inventory(ctx.author.id, "wooden_sword", 1)
+        self.repo.update_user_inventory(ctx.author.id, "wooden_shield", 1)
+        self.repo.update_user_inventory(ctx.author.id, "health_potion", 5)
+
+        # Mark as claimed
+        self.repo.update_user_inventory(ctx.author.id, "starter_claimed", 1)
+
+        # Show tutorial
+        view = _TutorialView(ctx.author.id)
+        msg = await ctx.send(embed=_TUTORIAL_PAGES[0], view=view)
+        view.message = msg
 
     @commands.command(name="stars")
     async def check_stars(self, ctx, member: discord.Member = None):

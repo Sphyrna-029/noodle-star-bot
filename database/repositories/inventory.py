@@ -24,7 +24,7 @@ class InventoryRepository(BaseRepository):
         "farm_plots", "first_weather_bonus", "inventory_capacity",
         "equipped_bait", "jig_active",
         "preserver_level", "preserver_pending_stars", "preserver_ready_ts",
-        "growbot_level",
+        "growbot_level", "starter_claimed",
     }
 
     _OWNERSHIP_MAP = {
@@ -53,7 +53,7 @@ class InventoryRepository(BaseRepository):
         "farm_level": 1, "farm_plots": 0, "first_weather_bonus": 0,
         "inventory_capacity": 50, "equipped_bait": None, "jig_active": 0,
         "preserver_level": 0, "preserver_pending_stars": 0,
-        "preserver_ready_ts": 0, "growbot_level": 0,
+        "preserver_ready_ts": 0, "growbot_level": 0, "starter_claimed": 0,
     }
 
     # Combined set for validation
