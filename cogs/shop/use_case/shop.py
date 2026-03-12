@@ -336,6 +336,25 @@ class ShopUseCases:
                 item_emoji=item.emoji,
             )
 
+        # Check bag capacity for consumable items
+        if item.consumable:
+            bag_count = self.repo.get_inventory_count(user_id)
+            bag_capacity = self.repo.get_inventory_capacity(user_id)
+            if bag_count + quantity > bag_capacity:
+                space_left = bag_capacity - bag_count
+                return PurchaseResult(
+                    success=False,
+                    message=(
+                        f"Not enough bag space! You have **{bag_count}/{bag_capacity}** slots.\n"
+                        f"You can fit **{space_left}** more item{'s' if space_left != 1 else ''}. "
+                        f"Use `!sell` to free space or buy a **Bag Upgrade** from `!store`."
+                    ),
+                    item_name=item.display_name,
+                    item_emoji=item.emoji,
+                    price=total_price,
+                    quantity=quantity,
+                )
+
         # Deduct stars
         new_stars = current_stars - total_price
         self.repo.update_user_stars(user_id, username, new_stars)

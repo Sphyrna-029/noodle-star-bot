@@ -3,9 +3,11 @@
 import discord
 from discord.ext import commands
 
+from cogs.combat.constants import STAMINA_RECOVERY
 from cogs.locations.check import require_location
 from cogs.mining.constants import MINE_LEVELS, MINERAL_TABLES, MINING_STAMINA_COST
 from cogs.mining.use_case import MiningUseCases
+from cogs.shop.resources import get_resource
 
 
 # ---------------------------------------------------------------------------
@@ -70,6 +72,28 @@ def _build_mine_embed(result, author: discord.Member | discord.User, stamina: in
 # Interactive Mine View
 # ---------------------------------------------------------------------------
 
+class _MineStaminaSelect(discord.ui.Select):
+    """Dropdown for stamina items inside the mining view."""
+
+    def __init__(self, options: list[discord.SelectOption]):
+        super().__init__(placeholder="\u26a1 Consume stamina item...", options=options, row=1)
+
+    async def callback(self, interaction: discord.Interaction):
+        view = self.view
+        if not isinstance(view, MineView) or interaction.user.id != view.author_id:
+            await interaction.response.send_message("Not your mine!", ephemeral=True)
+            return
+        view._selected_stam_item = self.values[0]
+        # Enable the consume button and update its label
+        view.consume_btn.disabled = False
+        display = self.values[0].replace("_", " ").title()
+        res = get_resource(self.values[0])
+        view.consume_btn.label = f"Consume {display}"
+        view.consume_btn.emoji = res.emoji if res else "\u26a1"
+        view.consume_btn.style = discord.ButtonStyle.success
+        await interaction.response.edit_message(view=view)
+
+
 class MineView(discord.ui.View):
     """Persistent mine button that updates the embed each click."""
 
@@ -80,8 +104,46 @@ class MineView(discord.ui.View):
         self.mining = mining_uc
         self.bot = bot
         self.message = None
+        self._selected_stam_item: str | None = None
+        self._health_uc = None  # lazy init
+        self._rebuild_view()
 
-    @discord.ui.button(label="Mine Again", emoji="⛏️", style=discord.ButtonStyle.primary)
+    def _get_health_uc(self):
+        if self._health_uc is None:
+            from cogs.combat.use_case.health import HealthUseCases
+            self._health_uc = HealthUseCases(self.mining.repo)
+        return self._health_uc
+
+    def _build_stam_options(self) -> list[discord.SelectOption]:
+        items = self.mining.repo.get_inventory_items(self.author_id)
+        item_counts: dict[str, int] = {}
+        for item in items:
+            key = item["item_key"]
+            item_counts[key] = item_counts.get(key, 0) + 1
+
+        opts = []
+        for key, count in sorted(item_counts.items()):
+            recovery = STAMINA_RECOVERY.get(key)
+            if recovery and count > 0:
+                display = key.replace("_", " ").title()
+                res = get_resource(key)
+                emoji = res.emoji if res else "\u26a1"
+                opts.append(discord.SelectOption(
+                    label=f"{display} (+{recovery} stam) x{count}",
+                    value=key,
+                    emoji=emoji,
+                ))
+        return opts
+
+    def _rebuild_view(self):
+        self.clear_items()
+        self.add_item(self.mine_button)
+        stam_opts = self._build_stam_options()
+        if stam_opts:
+            self.add_item(_MineStaminaSelect(stam_opts))
+        self.add_item(self.consume_btn)
+
+    @discord.ui.button(label="Mine Again", emoji="\u26cf\ufe0f", style=discord.ButtonStyle.primary, row=0)
     async def mine_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.author_id:
             await interaction.response.send_message("Not your mine!", ephemeral=True)
@@ -90,20 +152,18 @@ class MineView(discord.ui.View):
         result = self.mining.mine(self.author_id, self.username)
 
         if not result.success:
-            # Stamina or inventory full — disable button, show reason
+            # Stamina or inventory full — disable mine button, show reason
             button.disabled = True
             button.label = "Can't Mine"
             button.style = discord.ButtonStyle.secondary
             embed = interaction.message.embeds[0] if interaction.message.embeds else discord.Embed()
             embed.color = discord.Color.red()
-            embed.set_field_at(0, name="⚡ Stamina", value=f"❌ {result.message}", inline=False)
+            embed.set_field_at(0, name="\u26a1 Stamina", value=f"\u274c {result.message}", inline=False)
             await interaction.response.edit_message(embed=embed, view=self)
-            self.stop()
             return
 
         # Get updated stamina
-        from cogs.combat.use_case.health import HealthUseCases
-        health_uc = HealthUseCases(self.mining.repo)
+        health_uc = self._get_health_uc()
         status = health_uc.get_status(self.author_id)
 
         embed = _build_mine_embed(result, interaction.user, status.current_stamina, status.max_stamina)
@@ -122,15 +182,30 @@ class MineView(discord.ui.View):
             button.label = "Can't Mine"
             button.style = discord.ButtonStyle.secondary
             if status.current_stamina < next_cost:
-                embed.set_field_at(0, name="⚡ Stamina", value=f"{status.current_stamina}/{status.max_stamina} {_progress_bar(status.current_stamina, status.max_stamina)}\n❌ Not enough stamina ({next_cost} needed)", inline=False)
+                stam_text = f"{status.current_stamina}/{status.max_stamina} {_progress_bar(status.current_stamina, status.max_stamina)}"
+                embed.set_field_at(0, name="\u26a1 Stamina", value=f"{stam_text}\n\u274c Not enough stamina ({next_cost} needed)", inline=False)
             elif result.bag_count >= result.bag_capacity:
-                embed.description += "\n❌ Inventory full!"
+                embed.description += "\n\u274c Inventory full!"
 
         if result.ambush_mob_key:
-            # Ambush! Disable button and let the ambush handler take over
-            button.disabled = True
+            # Ambush! Disable everything and let the ambush handler take over
+            for child in self.children:
+                child.disabled = True
             button.label = "Ambushed!"
             button.style = discord.ButtonStyle.danger
+
+        # Rebuild dropdown with updated counts
+        self._rebuild_view()
+        # Re-apply mine button state after rebuild
+        if not can_mine_again and not result.ambush_mob_key:
+            self.mine_button.disabled = True
+            self.mine_button.label = "Can't Mine"
+            self.mine_button.style = discord.ButtonStyle.secondary
+        if result.ambush_mob_key:
+            for child in self.children:
+                child.disabled = True
+            self.mine_button.label = "Ambushed!"
+            self.mine_button.style = discord.ButtonStyle.danger
 
         await interaction.response.edit_message(embed=embed, view=self)
 
@@ -138,6 +213,46 @@ class MineView(discord.ui.View):
         if result.ambush_mob_key:
             self.stop()
             await _handle_ambush(interaction, result, self.author_id, self.username)
+
+    @discord.ui.button(label="Select item first", emoji="\U0001f37d\ufe0f", style=discord.ButtonStyle.secondary, disabled=True, row=2)
+    async def consume_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message("Not your mine!", ephemeral=True)
+            return
+        if not self._selected_stam_item:
+            await interaction.response.send_message("Select an item from the dropdown first!", ephemeral=True)
+            return
+
+        health_uc = self._get_health_uc()
+        result = health_uc.drink(self.author_id, self._selected_stam_item)
+
+        status = health_uc.get_status(self.author_id)
+        stam_bar = _progress_bar(status.current_stamina, status.max_stamina)
+
+        if not result.success:
+            embed = interaction.message.embeds[0] if interaction.message.embeds else discord.Embed()
+            embed.set_field_at(0, name="\u26a1 Stamina", value=f"{status.current_stamina}/{status.max_stamina} {stam_bar}\n\u274c {result.message}", inline=False)
+            self._rebuild_view()
+            await interaction.response.edit_message(embed=embed, view=self)
+            return
+
+        # Success — update stamina bar and re-enable mine button if possible
+        embed = interaction.message.embeds[0] if interaction.message.embeds else discord.Embed()
+        embed.set_field_at(0, name="\u26a1 Stamina", value=f"{status.current_stamina}/{status.max_stamina} {stam_bar}\n\u26a1 {result.message}", inline=False)
+
+        # Rebuild dropdown (item counts changed)
+        self._rebuild_view()
+
+        # Re-enable mine button if stamina is now sufficient
+        active_level = self.mining.repo.get_active_mine_level(self.author_id)
+        next_cost = MINING_STAMINA_COST[active_level]
+        if status.current_stamina >= next_cost:
+            self.mine_button.disabled = False
+            self.mine_button.label = "Mine Again"
+            self.mine_button.style = discord.ButtonStyle.primary
+            self.mine_button.emoji = "\u26cf\ufe0f"
+
+        await interaction.response.edit_message(embed=embed, view=self)
 
     async def on_timeout(self):
         if self.message:
@@ -244,16 +359,20 @@ class MiningCog(commands.Cog):
             and not result.ambush_mob_key
         )
 
-        if can_mine_again:
+        if not result.ambush_mob_key:
             view = MineView(ctx.author.id, str(ctx.author), self.mining, self.bot)
+            if not can_mine_again:
+                view.mine_button.disabled = True
+                view.mine_button.label = "Can't Mine"
+                view.mine_button.style = discord.ButtonStyle.secondary
+                if status.current_stamina < next_cost:
+                    stam_text = f"{status.current_stamina}/{status.max_stamina} {_progress_bar(status.current_stamina, status.max_stamina)}"
+                    embed.set_field_at(0, name="\u26a1 Stamina", value=f"{stam_text}\n\u274c Not enough stamina ({next_cost} needed)", inline=False)
+                elif result.bag_count >= result.bag_capacity:
+                    embed.description += "\n\u274c Inventory full!"
             msg = await ctx.send(embed=embed, view=view)
             view.message = msg
         else:
-            # No button if can't mine again
-            if status.current_stamina < next_cost and not result.ambush_mob_key:
-                embed.set_field_at(0, name="⚡ Stamina", value=f"{status.current_stamina}/{status.max_stamina} {_progress_bar(status.current_stamina, status.max_stamina)}\n❌ Not enough stamina ({next_cost} needed)", inline=False)
-            elif result.bag_count >= result.bag_capacity and not result.ambush_mob_key:
-                embed.description += "\n❌ Inventory full!"
             await ctx.send(embed=embed)
 
         # Handle ambush
