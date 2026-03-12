@@ -69,7 +69,7 @@ SHOP_ITEMS: Final[dict[str, ShopItem]] = {
         aliases=("growbot", "grow-bot", "grow bot", "agri bot"),
     ),
     "stamina_elixir": ShopItem(
-        price=50,
+        price=25,
         db_column="stamina_elixir",
         consumable=True,
         emoji="⚗️",
