@@ -4,11 +4,15 @@ import random
 from typing import Optional
 
 from cogs.combat.constants import (
-    BASE_HP, BASE_STAMINA, COMBAT_ITEMS, COMBAT_LEVEL_UNLOCK,
-    DAMAGE_FLOOR, DEATH_PENALTIES, DUNGEON_LEVELS, MOBS, MOBS_BY_LEVEL,
-    STAMINA_PER_ATTACK, STAMINA_PER_DEFEND, WINS_PER_COMBAT_LEVEL,
+    ALIEN_AMBUSH_DROPS, BASE_HP, BASE_STAMINA, BOSS_BONUS_DROPS,
+    COMBAT_ITEMS, COMBAT_LEVEL_UNLOCK,
+    DAMAGE_FLOOR, DEATH_PENALTIES, DUNGEON_DROPS, DUNGEON_LEVELS,
+    FISHING_AMBUSH_DROPS, MINING_AMBUSH_DROPS, MOBS, MOBS_BY_LEVEL,
+    SPACE_AMBUSH_DROPS, STAMINA_PER_ATTACK, STAMINA_PER_DEFEND,
+    WINS_PER_COMBAT_LEVEL,
 )
 from cogs.combat.dto import AmbushContext, BattleResult, BattleState, BattleTurn, DungeonUnlockResult
+from cogs.shop.resources import get_resource
 from database.repository import UserRepository
 
 
@@ -17,6 +21,69 @@ class CombatUseCases:
 
     def __init__(self, repository: UserRepository = None):
         self.repo = repository or UserRepository()
+
+    # ── Drop rolling ──────────────────────────────────────────
+
+    def roll_drops(self, battle: BattleState) -> list[tuple[str, str, int, str]]:
+        """Roll the loot table for a defeated mob.
+
+        Returns list of (item_key, category, sell_value, display_name) for items
+        that passed their drop chance.
+        """
+        drops: list[tuple[str, str, int, str]] = []
+        drop_table: list[tuple[str, str, int, float]] = []
+
+        if battle.ambush:
+            activity = battle.ambush.activity
+            level = battle.ambush.activity_level
+            if activity == "mining":
+                drop_table = list(MINING_AMBUSH_DROPS.get(level, []))
+            elif activity == "fishing":
+                drop_table = list(FISHING_AMBUSH_DROPS.get(level, []))
+            elif activity == "space":
+                drop_table = list(SPACE_AMBUSH_DROPS.get(level, []))
+            elif activity == "alien":
+                drop_table = list(ALIEN_AMBUSH_DROPS)
+        else:
+            drop_table = list(DUNGEON_DROPS.get(battle.dungeon_level, []))
+            # Boss bonus
+            mob = MOBS.get(battle.mob_key)
+            if mob and mob.is_boss:
+                drop_table.extend(BOSS_BONUS_DROPS)
+
+        for item_key, category, sell_value, chance in drop_table:
+            if random.random() < chance:
+                res = get_resource(item_key)
+                display = res.display_name if res else item_key.replace("_", " ").title()
+                drops.append((item_key, category, sell_value, display))
+
+        return drops
+
+    def grant_drops(self, user_id: int, drops: list[tuple[str, str, int, str]]) -> list[tuple[str, str]]:
+        """Add dropped items to player inventory.
+
+        Returns list of (item_key, display_name) for items actually granted.
+        Equipment items use update_user_inventory; others use add_item.
+        """
+        granted: list[tuple[str, str]] = []
+        for item_key, category, sell_value, display in drops:
+            if category == "equipment":
+                # Rare items stored in user_equipment table
+                inv = self.repo.get_user_inventory(user_id)
+                current = inv.get(item_key, 0)
+                if item_key in ("golden_axe", "mithril_shield"):
+                    # Permanent equipment — only grant if not owned
+                    if current > 0:
+                        continue
+                    self.repo.update_user_inventory(user_id, item_key, 1)
+                else:
+                    # Stacking equipment (star_magnet, lucky_charm, etc.)
+                    self.repo.update_user_inventory(user_id, item_key, current + 20)
+                granted.append((item_key, display))
+            else:
+                if self.repo.add_item(user_id, item_key, category, sell_value):
+                    granted.append((item_key, display))
+        return granted
 
     # ── Battle initialization ─────────────────────────────────
 
@@ -292,12 +359,16 @@ class CombatUseCases:
     # ── Battle resolution ─────────────────────────────────────
 
     def resolve_victory(self, user_id: int, username: str, battle: BattleState) -> BattleResult:
-        """Handle victory — award stars, check level up, save state."""
+        """Handle victory — award stars, roll drops, check level up, save state."""
         # Save HP/stamina
         self.repo.update_hp(user_id, battle.player_hp)
         self.repo.update_stamina(user_id, battle.player_stamina)
 
-        # Ambush victory: no star reward, just survival
+        # Roll and grant drops (for all victory types)
+        raw_drops = self.roll_drops(battle)
+        granted = self.grant_drops(user_id, raw_drops)
+
+        # Ambush victory: no star reward, just survival + drops
         if battle.ambush:
             return BattleResult(
                 success=True,
@@ -306,6 +377,7 @@ class CombatUseCases:
                 mob_name=battle.mob_name,
                 mob_emoji=battle.mob_emoji,
                 turns=battle.turns,
+                drops=granted,
             )
 
         # Dungeon victory: award stars and check level up
@@ -346,6 +418,7 @@ class CombatUseCases:
             combat_level_up=level_up,
             new_combat_level=new_level,
             turns=battle.turns,
+            drops=granted,
         )
 
     def resolve_defeat(self, user_id: int, username: str, battle: BattleState) -> BattleResult:

@@ -4,15 +4,18 @@ import random
 from typing import Optional
 
 from cogs.combat.constants import (
-    BASE_HP, BASE_STAMINA, COMBAT_ITEMS, COOP_MAX_PLAYERS,
-    COOP_MOB_DAMAGE_FALLOFF, COOP_REWARD_MULTIPLIER,
-    DAMAGE_FLOOR, DEATH_PENALTIES, MOBS, STAMINA_PER_ATTACK,
+    ALIEN_AMBUSH_DROPS, BASE_HP, BASE_STAMINA, BOSS_BONUS_DROPS,
+    COMBAT_ITEMS, COOP_MAX_PLAYERS, COOP_MOB_DAMAGE_FALLOFF,
+    COOP_REWARD_MULTIPLIER, DAMAGE_FLOOR, DEATH_PENALTIES,
+    DUNGEON_DROPS, FISHING_AMBUSH_DROPS, MINING_AMBUSH_DROPS,
+    MOBS, SPACE_AMBUSH_DROPS, STAMINA_PER_ATTACK,
     STAMINA_PER_DEFEND, WINS_PER_COMBAT_LEVEL,
 )
 from cogs.combat.dto import (
     AmbushContext, BattleState, BattleTurn, CoopBattleState, CoopPlayer,
 )
 from cogs.combat.use_case.health import HealthUseCases
+from cogs.shop.resources import get_resource
 from database.repository import UserRepository
 
 
@@ -394,18 +397,25 @@ class CoopCombatUseCases:
                 max_hp += COMBAT_ITEMS[key].hp_bonus
         self.repo.update_hp(player.user_id, 1, max_hp)
 
-    def resolve_coop_victory(self, state: CoopBattleState) -> dict[int, int]:
-        """Award victory rewards to all living players.
+    def resolve_coop_victory(self, state: CoopBattleState) -> tuple[dict[int, int], dict[int, list[tuple[str, str]]]]:
+        """Award victory rewards and drops to all living players.
 
-        Returns {user_id: stars_earned} for living players.
+        Returns (rewards, drops) where:
+          rewards = {user_id: stars_earned}
+          drops   = {user_id: [(item_key, display_name), ...]}
         """
-        # Players who fled are not alive but also didn't lose — save was
-        # already done in _resolve_player_flee. They get no rewards.
         alive_players = [p for p in state.players if p.alive]
         rewards: dict[int, int] = {}
+        all_drops: dict[int, list[tuple[str, str]]] = {}
 
         if not alive_players:
-            return rewards
+            return rewards, all_drops
+
+        # Roll drops once per player (each gets independent rolls)
+        for player in alive_players:
+            raw = self._roll_drops(state)
+            granted = self._grant_drops(player.user_id, raw)
+            all_drops[player.user_id] = granted
 
         # Ambush victory: no star reward
         if state.ambush:
@@ -413,7 +423,7 @@ class CoopCombatUseCases:
                 self.repo.update_hp(player.user_id, player.hp)
                 self.repo.update_stamina(player.user_id, player.stamina)
                 rewards[player.user_id] = 0
-            return rewards
+            return rewards, all_drops
 
         mob = MOBS.get(state.mob_key)
         base_reward = mob.star_reward if mob else 50
@@ -446,7 +456,55 @@ class CoopCombatUseCases:
 
             rewards[player.user_id] = star_reward
 
-        return rewards
+        return rewards, all_drops
+
+    def _roll_drops(self, state: CoopBattleState) -> list[tuple[str, str, int, str]]:
+        """Roll the drop table for a defeated mob. Returns raw drop list."""
+        drop_table: list[tuple[str, str, int, float]] = []
+
+        if state.ambush:
+            activity = state.ambush.activity
+            level = state.ambush.activity_level
+            if activity == "mining":
+                drop_table = list(MINING_AMBUSH_DROPS.get(level, []))
+            elif activity == "fishing":
+                drop_table = list(FISHING_AMBUSH_DROPS.get(level, []))
+            elif activity == "space":
+                drop_table = list(SPACE_AMBUSH_DROPS.get(level, []))
+            elif activity == "alien":
+                drop_table = list(ALIEN_AMBUSH_DROPS)
+        else:
+            drop_table = list(DUNGEON_DROPS.get(state.dungeon_level, []))
+            mob = MOBS.get(state.mob_key)
+            if mob and mob.is_boss:
+                drop_table.extend(BOSS_BONUS_DROPS)
+
+        drops: list[tuple[str, str, int, str]] = []
+        for item_key, category, sell_value, chance in drop_table:
+            if random.random() < chance:
+                res = get_resource(item_key)
+                display = res.display_name if res else item_key.replace("_", " ").title()
+                drops.append((item_key, category, sell_value, display))
+        return drops
+
+    def _grant_drops(self, user_id: int, drops: list[tuple[str, str, int, str]]) -> list[tuple[str, str]]:
+        """Add dropped items to player inventory. Returns granted list."""
+        granted: list[tuple[str, str]] = []
+        for item_key, category, sell_value, display in drops:
+            if category == "equipment":
+                inv = self.repo.get_user_inventory(user_id)
+                current = inv.get(item_key, 0)
+                if item_key in ("golden_axe", "mithril_shield"):
+                    if current > 0:
+                        continue
+                    self.repo.update_user_inventory(user_id, item_key, 1)
+                else:
+                    self.repo.update_user_inventory(user_id, item_key, current + 20)
+                granted.append((item_key, display))
+            else:
+                if self.repo.add_item(user_id, item_key, category, sell_value):
+                    granted.append((item_key, display))
+        return granted
 
     # ── Helpers ──────────────────────────────────────────────
 

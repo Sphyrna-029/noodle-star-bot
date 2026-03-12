@@ -118,6 +118,7 @@ class BattleResult:
     combat_level_up: bool = False
     new_combat_level: int = 0
     turns: list[BattleTurn] = field(default_factory=list)
+    drops: list[tuple[str, str]] = field(default_factory=list)  # [(item_key, display_name), ...]
 
 
 @dataclass(slots=True)

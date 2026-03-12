@@ -428,6 +428,12 @@ class BattleView(discord.ui.View):
                     if result.combat_level_up:
                         victory_text += f"\n🎉 **COMBAT LEVEL UP!** → Level {result.new_combat_level}"
                     embed.add_field(name="🏆 VICTORY", value=victory_text, inline=False)
+                    if result.drops:
+                        embed.add_field(
+                            name="🎁 Loot Drops",
+                            value=_format_drops(result.drops),
+                            inline=False,
+                        )
                     await interaction.edit_original_response(embed=embed, view=self)
                     return
 
@@ -624,6 +630,18 @@ def _progress_bar(pct: float, length: int = 10) -> str:
     """Create a text progress bar."""
     filled = int(pct * length)
     return "█" * filled + "░" * (length - filled)
+
+
+def _format_drops(drops: list[tuple[str, str]]) -> str:
+    """Format a drops list into a display string for embeds."""
+    if not drops:
+        return ""
+    res_lines = []
+    for item_key, display in drops:
+        res = get_resource(item_key)
+        emoji = res.emoji if res else "📦"
+        res_lines.append(f"{emoji} {display}")
+    return "\n".join(res_lines)
 
 
 # ---------------------------------------------------------------------------
@@ -932,7 +950,7 @@ class CoopBattleView(discord.ui.View):
             if self.coop_state.finished:
                 # Check victory or defeat
                 if self.coop_state.mob_hp <= 0:
-                    rewards = self.coop_uc.resolve_coop_victory(self.coop_state)
+                    rewards, all_drops = self.coop_uc.resolve_coop_victory(self.coop_state)
                     self._finish_coop_battle()
                     embed = self.create_embed()
                     reward_lines = []
@@ -948,6 +966,16 @@ class CoopBattleView(discord.ui.View):
                         value="\n".join(reward_lines) if reward_lines else "No rewards.",
                         inline=False,
                     )
+                    # Show drops per player
+                    for uid, drops in all_drops.items():
+                        if drops:
+                            p = self._get_player(uid)
+                            name = p.username if p else str(uid)
+                            embed.add_field(
+                                name=f"🎁 {name}'s Loot",
+                                value=_format_drops(drops),
+                                inline=True,
+                            )
                     await self._update_message(embed)
                 else:
                     # All players dead
@@ -1089,7 +1117,7 @@ class CoopBattleView(discord.ui.View):
 
             if self.coop_state.finished:
                 if self.coop_state.mob_hp <= 0:
-                    rewards = self.coop_uc.resolve_coop_victory(self.coop_state)
+                    rewards, all_drops = self.coop_uc.resolve_coop_victory(self.coop_state)
                     self._finish_coop_battle()
                     embed = self.create_embed()
                     reward_lines = []
@@ -1103,6 +1131,15 @@ class CoopBattleView(discord.ui.View):
                         value="\n".join(reward_lines) if reward_lines else "No rewards.",
                         inline=False,
                     )
+                    for uid, drops in all_drops.items():
+                        if drops:
+                            p = self._get_player(uid)
+                            name = p.username if p else str(uid)
+                            embed.add_field(
+                                name=f"🎁 {name}'s Loot",
+                                value=_format_drops(drops),
+                                inline=True,
+                            )
                     await self._update_message(embed)
                 else:
                     self._finish_coop_battle()

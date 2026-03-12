@@ -637,3 +637,225 @@ COOP_REWARD_MULTIPLIER: Final[dict[int, float]] = {
     4: 0.40,   # 40% each
 }
 COOP_MOB_DAMAGE_FALLOFF: Final[list[float]] = [1.0, 0.50, 0.25, 0.125]
+
+# ---------------------------------------------------------------------------
+# Mob Drop Pools — loot tables for defeated mobs
+# Each entry: (item_key, category, sell_value, drop_chance)
+#   drop_chance is 0.0-1.0 probability; multiple items can drop per kill.
+#   "equipment" category items use update_user_inventory instead of add_item.
+# ---------------------------------------------------------------------------
+
+# Type alias for readability
+_Drop = tuple[str, str, int, float]  # (item_key, category, sell_value, chance)
+
+# -- Dungeon mob drops by level -------------------------------------------
+
+DUNGEON_DROPS: Final[dict[int, list[_Drop]]] = {
+    1: [
+        # Consumables — common
+        ("raw_potato", "consumable", 2, 0.30),
+        ("health_potion", "consumable", 50, 0.10),
+        # Minerals — level 1 resources
+        ("coal", "mineral", 10, 0.25),
+        ("iron", "mineral", 20, 0.15),
+        ("gold", "mineral", 40, 0.05),
+    ],
+    2: [
+        ("raw_potato", "consumable", 2, 0.25),
+        ("health_potion", "consumable", 50, 0.15),
+        ("golden_mushroom", "consumable", 25, 0.10),
+        # Minerals — level 2
+        ("copper", "mineral", 15, 0.20),
+        ("silver", "mineral", 30, 0.15),
+        ("emerald", "mineral", 60, 0.06),
+        # Fish consumables
+        ("salmon", "fish", 20, 0.10),
+    ],
+    3: [
+        ("health_potion", "consumable", 50, 0.20),
+        ("golden_mushroom", "consumable", 25, 0.15),
+        # Minerals — level 3
+        ("tin", "mineral", 25, 0.18),
+        ("platinum", "mineral", 50, 0.12),
+        ("sapphire", "mineral", 90, 0.06),
+        ("amethyst", "mineral", 225, 0.02),
+        # Crafting fish
+        ("golden_fish", "fish", 0, 0.04),
+        ("river_dragon", "fish", 0, 0.03),
+        # Stamina potion material
+        ("seaweed", "fish", 10, 0.12),
+    ],
+    4: [
+        ("health_potion", "consumable", 50, 0.25),
+        ("golden_mushroom", "consumable", 25, 0.20),
+        # Minerals — level 4
+        ("titanium", "mineral", 40, 0.15),
+        ("mithril", "mineral", 80, 0.10),
+        ("opal", "mineral", 140, 0.06),
+        ("star_fragment", "mineral", 350, 0.02),
+        # Crafting fish
+        ("neptunes_trident", "fish", 0, 0.03),
+        ("phantom_captain", "fish", 0, 0.03),
+        ("diamond_anchor", "fish", 0, 0.02),
+        # Stamina materials
+        ("bioluminescent_jelly", "fish", 24, 0.08),
+    ],
+    5: [
+        ("health_potion", "consumable", 50, 0.30),
+        ("golden_mushroom", "consumable", 25, 0.25),
+        # Minerals — level 5
+        ("adamantium", "mineral", 60, 0.12),
+        ("dragonstone", "mineral", 120, 0.08),
+        ("void_crystal", "mineral", 200, 0.04),
+        ("noodle_gem", "mineral", 500, 0.01),
+        # Crafting fish — endgame
+        ("leviathan_scale", "fish", 0, 0.03),
+        ("poseidons_eye", "fish", 0, 0.02),
+        ("world_serpent_fang", "fish", 0, 0.02),
+        ("heart_of_the_abyss", "fish", 0, 0.01),
+        # Space ores
+        ("dark_matter", "ore", 0, 0.03),
+        ("void_coral", "fish", 20, 0.10),
+    ],
+}
+
+# Boss bonus drops — rolled IN ADDITION to the level drops above
+BOSS_BONUS_DROPS: Final[list[_Drop]] = [
+    ("health_potion", "consumable", 50, 0.50),
+    ("golden_mushroom", "consumable", 25, 0.40),
+    # Drop-only combat gear (very rare)
+    ("golden_axe", "equipment", 0, 0.03),
+    ("mithril_shield", "equipment", 0, 0.03),
+    # Rare effect items
+    ("star_magnet", "equipment", 0, 0.05),
+    ("lucky_charm", "equipment", 0, 0.04),
+]
+
+# -- Mining ambush drops (themed to underground resources) ----------------
+
+MINING_AMBUSH_DROPS: Final[dict[int, list[_Drop]]] = {
+    1: [
+        ("stone", "mineral", 5, 0.30),
+        ("coal", "mineral", 10, 0.25),
+        ("iron", "mineral", 20, 0.10),
+        ("raw_potato", "consumable", 2, 0.15),
+    ],
+    2: [
+        ("copper", "mineral", 15, 0.25),
+        ("silver", "mineral", 30, 0.15),
+        ("emerald", "mineral", 60, 0.05),
+        ("raw_potato", "consumable", 2, 0.15),
+        ("health_potion", "consumable", 50, 0.08),
+    ],
+    3: [
+        ("tin", "mineral", 25, 0.20),
+        ("platinum", "mineral", 50, 0.15),
+        ("sapphire", "mineral", 90, 0.06),
+        ("health_potion", "consumable", 50, 0.12),
+        ("golden_mushroom", "consumable", 25, 0.08),
+    ],
+    4: [
+        ("titanium", "mineral", 40, 0.18),
+        ("mithril", "mineral", 80, 0.12),
+        ("opal", "mineral", 140, 0.05),
+        ("star_fragment", "mineral", 350, 0.02),
+        ("health_potion", "consumable", 50, 0.15),
+    ],
+    5: [
+        ("adamantium", "mineral", 60, 0.15),
+        ("dragonstone", "mineral", 120, 0.10),
+        ("void_crystal", "mineral", 200, 0.04),
+        ("noodle_gem", "mineral", 500, 0.01),
+        ("health_potion", "consumable", 50, 0.18),
+        ("golden_mushroom", "consumable", 25, 0.12),
+    ],
+}
+
+# -- Fishing ambush drops (themed to sea creatures/fish) ------------------
+
+FISHING_AMBUSH_DROPS: Final[dict[int, list[_Drop]]] = {
+    2: [
+        ("trout", "fish", 12, 0.25),
+        ("catfish", "fish", 15, 0.20),
+        ("bass", "fish", 18, 0.12),
+        ("seaweed", "fish", 10, 0.15),
+        ("health_potion", "consumable", 50, 0.08),
+    ],
+    3: [
+        ("clownfish", "fish", 10, 0.20),
+        ("parrotfish", "fish", 18, 0.15),
+        ("moray_eel", "fish", 22, 0.10),
+        ("reef_shark", "fish", 35, 0.05),
+        ("sea_sponge", "fish", 10, 0.15),
+        ("golden_seahorse", "fish", 0, 0.03),
+    ],
+    4: [
+        ("barracuda", "fish", 25, 0.18),
+        ("swordfish", "fish", 30, 0.12),
+        ("hammerhead_shark", "fish", 0, 0.08),
+        ("barnacle_cluster", "fish", 12, 0.15),
+        ("health_potion", "consumable", 50, 0.12),
+        ("phantom_captain", "fish", 0, 0.03),
+    ],
+    5: [
+        ("vampire_squid", "fish", 0, 0.15),
+        ("dragonfish", "fish", 0, 0.10),
+        ("megalodon_tooth", "fish", 0, 0.06),
+        ("void_coral", "fish", 20, 0.12),
+        ("bioluminescent_jelly", "fish", 24, 0.10),
+        ("leviathan_scale", "fish", 0, 0.02),
+        ("health_potion", "consumable", 50, 0.15),
+    ],
+}
+
+# -- Space ambush drops (themed to space ores) ----------------------------
+
+SPACE_AMBUSH_DROPS: Final[dict[int, list[_Drop]]] = {
+    1: [
+        ("moon_dust", "ore", 0, 0.30),
+        ("helium_3", "ore", 0, 0.20),
+        ("lunar_quartz", "ore", 0, 0.10),
+        ("raw_potato", "consumable", 2, 0.15),
+    ],
+    2: [
+        ("red_sand", "ore", 0, 0.25),
+        ("martian_iron", "ore", 0, 0.18),
+        ("phobos_shard", "ore", 0, 0.08),
+        ("health_potion", "consumable", 50, 0.10),
+    ],
+    3: [
+        ("ring_fragment", "ore", 0, 0.22),
+        ("titan_ore", "ore", 0, 0.15),
+        ("ammonia_ice", "ore", 0, 0.08),
+        ("saturn_sapphire", "ore", 0, 0.04),
+        ("health_potion", "consumable", 50, 0.12),
+    ],
+    4: [
+        ("ice_rock", "ore", 0, 0.20),
+        ("methane_crystal", "ore", 0, 0.14),
+        ("miranda_stone", "ore", 0, 0.08),
+        ("uranian_diamond", "ore", 0, 0.03),
+        ("health_potion", "consumable", 50, 0.15),
+        ("golden_mushroom", "consumable", 25, 0.10),
+    ],
+    5: [
+        ("frozen_nitrogen", "ore", 0, 0.18),
+        ("charon_basalt", "ore", 0, 0.12),
+        ("dark_matter", "ore", 0, 0.06),
+        ("plutonium_core", "ore", 0, 0.03),
+        ("eternity_gem", "ore", 0, 0.01),
+        ("health_potion", "consumable", 50, 0.18),
+        ("golden_mushroom", "consumable", 25, 0.12),
+    ],
+}
+
+# -- Alien ambush drops ---------------------------------------------------
+
+ALIEN_AMBUSH_DROPS: Final[list[_Drop]] = [
+    ("health_potion", "consumable", 50, 0.35),
+    ("golden_mushroom", "consumable", 25, 0.25),
+    ("star_fragment", "mineral", 350, 0.08),
+    ("void_crystal", "mineral", 200, 0.06),
+    ("dark_matter", "ore", 0, 0.05),
+    ("star_magnet", "equipment", 0, 0.04),
+]
