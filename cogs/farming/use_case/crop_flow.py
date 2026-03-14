@@ -233,7 +233,7 @@ class CropFlowMixin(FarmingUseCaseMixin):
         bag_capacity = self.repo.get_inventory_capacity(user_id)
         available_space = bag_capacity - bag_count
         items_added = 0
-        skipped = 0
+        stashed_overflow = 0
 
         for crop_data in ready_crops:
             crop_info = get_crop_by_name(crop_data.crop_type)
@@ -258,14 +258,17 @@ class CropFlowMixin(FarmingUseCaseMixin):
                 if weather_multiplier != 1.0:
                     weather_blessed.append((crop_info.name, crop_info.emoji, crop_info.sell_price, actual_price))
 
-                # Add crop item to inventory with baked-in sell value
+                # Add crop item to inventory; overflow goes to stash
                 crop_key = crop_info.name.lower().replace(" ", "_")
                 if items_added < available_space:
                     self.repo.add_item(user_id, crop_key, "crop", actual_price, quality=quality_name)
                     items_added += 1
                 else:
-                    skipped += 1
-                    continue  # Skip this crop but keep it planted (don't remove it)
+                    self.repo.add_to_storage(
+                        user_id, crop_key, item_type="inventory", uses=1,
+                        category="crop", base_sell_value=actual_price,
+                    )
+                    stashed_overflow += 1
 
             harvested.append((crop_data.plot_number, crop_info.name, crop_info.emoji, actual_price))
             total_stars += actual_price
@@ -283,17 +286,24 @@ class CropFlowMixin(FarmingUseCaseMixin):
         new_balance = balance  # No star change from harvesting
 
         if mushrooms_earned > 0:
-            self.repo.add_items(
+            actually_added = self.repo.add_items(
                 user_id, "golden_mushroom", mushrooms_earned,
                 category="consumable",
             )
-
+            mushroom_overflow = mushrooms_earned - actually_added
+            if mushroom_overflow > 0:
+                stash_bulk = [
+                    ("golden_mushroom", "inventory", 1, "consumable", 0)
+                    for _ in range(mushroom_overflow)
+                ]
+                self.repo.add_to_storage_bulk(user_id, stash_bulk)
+                stashed_overflow += mushroom_overflow
 
         summary = f"Harvested {len(harvested)} crop(s)!"
         if mushrooms_earned > 0:
             summary += f" Found **{mushrooms_earned}** golden mushroom(s)!"
-        if skipped > 0:
-            summary += f" {skipped} crop(s) left unharvested (inventory full)."
+        if stashed_overflow > 0:
+            summary += f" 📦 {stashed_overflow} item(s) sent to stash (inventory full)."
 
         return HarvestResult(
             success=True,
@@ -309,5 +319,5 @@ class CropFlowMixin(FarmingUseCaseMixin):
             items_added=items_added,
             bag_count=self.repo.get_inventory_count(user_id),
             bag_capacity=bag_capacity,
-            inventory_full_skipped=skipped,
+            inventory_full_skipped=stashed_overflow,
         )

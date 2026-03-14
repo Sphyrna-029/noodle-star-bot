@@ -510,7 +510,7 @@ class FarmingCog(commands.Cog):
         if result.mushrooms_earned > 0:
             lines.append(f"🍄 Found **{result.mushrooms_earned}** Golden Mushrooms!")
         if result.inventory_full_skipped > 0:
-            lines.append(f"⚠️ Inventory full! {result.inventory_full_skipped} crop(s) left unharvested.")
+            lines.append(f"📦 Inventory full! {result.inventory_full_skipped} item(s) sent to stash.")
 
         lines.append(f"💰 Wallet: **{result.new_balance}** stars")
         await ctx.send("\n".join(lines))
@@ -633,7 +633,7 @@ class FarmingCog(commands.Cog):
                     f"**{result.items_added}** crop(s) added to inventory. Use `!sell` to sell them.",
                 ]
                 if result.inventory_full_skipped > 0:
-                    lines_single.append(f"⚠️ Inventory full! {result.inventory_full_skipped} crop(s) left unharvested.")
+                    lines_single.append(f"📦 Inventory full! {result.inventory_full_skipped} item(s) sent to stash.")
                 lines_single.append(f"💰 Wallet: **{result.new_balance}** stars")
                 await ctx.send("\n".join(lines_single))
         else:
@@ -660,7 +660,7 @@ class FarmingCog(commands.Cog):
             if result.mushrooms_earned > 0:
                 lines.append(f"🍄 Found **{result.mushrooms_earned}** Golden Mushrooms!")
             if result.inventory_full_skipped > 0:
-                lines.append(f"⚠️ Inventory full! {result.inventory_full_skipped} crop(s) left unharvested.")
+                lines.append(f"📦 Inventory full! {result.inventory_full_skipped} item(s) sent to stash.")
 
             lines.append(f"💰 Wallet: **{result.new_balance}** stars")
             await ctx.send("\n".join(lines))
