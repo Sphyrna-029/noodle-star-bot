@@ -31,6 +31,33 @@ def _get_location_mobs(user_id: int, location_key: str, repo: UserRepository = N
     return []
 
 
+async def _check_alien_arrival(bot, ctx_or_interaction, new_location: str):
+    """Pre-roll alien encounter when arriving at Noodle Town and warn if telescope owned."""
+    if new_location != "noodle_town":
+        return
+    cog = bot.get_cog("AlienAbductionCog")
+    if cog is None:
+        return
+
+    if isinstance(ctx_or_interaction, discord.Interaction):
+        user = ctx_or_interaction.user
+        send = ctx_or_interaction.followup.send
+    else:
+        user = ctx_or_interaction.author
+        send = ctx_or_interaction.send
+
+    has_alien = cog.pre_roll_alien(user.id)
+    if has_alien:
+        repo = UserRepository()
+        inv = repo.get_user_inventory(user.id)
+        if inv.get("telescope", 0) > 0:
+            from cogs.events.alien_abduction import TELESCOPE_WARNING
+            if isinstance(ctx_or_interaction, discord.Interaction):
+                await send(TELESCOPE_WARNING, ephemeral=True)
+            else:
+                await send(TELESCOPE_WARNING)
+
+
 async def _check_abduction(bot, ctx_or_interaction, previous_location: str, new_location: str):
     """Check for alien abduction when traveling away from Noodle Town."""
     if previous_location != "noodle_town" or new_location == "noodle_town":
@@ -93,6 +120,7 @@ class TravelButton(discord.ui.Button):
         )
         embed.set_footer(text=f"📍 You are now at {loc.name}")
         await interaction.response.edit_message(embed=embed, view=new_view)
+        await _check_alien_arrival(interaction.client, interaction, self.location_key)
         await _check_abduction(interaction.client, interaction, previous, self.location_key)
 
         # Gear warning for dangerous locations
@@ -197,6 +225,7 @@ class LocationsCog(commands.Cog):
 
         loc = LOCATIONS[loc_key]
         await ctx.send(f"🚶 {ctx.author.mention} traveled to **{loc.name}** {loc.emoji}")
+        await _check_alien_arrival(self.bot, ctx, loc_key)
         await _check_abduction(self.bot, ctx, previous, loc_key)
 
         # Gear warning for dangerous locations

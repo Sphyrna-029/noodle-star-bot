@@ -1,6 +1,9 @@
 """Alien abduction random event cog.
 
 Triggers at 1% chance when a player travels away from Noodle Town.
+The chance is pre-rolled when arriving at Noodle Town.  If the player
+owns a Telescope, they receive a warning before leaving.
+
 With a ray-gun the player fights the alien in interactive combat (both
 sides get +75 ATK).  Without a ray-gun the alien auto-wins and the
 standard alien defeat penalties are applied immediately.
@@ -66,6 +69,12 @@ RAYGUN_INTRO_MESSAGES = [
     ),
 ]
 
+TELESCOPE_WARNING = (
+    "🔭 Your **Telescope** picks up a faint signal... "
+    "alien ships are lurking nearby! "
+    "**Leaving Noodle Town could be dangerous.**"
+)
+
 
 class AlienAbductionCog(commands.Cog):
     """Random alien abduction event that triggers when traveling away from Noodle Town."""
@@ -73,13 +82,40 @@ class AlienAbductionCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.repo = UserRepository()
+        # Pre-rolled alien encounters: user_id -> True if alien is waiting
+        self._pending_aliens: dict[int, bool] = {}
+
+    def pre_roll_alien(self, user_id: int) -> bool:
+        """Pre-roll the alien encounter when a player arrives at Noodle Town.
+
+        Returns True if an alien will be waiting when they leave.
+        """
+        has_alien = random.random() < ABDUCTION_CHANCE
+        self._pending_aliens[user_id] = has_alien
+        return has_alien
+
+    def has_pending_alien(self, user_id: int) -> bool:
+        """Check if an alien is waiting for this player."""
+        return self._pending_aliens.get(user_id, False)
 
     async def try_abduction(self, ctx_or_interaction):
         """Called by the travel system when leaving Noodle Town. Returns True if abduction happened.
 
         Accepts either a commands.Context or discord.Interaction.
         """
-        if random.random() > ABDUCTION_CHANCE:
+        user_id = (
+            ctx_or_interaction.user.id
+            if isinstance(ctx_or_interaction, discord.Interaction)
+            else ctx_or_interaction.author.id
+        )
+
+        # Use pre-rolled result if available, otherwise roll now (fallback)
+        if user_id in self._pending_aliens:
+            has_alien = self._pending_aliens.pop(user_id)
+        else:
+            has_alien = random.random() < ABDUCTION_CHANCE
+
+        if not has_alien:
             return False
 
         # Normalize ctx vs interaction
@@ -90,7 +126,6 @@ class AlienAbductionCog(commands.Cog):
             user = ctx_or_interaction.author
             send = ctx_or_interaction.send
 
-        user_id = user.id
         username = str(user)
         mention = user.mention
 

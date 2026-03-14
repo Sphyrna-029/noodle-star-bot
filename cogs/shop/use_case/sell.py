@@ -80,12 +80,18 @@ def _get_default_sell_value(item_key: str) -> int:
     return _DEFAULT_SELL_VALUES.get(item_key, 0)
 
 
+_SELLABLE_EQUIPMENT: dict[str, tuple[str, str, int]] = {
+    # item_key -> (display_name, emoji, sell_value)
+    "rune_fragment": ("Rune Fragment", "🪨", 2000),
+    "fossilized_noodle": ("Fossilized Noodle", "🍜", 2000),
+}
+
+
 class SellUseCases:
     """Handles selling and trashing inventory items."""
 
     NOODLE_TOWN_BONUS = 25   # +25%
     NON_HOME_BONUS = 10      # +10%
-    MAGNET_BONUS = 15         # +15%
 
     def __init__(self, repository: UserRepository = None):
         self.repo = repository or UserRepository()
@@ -135,6 +141,11 @@ class SellUseCases:
         category = resolve_category(target_lower)
         if category is not None:
             return self._sell_category(user_id, username, category)
+
+        # Check for sellable equipment items (rune_fragment, fossilized_noodle)
+        equip_key = target_lower.replace(" ", "_")
+        if equip_key in _SELLABLE_EQUIPMENT:
+            return self._sell_equipment(user_id, username, equip_key)
 
         # Try as item name
         resource = resolve_item(target_lower)
@@ -222,20 +233,11 @@ class SellUseCases:
         # Location bonus
         location_bonus_pct, location_name = self._get_location_bonus(user_id, primary_category)
 
-        # Star Magnet check
-        magnet_uses = self.repo.get_equipment_uses(user_id, "star_magnet")
-        magnet_bonus_pct = 0
-        if magnet_uses > 0:
-            magnet_bonus_pct = self.MAGNET_BONUS
-            self.repo.consume_equipment_use(user_id, "star_magnet")
-            magnet_uses -= 1
-
         # Calculate base total
         base_total = sum(i["base_sell_value"] for i in items)
 
-        # Apply bonuses (additive)
-        total_bonus_pct = location_bonus_pct + magnet_bonus_pct
-        bonus_stars = int(base_total * total_bonus_pct / 100)
+        # Apply location bonus
+        bonus_stars = int(base_total * location_bonus_pct / 100)
         total_stars = base_total + bonus_stars
 
         # Group sold items for display
@@ -268,8 +270,6 @@ class SellUseCases:
             base_total=base_total,
             location_bonus_pct=location_bonus_pct,
             location_name=location_name,
-            magnet_bonus_pct=magnet_bonus_pct,
-            magnet_uses_left=magnet_uses,
             bonus_stars=bonus_stars,
             total_stars=total_stars,
             new_balance=new_balance,
@@ -301,6 +301,29 @@ class SellUseCases:
             item_name=resource.display_name,
             item_emoji=resource.emoji,
             count=len(to_remove),
+        )
+
+    def _sell_equipment(self, user_id: int, username: str, item_key: str) -> SellResult:
+        """Sell an equipment-type effect item (removes all uses)."""
+        display_name, emoji, sell_value = _SELLABLE_EQUIPMENT[item_key]
+        inv = self.repo.get_user_inventory(user_id)
+        uses = inv.get(item_key, 0)
+        if uses <= 0:
+            return SellResult(
+                success=False,
+                message=f"You don't have any **{display_name}** to sell.",
+            )
+        self.repo.set_equipment(user_id, item_key, 0)
+        current_stars = self.repo.get_user_stars(user_id, username)
+        new_balance = current_stars + sell_value
+        self.repo.update_user_stars(user_id, username, new_balance)
+        return SellResult(
+            success=True,
+            message="Sold!",
+            items_sold=[(item_key, f"{emoji} {display_name}", 1, sell_value)],
+            base_total=sell_value,
+            total_stars=sell_value,
+            new_balance=new_balance,
         )
 
     def _get_user_items_by_key(self, user_id: int, item_key: str) -> list[dict]:

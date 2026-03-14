@@ -83,15 +83,21 @@ class MiningUseCases:
         # Select random mineral based on weights
         mineral = random.choices(minerals, weights=[m.weight for m in minerals])[0]
 
-        # Calculate reward value (Star Magnet still boosts the stored sell value)
+        # Calculate reward value
         reward = mineral.stars
-        star_magnet_uses = inventory["star_magnet"]
-        if star_magnet_uses > 0 and reward > 0:
-            reward = math.ceil(reward * 1.15)
-            self.repo.update_user_inventory(user_id, "star_magnet", star_magnet_uses - 1)
 
         # Add resource to inventory instead of awarding stars directly
-        self.repo.add_item(user_id, mineral.name.lower().replace(" ", "_"), "mineral", reward)
+        mineral_key = mineral.name.lower().replace(" ", "_")
+        self.repo.add_item(user_id, mineral_key, "mineral", reward)
+
+        # Star Magnet: 15% chance to get a second copy of the same resource
+        star_magnet_uses = inventory["star_magnet"]
+        doubled = False
+        if star_magnet_uses > 0:
+            self.repo.update_user_inventory(user_id, "star_magnet", star_magnet_uses - 1)
+            if random.random() < 0.15:
+                self.repo.add_item(user_id, mineral_key, "mineral", reward)
+                doubled = True
         bag_count = self.repo.get_inventory_count(user_id)
         bag_capacity = self.repo.get_inventory_capacity(user_id)
 
@@ -119,6 +125,11 @@ class MiningUseCases:
             bag_count=bag_count,
             bag_capacity=bag_capacity,
         )
+        if doubled:
+            result.extra_messages.append(
+                "🧲 **Star Magnet** activated! You found a second "
+                f"{mineral.emoji} **{mineral.name}**!"
+            )
         if unlocked_mine_100:
             result.extra_messages.append(
                 "🏆 **Achievement unlocked:** 💎 **Centurion Miner**"

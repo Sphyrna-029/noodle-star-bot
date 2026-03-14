@@ -433,65 +433,68 @@ class CombatUseCases:
         equipment_lost = []
         bank_loss = 0
 
-        # Wallet loss
-        current_stars = self.repo.get_user_stars(user_id, username)
-        if penalty["wallet_loss_pct"] > 0:
-            stars_lost = int(current_stars * penalty["wallet_loss_pct"])
-            self.repo.update_user_stars(user_id, username, max(0, current_stars - stars_lost))
+        # Heart of Leviathan: full protection from ALL defeat penalties (1 use)
+        inv = self.repo.get_user_inventory(user_id)
+        heart_uses = inv.get("heart_of_leviathan", 0)
+        heart_saved = False
+        if heart_uses > 0:
+            self.repo.update_user_inventory(user_id, "heart_of_leviathan", heart_uses - 1)
+            heart_saved = True
+        else:
+            # Wallet loss
+            current_stars = self.repo.get_user_stars(user_id, username)
+            if penalty["wallet_loss_pct"] > 0:
+                stars_lost = int(current_stars * penalty["wallet_loss_pct"])
+                self.repo.update_user_stars(user_id, username, max(0, current_stars - stars_lost))
 
-        # Bank loss (Heart of Leviathan / Bank Insurance can protect)
-        if penalty["bank_loss_pct"] > 0:
-            current_bank = self.repo.get_user_bank(user_id)
-            bank_loss = int(current_bank * penalty["bank_loss_pct"])
-            if bank_loss > 0:
-                inv = self.repo.get_user_inventory(user_id)
-                heart_uses = inv.get("heart_of_leviathan", 0)
-                bank_ins = inv.get("bank_insurance", 0)
-                if heart_uses > 0:
-                    self.repo.update_user_inventory(user_id, "heart_of_leviathan", heart_uses - 1)
-                    bank_loss = 0
-                elif bank_ins > 0:
-                    self.repo.update_user_inventory(user_id, "bank_insurance", bank_ins - 1)
-                    bank_loss = 0
-                else:
-                    self.repo.update_user_bank(user_id, username, max(0, current_bank - bank_loss))
+            # Bank loss (Bank Insurance can still protect)
+            if penalty["bank_loss_pct"] > 0:
+                current_bank = self.repo.get_user_bank(user_id)
+                bank_loss = int(current_bank * penalty["bank_loss_pct"])
+                if bank_loss > 0:
+                    bank_ins = inv.get("bank_insurance", 0)
+                    if bank_ins > 0:
+                        self.repo.update_user_inventory(user_id, "bank_insurance", bank_ins - 1)
+                        bank_loss = 0
+                    else:
+                        self.repo.update_user_bank(user_id, username, max(0, current_bank - bank_loss))
 
-        # Item losses
-        if penalty["lose_all_items"]:
-            inv_items = self.repo.get_inventory_items(user_id)
-            for item in inv_items:
-                items_lost.append(item["item_key"])
-            self.repo.clear_inventory(user_id)
-        elif penalty["lose_random_items_pct"] > 0:
-            inv_items = self.repo.get_inventory_items(user_id)
-            count_to_lose = max(1, int(len(inv_items) * penalty["lose_random_items_pct"]))
-            to_remove = random.sample(inv_items, min(count_to_lose, len(inv_items)))
-            for item in to_remove:
-                items_lost.append(item["item_key"])
-                self.repo.remove_items_by_ids(user_id, [item["id"]])
+            # Item losses
+            if penalty["lose_all_items"]:
+                inv_items = self.repo.get_inventory_items(user_id)
+                for item in inv_items:
+                    items_lost.append(item["item_key"])
+                self.repo.clear_inventory(user_id)
+            elif penalty["lose_random_items_pct"] > 0:
+                inv_items = self.repo.get_inventory_items(user_id)
+                count_to_lose = max(1, int(len(inv_items) * penalty["lose_random_items_pct"]))
+                to_remove = random.sample(inv_items, min(count_to_lose, len(inv_items)))
+                for item in to_remove:
+                    items_lost.append(item["item_key"])
+                    self.repo.remove_items_by_ids(user_id, [item["id"]])
 
-        # Equipment losses
-        if penalty["lose_all_equipment"]:
-            equip = self.repo.get_user_equipment(user_id)
-            equipment_lost = list(equip.keys())
-            self.repo.clear_all_equipment(user_id)
-            # Unequip combat slots
-            for slot in ("weapon", "shield", "armor"):
-                self.repo.set_equipped_combat_item(user_id, slot, None)
-        elif penalty["lose_random_equipment"] > 0:
-            equip = self.repo.get_user_equipment(user_id)
-            equip_keys = list(equip.keys())
-            count = min(penalty["lose_random_equipment"], len(equip_keys))
-            if count > 0:
-                to_remove = random.sample(equip_keys, count)
-                stats = self.repo.get_combat_stats(user_id)
-                for key in to_remove:
-                    equipment_lost.append(key)
-                    self.repo.set_equipment(user_id, key, 0)
-                    # Unequip if it was equipped
-                    for slot in ("weapon", "shield", "armor"):
-                        if stats.get(f"equipped_{slot}") == key:
-                            self.repo.set_equipped_combat_item(user_id, slot, None)
+            # Equipment losses
+            if penalty["lose_all_equipment"]:
+                equip = self.repo.get_user_equipment(user_id)
+                equipment_lost = list(equip.keys())
+                self.repo.clear_all_equipment(user_id)
+                # Unequip combat slots
+                for slot in ("weapon", "shield", "armor"):
+                    self.repo.set_equipped_combat_item(user_id, slot, None)
+            elif penalty["lose_random_equipment"] > 0:
+                equip = self.repo.get_user_equipment(user_id)
+                equip_keys = list(equip.keys())
+                count = min(penalty["lose_random_equipment"], len(equip_keys))
+                if count > 0:
+                    to_remove = random.sample(equip_keys, count)
+                    stats = self.repo.get_combat_stats(user_id)
+                    for key in to_remove:
+                        equipment_lost.append(key)
+                        self.repo.set_equipment(user_id, key, 0)
+                        # Unequip if it was equipped
+                        for slot in ("weapon", "shield", "armor"):
+                            if stats.get(f"equipped_{slot}") == key:
+                                self.repo.set_equipped_combat_item(user_id, slot, None)
 
         # Save HP (player is at 0) — set to 1 so they can recover
         self.repo.update_hp(user_id, 1)
@@ -519,10 +522,17 @@ class CombatUseCases:
         )
 
         penalty_desc = penalty["description"]
+        if heart_saved:
+            defeat_msg = (
+                f"Defeated by **{battle.mob_name}**! "
+                f"But your 💚 **Heart of Leviathan** shielded you from all penalties!"
+            )
+        else:
+            defeat_msg = f"Defeated by **{battle.mob_name}**! {penalty_desc}"
         return BattleResult(
             success=True,
             won=False,
-            message=f"Defeated by **{battle.mob_name}**! {penalty_desc}",
+            message=defeat_msg,
             mob_name=battle.mob_name,
             mob_emoji=battle.mob_emoji,
             stars_lost=stars_lost,

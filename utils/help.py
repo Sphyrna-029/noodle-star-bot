@@ -587,7 +587,8 @@ def _economy_embed() -> discord.Embed:
             "dungeon deaths, and alien abductions!\n\n"
             "🏦 **Bank** — This is your safe storage. Protected from almost everything. "
             "Only high-level ambush defeats and dungeon deaths can touch it. "
-            "Buy Bank Insurance or find Heart of Leviathan to prevent even that.\n\n"
+            "Buy Bank Insurance to protect your bank, or find Heart of Leviathan "
+            "for full protection from ALL defeat penalties.\n\n"
             "**Rule of thumb:** Always `!deposit all` after earning stars!"
         ),
         inline=False,
@@ -711,7 +712,7 @@ def _shop_embed() -> discord.Embed:
             "📍 Noodle Town: +25% sell bonus\n"
             "📍 Non-home location: +10% bonus\n"
             "📍 Home location: +0% (Crystal Cave for minerals, etc.)\n"
-            "🧲 Star Magnet adds +15% per sell command"
+            "🧲 Star Magnet: 15% chance for 2x resource drops"
         ),
         inline=False,
     )
@@ -736,7 +737,7 @@ def _shop_embed() -> discord.Embed:
             "🍄 Golden Mushroom (farm harvest) — `!consume` restores 40 stamina\n"
             "❤️‍🩹 Health Potion (50) — `!consume` restores 20 HP\n"
             "💸 Bank Insurance (2000) — Protects your bank from 1 defeat\n"
-            "📷 Telescope (200) — View a starfield (permanent, fun item)\n"
+            "📷 Telescope (200) — Warns you of alien ambushes when entering Noodle Town (permanent)\n"
             "🪱 Worm (33) / 🐟 Herring (79) / 🐋 Sturgeon (110) — Fishing bait\n"
             "🔫 Ray-Gun (5000, 3 uses) — Fight aliens instead of auto-losing\n"
             "🐾 Pets — Companion category in `!store` (buy with `!buy <pet>`)"
@@ -1115,8 +1116,8 @@ def _items_embed() -> discord.Embed:
         value=(
             "💸 **Bank Insurance** (2000 stars, 1 use) — Protects your bank from "
             "ambush defeats or dungeon deaths that drain banked stars\n"
-            "💜 **Heart of Leviathan** (1 use, fishing drop) — Fully protects "
-            "your bank from one defeat"
+            "💜 **Heart of Leviathan** (1 use, drop) — **100% protection** from "
+            "ALL defeat penalties (wallet, bank, items, equipment) for one death"
         ),
         inline=False,
     )
@@ -1134,9 +1135,11 @@ def _items_embed() -> discord.Embed:
     embed.add_field(
         name="✨ Rare Effect Items (Drops)",
         value=(
-            "🔮 **Rune Fragment** (30 uses, from mining) — A mysterious glowing fragment. "
+            "🔮 **Rune Fragment** (30 uses, from mining) — **+2 stamina/min** passive regen. "
+            "Stacks with Fossilized Noodle but not with itself. Sellable for 2000 stars. "
             "*0.5% drop per mine*\n"
-            "🦴 **Fossilized Noodle** (30 uses, from mining) — A rare ancient noodle. "
+            "🦴 **Fossilized Noodle** (30 uses, from mining) — **+2 stamina/min** passive regen. "
+            "Stacks with Rune Fragment but not with itself. Sellable for 2000 stars. "
             "*0.5% drop per mine*\n"
             "🎣 **Bucktail Jig** (from fishing) — Use `!use jig` to get 20% legendary "
             "catch chance on your next cast. *0.3% drop per catch*\n"
@@ -1149,8 +1152,8 @@ def _items_embed() -> discord.Embed:
     embed.add_field(
         name="⭐ Passive Boosts (Drops)",
         value=(
-            "🧲 **Star Magnet** (20 uses, from fishing) — +15% stars on every mine, "
-            "fishing catch, and space mine. *1% drop on rare/legendary catches*\n"
+            "🧲 **Star Magnet** (20 uses, from fishing) — **15% chance** to get a second "
+            "copy of your mine/fish/space mine drop. *1% drop on rare/legendary catches*\n"
             "🍀 **Lucky Charm** (50 uses, from fishing) — Cuts ambush chance in half. "
             "*0.05% drop on any catch*"
         ),
@@ -1163,7 +1166,9 @@ def _items_embed() -> discord.Embed:
             "• Check your items with `!inventory`\n"
             "• Passive items (Star Magnet, Lucky Charm) activate automatically\n"
             "• Lucky Charm halves ambush chance on mining, fishing, and space mining\n"
-            "• Bank Insurance and Heart of Leviathan protect your bank from defeat penalties"
+            "• Heart of Leviathan protects from ALL defeat penalties (wallet, bank, items, equipment)\n"
+            "• Rune Fragment / Fossilized Noodle give +2 stamina/min each (non-self-stacking)\n"
+            "• Telescope warns you of aliens when entering Noodle Town"
         ),
         inline=False,
     )

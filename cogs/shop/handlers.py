@@ -746,11 +746,6 @@ class ShopCog(commands.Cog):
             bonus_parts.append(f"📍 {result.location_name}: +{result.location_bonus_pct}%")
         else:
             bonus_parts.append(f"📍 {result.location_name}: +0%")
-        if result.magnet_bonus_pct > 0:
-            bonus_parts.append(
-                f"🧲 Star Magnet: +{result.magnet_bonus_pct}% ({result.magnet_uses_left} uses left)"
-            )
-
         if result.bonus_stars > 0:
             bonus_parts.append(f"Bonus: +{result.bonus_stars}⭐")
 

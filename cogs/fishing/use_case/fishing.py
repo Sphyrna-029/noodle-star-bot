@@ -466,16 +466,21 @@ class FishingUseCases:
             # Read inventory for item effects
             inventory = self.repo.get_user_inventory(user_id)
 
-            # Calculate reward value (bait multiplier, then Star Magnet boost)
+            # Calculate reward value (bait multiplier)
             reward = int(catch["stars"] * FISHING_BAIT_MULTIPLIER.get(bait_type, 1.0))
-            star_magnet_uses = inventory["star_magnet"]
-            if star_magnet_uses > 0 and reward > 0:
-                reward = math.ceil(reward * 1.15)
-                self.repo.update_user_inventory(user_id, "star_magnet", star_magnet_uses - 1)
 
             # Add catch to inventory instead of awarding stars
             catch_key = catch["name"].lower().replace(" ", "_").replace("'", "")
             self.repo.add_item(user_id, catch_key, "fish", reward)
+
+            # Star Magnet: 15% chance to get a second copy of the same catch
+            star_magnet_uses = inventory["star_magnet"]
+            doubled = False
+            if star_magnet_uses > 0:
+                self.repo.update_user_inventory(user_id, "star_magnet", star_magnet_uses - 1)
+                if random.random() < 0.15:
+                    self.repo.add_item(user_id, catch_key, "fish", reward)
+                    doubled = True
             bag_count = self.repo.get_inventory_count(user_id)
             bag_capacity = self.repo.get_inventory_capacity(user_id)
 
@@ -505,6 +510,11 @@ class FishingUseCases:
                 level_name=level_config["name"],
                 level_emoji=level_config["emoji"],
             )
+            if doubled:
+                result.extra_messages.append(
+                    "🧲 **Star Magnet** activated! You caught a second "
+                    f"{catch['emoji']} **{catch['name']}**!"
+                )
             if unlocked_fish_10:
                 result.extra_messages.append(
                     "🏆 **Achievement unlocked:** 🐟 **Lake Regular**"

@@ -47,11 +47,18 @@ class HealthUseCases:
             self.repo.update_stamina(user_id, stats["current_stamina"])
             stats["stamina_updated_at"] = now.isoformat()
 
-        # Stamina regen
+        # Stamina regen (base + bonus from Rune Fragment / Fossilized Noodle)
         if stats["current_stamina"] < stats["max_stamina"] and stats["stamina_updated_at"]:
             last = datetime.fromisoformat(stats["stamina_updated_at"])
             minutes = (now - last).total_seconds() / 60
-            regen = int(minutes * STAMINA_REGEN_PER_MINUTE)
+            # +2/min for each unique effect item (non-self-stacking)
+            bonus_per_min = 0
+            inv = self.repo.get_user_inventory(user_id)
+            if inv.get("rune_fragment", 0) > 0:
+                bonus_per_min += 2
+            if inv.get("fossilized_noodle", 0) > 0:
+                bonus_per_min += 2
+            regen = int(minutes * (STAMINA_REGEN_PER_MINUTE + bonus_per_min))
             if regen > 0:
                 stats["current_stamina"] = min(stats["max_stamina"], stats["current_stamina"] + regen)
                 stamina_changed = True
