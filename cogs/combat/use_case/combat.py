@@ -3,6 +3,7 @@
 import random
 from typing import Optional
 
+from cogs.combat.ambush_constants import AMBUSH_MOB_BONUS_DROPS
 from cogs.combat.constants import (
     ALIEN_AMBUSH_DROPS, BASE_HP, BASE_STAMINA, BOSS_BONUS_DROPS,
     COMBAT_ITEMS, COMBAT_LEVEL_UNLOCK,
@@ -44,6 +45,8 @@ class CombatUseCases:
                 drop_table = list(SPACE_AMBUSH_DROPS.get(level, []))
             elif activity == "alien":
                 drop_table = list(ALIEN_AMBUSH_DROPS)
+            # Per-mob bonus drops (rare resources / effect items)
+            drop_table.extend(AMBUSH_MOB_BONUS_DROPS.get(battle.mob_key, []))
         else:
             drop_table = list(DUNGEON_DROPS.get(battle.dungeon_level, []))
             # Boss bonus
