@@ -59,8 +59,8 @@ def _main_embed() -> discord.Embed:
         inline=True,
     )
     embed.add_field(
-        name="💰 Economy",
-        value="Check stars, bank, leaderboards",
+        name="💰 Storage/Banking",
+        value="Stars, bank, stash, leaderboards",
         inline=True,
     )
     embed.add_field(
@@ -95,7 +95,7 @@ def _main_embed() -> discord.Embed:
     )
     embed.add_field(
         name="🎒 Items",
-        value="Rare items, effects & how to get them",
+        value="Resource tables, rare items & effects",
         inline=True,
     )
     embed.set_footer(text="Buttons expire after 3 minutes. Type !help anytime to reopen.")
@@ -533,7 +533,7 @@ def _pets_embed() -> discord.Embed:
 
 def _economy_embed() -> discord.Embed:
     embed = discord.Embed(
-        title="💰 Economy — How It Works",
+        title="💰 Storage / Banking — How It Works",
         description=(
             "Everything in Noodle House runs on **noodle stars**. "
             "Earn them, save them, spend them!"
@@ -874,6 +874,233 @@ def _space_embed() -> discord.Embed:
     return embed
 
 
+def _items_overview_embed() -> discord.Embed:
+    embed = discord.Embed(
+        title="🎒 Items — Resource Guide",
+        description=(
+            "Use the **dropdown below** to browse resource tables by category.\n\n"
+            "Every resource has a base sell value — use `!sell` to convert items to stars.\n"
+            "Quality, weather, and soil can modify crop values. Bait tier affects fish values."
+        ),
+        color=discord.Color.dark_purple(),
+    )
+    embed.add_field(
+        name="Categories",
+        value=(
+            "⛏️ **Mining** — 25 minerals across 5 mine levels\n"
+            "🎣 **Fishing** — 52 catches across 5 fishing levels\n"
+            "🌾 **Farming** — 6 crops with passive income\n"
+            "🚀 **Space** — 25 ores across 5 planets\n"
+            "🎒 **Rare Items** — Drop-only gear and effect items"
+        ),
+        inline=False,
+    )
+    embed.set_footer(text="Select a category from the dropdown to see the full table.")
+    return embed
+
+
+def _mining_resources_embed() -> discord.Embed:
+    embed = discord.Embed(
+        title="⛏️ Mining Resources — All Minerals",
+        description="Base sell values by mine level. Use `!sell` to sell.",
+        color=discord.Color.dark_gold(),
+    )
+    embed.add_field(
+        name="Lv1 Surface Mine",
+        value=(
+            "🪨 Stone — 5\n⚫ Coal — 10\n⚙️ Iron — 20\n"
+            "🟡 Gold — 40\n💎 Diamond — 100"
+        ),
+        inline=True,
+    )
+    embed.add_field(
+        name="Lv2 Caverns",
+        value=(
+            "🧱 Sandstone — 8\n🟤 Copper — 15\n⬜ Silver — 30\n"
+            "💚 Emerald — 60\n❤️ Ruby — 150"
+        ),
+        inline=True,
+    )
+    embed.add_field(
+        name="Lv3 Deep Tunnels",
+        value=(
+            "🪨 Slate — 12\n🪙 Tin — 25\n🔘 Platinum — 50\n"
+            "💙 Sapphire — 90\n💜 Amethyst — 225"
+        ),
+        inline=True,
+    )
+    embed.add_field(
+        name="Lv4 Molten Core",
+        value=(
+            "🖤 Obsidian — 20\n⚪ Titanium — 40\n🔵 Mithril — 80\n"
+            "🌈 Opal — 140\n🌟 Star Fragment — 350"
+        ),
+        inline=True,
+    )
+    embed.add_field(
+        name="Lv5 The Abyss",
+        value=(
+            "🌑 Darkite — 30\n⛓️ Adamantium — 60\n🐉 Dragonstone — 120\n"
+            "🔮 Void Crystal — 200\n🍜 Noodle Gem — 500"
+        ),
+        inline=True,
+    )
+    return embed
+
+
+def _fishing_resources_embed() -> discord.Embed:
+    embed = discord.Embed(
+        title="🎣 Fishing Resources — All Catches",
+        description=(
+            "Base sell values by fishing level. **0** = junk (restores stamina instead).\n"
+            "Bait tier multiplies values. Rarity: Common 70% / Rare 25% / Legendary 5%."
+        ),
+        color=discord.Color.blue(),
+    )
+    embed.add_field(
+        name="Lv1 Calm Pond",
+        value=(
+            "**Common:** 🥾 Old Boot 0 · 🌿 Seaweed 0 · 🥫 Tin Can 0 · "
+            "🐟 Small Fish 30 · 🦀 Crab 50 · 🦐 Shrimp 60\n"
+            "**Rare:** 🐠 Salmon 160 · 🐟 Tuna 260 · 🦞 Lobster 360 · "
+            "🐙 Octopus 520 · 📦 Chest 805\n"
+            "**Leg:** ✨ Golden Fish 2k · 🦑 Giant Squid 3.2k · "
+            "🏺 Artifact 4.8k · 🔮 Mermaid's Pearl 8k"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Lv2 River Rapids",
+        value=(
+            "**Common:** 🪵 Driftwood 0 · 🪨 River Stone 0 · 🦐 Crawdad 20 · "
+            "🐟 Trout 45 · 🐈 Catfish 65 · 🐠 Bass 95\n"
+            "**Rare:** 🐠 River Salmon 225 · 🐋 Sturgeon 375 · 🐢 Snap. Turtle 560 · "
+            "🐟 Giant Catfish 750 · 📦 Chest 1.1k\n"
+            "**Leg:** ✨ Platinum Trout 2.8k · 🐉 River Dragon 4.5k · "
+            "👑 Lost Crown 7.5k · 💎 Spirit Gem 11.2k"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Lv3 Coral Reef",
+        value=(
+            "**Common:** 🧽 Sea Sponge 0 · ⭐ Starfish 20 · 🐠 Clownfish 35 · "
+            "🦜 Parrotfish 75 · 🟣 Sea Urchin 110 · 🐍 Moray Eel 145\n"
+            "**Rare:** 🦈 Reef Shark 295 · 🐚 Giant Clam 550 · 🦅 Manta Ray 915 · "
+            "🐢 Sea Turtle 1.3k · 💰 Treasure 1.7k\n"
+            "**Leg:** ✨ Golden Seahorse 3.7k · 🪸 Coral Golem 7.3k · "
+            "🔱 Neptune's Trident 12.8k · 🔮 Pearl of Deep 18.3k"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Lv4 Shipwreck Depths",
+        value=(
+            "**Common:** 🪨 Barnacles 0 · ⚓ Rusty Anchor 15 · 🐡 Anglerfish 50 · "
+            "🐟 Barracuda 105 · ⚔️ Swordfish 155 · ⚡ Electric Eel 210\n"
+            "**Rare:** 🦈 Hammerhead 415 · 🐙 Giant Octopus 870 · 💣 Cannon 1.4k · "
+            "☠️ Ghost Wheel 1.7k · 💰 Pirate's Hoard 2.3k\n"
+            "**Leg:** 👻 Phantom Captain 5.2k · 💎 Diamond Anchor 10.4k · "
+            "🏴\u200d☠️ Cursed Gold 19.1k · 📦 Davy Jones 27.8k"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Lv5 Abyss Trench",
+        value=(
+            "**Common:** 🖤 Void Coral 0 · 🪼 Bio Jelly 35 · 🦀 Abyssal Crab 75 · "
+            "🦑 Vampire Squid 150 · 🐍 Gulper Eel 225 · 🐉 Dragonfish 335\n"
+            "**Rare:** 🦑 Colossal Squid 670 · 🦷 Megalodon Tooth 1.3k · "
+            "⚪ Abyssal Pearl 2k · 👑 Deep Sea Crown 2.8k · 💰 Trench Treasure 3.7k\n"
+            "**Leg:** 🐲 Leviathan Scale 9.3k · 🔮 Poseidon's Eye 18.6k · "
+            "🐍 World Serpent Fang 29.7k · 💜 Heart of Abyss 44.6k"
+        ),
+        inline=False,
+    )
+    return embed
+
+
+def _farming_resources_embed() -> discord.Embed:
+    embed = discord.Embed(
+        title="🌾 Farming Resources — All Crops",
+        description=(
+            "Base sell values before quality modifiers.\n"
+            "Quality: Bad 0.8x / Normal 1.0x / Great 1.2x. Weather and soil also apply."
+        ),
+        color=discord.Color.green(),
+    )
+    embed.add_field(
+        name="Crops",
+        value=(
+            "🌾 **Wheat** — 40 stars (seed: 15, grows: 1h)\n"
+            "🥕 **Carrot** — 90 stars (seed: 30, grows: 2h)\n"
+            "🌽 **Corn** — 200 stars (seed: 60, grows: 4h)\n"
+            "🍅 **Tomato** — 440 stars (seed: 120, grows: 8h)\n"
+            "🍉 **Melon** — 960 stars (seed: 240, grows: 16h)\n"
+            "🍄 **Mushroom** — yields 5 Golden Mushrooms (seed: 300, grows: 24h)"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Golden Mushrooms",
+        value=(
+            "🍄 Golden Mushrooms restore **40 stamina** each.\n"
+            "Harvested from Mushroom crops or bought from the shop for 25 stars."
+        ),
+        inline=False,
+    )
+    return embed
+
+
+def _space_resources_embed() -> discord.Embed:
+    embed = discord.Embed(
+        title="🚀 Space Mining Resources — All Ores",
+        description="Base sell values by planet. Use `!sell` to sell.",
+        color=discord.Color.dark_blue(),
+    )
+    embed.add_field(
+        name="P1 The Moon 🌕",
+        value=(
+            "🌕 Moon Dust — 45\n🫧 Helium-3 — 90\n🤍 Lunar Quartz — 180\n"
+            "🌙 Selenite — 300\n🦪 Cosmic Pearl — 750"
+        ),
+        inline=True,
+    )
+    embed.add_field(
+        name="P2 Mars 🔴",
+        value=(
+            "🔴 Red Sand — 65\n🧲 Martian Iron — 130\n💫 Phobos Shard — 260\n"
+            "🌋 Olympus Ruby — 430\n✴️ Stardust Crystal — 1,075"
+        ),
+        inline=True,
+    )
+    embed.add_field(
+        name="P3 Saturn 🪐",
+        value=(
+            "🪐 Ring Fragment — 90\n🟠 Titan Ore — 180\n🧊 Ammonia Ice — 360\n"
+            "💍 Saturn Sapphire — 600\n💥 Nova Core — 1,500"
+        ),
+        inline=True,
+    )
+    embed.add_field(
+        name="P4 Uranus 💠",
+        value=(
+            "❄️ Ice Rock — 125\n🟢 Methane Crystal — 250\n🌀 Miranda Stone — 500\n"
+            "💠 Uranian Diamond — 830\n🌌 Nebula Shard — 2,075"
+        ),
+        inline=True,
+    )
+    embed.add_field(
+        name="P5 Pluto 🥶",
+        value=(
+            "🥶 Frozen Nitrogen — 175\n🗿 Charon Basalt — 350\n⚛️ Dark Matter — 700\n"
+            "☢️ Plutonium Core — 1,150\n👑 Eternity Gem — 2,875"
+        ),
+        inline=True,
+    )
+    return embed
+
+
 def _items_embed() -> discord.Embed:
     embed = discord.Embed(
         title="🎒 Items — Rare Effects & How to Get Them",
@@ -1108,6 +1335,9 @@ _CATEGORY_HELP_BUILDERS = {
     "pets": _pets_embed,
     "pet": _pets_embed,
     "economy": _economy_embed,
+    "storage": _economy_embed,
+    "banking": _economy_embed,
+    "storage/banking": _economy_embed,
     "gambling": _gambling_embed,
     "shop": _shop_embed,
     "trading": _shop_embed,
@@ -1169,7 +1399,7 @@ class HelpView(discord.ui.View):
         view = SubHelpView(self.author_id)
         await interaction.response.edit_message(embed=_pets_embed(), view=view)
 
-    @discord.ui.button(label="Economy", style=discord.ButtonStyle.secondary, emoji="💰", row=1)
+    @discord.ui.button(label="Storage/Banking", style=discord.ButtonStyle.secondary, emoji="💰", row=1)
     async def economy_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = SubHelpView(self.author_id)
         await interaction.response.edit_message(embed=_economy_embed(), view=view)
@@ -1206,8 +1436,8 @@ class HelpView(discord.ui.View):
 
     @discord.ui.button(label="Items", style=discord.ButtonStyle.secondary, emoji="🎒", row=2)
     async def items_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = SubHelpView(self.author_id)
-        await interaction.response.edit_message(embed=_items_embed(), view=view)
+        view = ItemsHelpView(self.author_id)
+        await interaction.response.edit_message(embed=_items_overview_embed(), view=view)
 
 
 class SubHelpView(discord.ui.View):
@@ -1260,7 +1490,7 @@ class SubHelpView(discord.ui.View):
         view = SubHelpView(self.author_id)
         await interaction.response.edit_message(embed=_pets_embed(), view=view)
 
-    @discord.ui.button(label="Economy", style=discord.ButtonStyle.secondary, emoji="💰", row=2)
+    @discord.ui.button(label="Storage/Banking", style=discord.ButtonStyle.secondary, emoji="💰", row=2)
     async def economy_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = SubHelpView(self.author_id)
         await interaction.response.edit_message(embed=_economy_embed(), view=view)
@@ -1297,8 +1527,8 @@ class SubHelpView(discord.ui.View):
 
     @discord.ui.button(label="Items", style=discord.ButtonStyle.secondary, emoji="🎒", row=3)
     async def items_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = SubHelpView(self.author_id)
-        await interaction.response.edit_message(embed=_items_embed(), view=view)
+        view = ItemsHelpView(self.author_id)
+        await interaction.response.edit_message(embed=_items_overview_embed(), view=view)
 
 
 class FarmingHelpView(discord.ui.View):
@@ -1345,6 +1575,62 @@ class FarmingHelpView(discord.ui.View):
     async def categories_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = SubHelpView(self.author_id)
         await interaction.response.edit_message(embed=_farming_embed(), view=view)
+
+
+class ItemsHelpView(discord.ui.View):
+    """Dedicated items help navigation with resource category sub-pages."""
+
+    def __init__(self, author_id: int):
+        super().__init__(timeout=180)
+        self.author_id = author_id
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message(
+                "This isn't your help menu! Type `!help` to open your own.",
+                ephemeral=True,
+            )
+            return False
+        return True
+
+    async def on_timeout(self) -> None:
+        for item in self.children:
+            item.disabled = True  # type: ignore[union-attr]
+
+    @discord.ui.button(label="Back to Menu", style=discord.ButtonStyle.danger, emoji="◀️", row=0)
+    async def back_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = HelpView(self.author_id)
+        await interaction.response.edit_message(embed=_main_embed(), view=view)
+
+    @discord.ui.button(label="Overview", style=discord.ButtonStyle.success, emoji="🎒", row=1)
+    async def overview_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = ItemsHelpView(self.author_id)
+        await interaction.response.edit_message(embed=_items_overview_embed(), view=view)
+
+    @discord.ui.button(label="Mining", style=discord.ButtonStyle.secondary, emoji="⛏️", row=1)
+    async def mining_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = ItemsHelpView(self.author_id)
+        await interaction.response.edit_message(embed=_mining_resources_embed(), view=view)
+
+    @discord.ui.button(label="Fishing", style=discord.ButtonStyle.secondary, emoji="🎣", row=1)
+    async def fishing_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = ItemsHelpView(self.author_id)
+        await interaction.response.edit_message(embed=_fishing_resources_embed(), view=view)
+
+    @discord.ui.button(label="Farming", style=discord.ButtonStyle.secondary, emoji="🌾", row=1)
+    async def farming_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = ItemsHelpView(self.author_id)
+        await interaction.response.edit_message(embed=_farming_resources_embed(), view=view)
+
+    @discord.ui.button(label="Space", style=discord.ButtonStyle.secondary, emoji="🚀", row=2)
+    async def space_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = ItemsHelpView(self.author_id)
+        await interaction.response.edit_message(embed=_space_resources_embed(), view=view)
+
+    @discord.ui.button(label="Rare Items", style=discord.ButtonStyle.secondary, emoji="✨", row=2)
+    async def rare_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = ItemsHelpView(self.author_id)
+        await interaction.response.edit_message(embed=_items_embed(), view=view)
 
 
 # ---------------------------------------------------------------------------
