@@ -11,8 +11,8 @@ BASE_HP: Final[int] = 100
 BASE_STAMINA: Final[int] = 100
 STAMINA_PER_ATTACK: Final[int] = 8
 STAMINA_PER_DEFEND: Final[int] = 3
-HP_REGEN_PER_MINUTE: Final[int] = 1
-STAMINA_REGEN_PER_MINUTE: Final[int] = 2
+HP_REGEN_PER_MINUTE: Final[int] = 4
+STAMINA_REGEN_PER_MINUTE: Final[int] = 8
 DAMAGE_FLOOR: Final[float] = 0.20  # minimum damage multiplier at 0 stamina
 
 # ---------------------------------------------------------------------------
