@@ -37,12 +37,12 @@ CHEST_SPAWN_COOLDOWN: Final[timedelta] = timedelta(minutes=5)
 # =============================================================================
 
 # Reward range in stars for a successful standard chest pick
-TREASURE_REWARD_MIN: Final[int] = 75
-TREASURE_REWARD_MAX: Final[int] = 200
+TREASURE_REWARD_MIN: Final[int] = 150
+TREASURE_REWARD_MAX: Final[int] = 400
 
 # Reward range in stars for a successful rare chest pick
-TREASURE_REWARD_MIN_RARE: Final[int] = 125
-TREASURE_REWARD_MAX_RARE: Final[int] = 300
+TREASURE_REWARD_MIN_RARE: Final[int] = 300
+TREASURE_REWARD_MAX_RARE: Final[int] = 750
 
 # Retry-penalty range for repeated wrong guesses (after the first failed guess)
 LOCK_RETRY_PENALTY_MIN: Final[int] = 10

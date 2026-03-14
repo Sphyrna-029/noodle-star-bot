@@ -9,10 +9,8 @@ from datetime import datetime, timedelta
 from typing import Callable, Optional
 
 from cogs.treasure.constants import (
-    CHEST_ITEM_DROP_CHANCE,
     CHEST_ITEM_TIER_CHANCE,
     CHEST_LIFETIME,
-    CHEST_RARE_ITEM_DROP_CHANCE,
     FAIL_MESSAGE,
     LOCK_ATTEMPTS,
     LOCK_INSTRUCTIONS,
@@ -52,25 +50,41 @@ class TreasureUseCases:
         self._owner_task: Optional[asyncio.Task] = None
         self._event_callback: Optional[Callable] = None
         self._user_reclaim_cooldowns: dict[int, datetime] = {}
-        self._common_drop_table = (
-            ("raw_potato", "🥔", "Raw Potato", 3),
-            ("bait_worm", "🪱", "Worm Bait", 3),
-            ("bait_herring", "🐟", "Herring Bait", 2),
-            ("bait_sturgeon", "🐋", "Sturgeon Bait", 1),
-            ("bank_insurance", "💸", "Bank Insurance", 1),
+        # Standard chest: 75% rare mining mineral, 25% rare/legendary fish
+        self._standard_mining_drops = (
+            # (item_key, emoji, display_name, category, sell_value)
+            ("diamond", "💎", "Diamond", "mineral", 100),
+            ("ruby", "❤️", "Ruby", "mineral", 150),
+            ("amethyst", "💜", "Amethyst", "mineral", 225),
+            ("star_fragment", "🌟", "Star Fragment", "mineral", 350),
+            ("void_crystal", "🔮", "Void Crystal", "mineral", 200),
+            ("noodle_gem", "🍜", "Noodle Gem", "mineral", 500),
         )
-        self._rare_drop_table = (
-            ("rune_fragment", "🪨", "Rune Fragment", 10),
-            ("fossilized_noodle", "🍜", "Fossilized Noodle", 10),
+        self._standard_fish_drops = (
+            ("golden_fish", "✨", "Golden Fish", "fish", 2005),
+            ("giant_squid", "🦑", "Giant Squid", "fish", 3210),
+            ("platinum_trout", "✨", "Platinum Trout", "fish", 2805),
+            ("golden_seahorse", "✨", "Golden Seahorse", "fish", 3665),
+            ("phantom_captain", "👻", "Phantom Captain", "fish", 5210),
+            ("leviathan_scale", "🐲", "Leviathan Scale", "fish", 9280),
+        )
+        # Rare chest: 60% rare fishing item, 40% rare effect item
+        self._rare_fish_drops = (
+            ("reef_shark", "🦈", "Reef Shark", "fish", 295),
+            ("sea_turtle", "🐢", "Sea Turtle", "fish", 1280),
+            ("pirates_hoard", "💰", "Pirate's Hoard", "fish", 2255),
+            ("diamond_anchor", "💎", "Diamond Anchor", "fish", 10420),
+            ("trench_treasure", "💰", "Trench Treasure", "fish", 3715),
+            ("poseidons_eye", "🔮", "Poseidon's Eye", "fish", 18565),
+        )
+        self._rare_effect_drops = (
+            # (item_key, emoji, display_name, amount)
+            ("rune_fragment", "🔮", "Rune Fragment", 10),
+            ("fossilized_noodle", "🦴", "Fossilized Noodle", 10),
             ("star_magnet", "🧲", "Star Magnet", 10),
             ("lucky_charm", "🍀", "Lucky Charm", 20),
             ("ray_gun", "🔫", "Ray-Gun", 3),
             ("heart_of_leviathan", "💜", "Heart of Leviathan", 1),
-        )
-        # Permanent combat drops — handled separately in _roll_item_drop
-        self._combat_drop_table = (
-            ("golden_axe", "🪓", "Golden Axe"),
-            ("mithril_shield", "🛡️", "Mithril Shield"),
         )
 
     # --------------------------------------------------------------------- #
@@ -103,8 +117,8 @@ class TreasureUseCases:
             reward=reward,
             spawned_at=now,
             pin_count=LOCK_PIN_COUNT_ITEM_CHEST if item_tier else LOCK_PIN_COUNT,
-            item_drop_chance=CHEST_ITEM_DROP_CHANCE if item_tier else 0.0,
-            rare_item_drop_chance=CHEST_RARE_ITEM_DROP_CHANCE if item_tier else 0.0,
+            item_drop_chance=1.0,
+            rare_item_drop_chance=0.0,
             expires_at=expires_at,
         )
 
@@ -410,36 +424,30 @@ class TreasureUseCases:
         )
 
     def _roll_item_drop(self, user_id: int, username: str, chest: TreasureChest) -> str | None:
-        if chest.item_drop_chance <= 0:
-            return None
-        if random.random() >= chest.item_drop_chance:
-            return None
+        is_rare_chest = chest.pin_count >= LOCK_PIN_COUNT_ITEM_CHEST
 
-        use_rare_pool = random.random() < chest.rare_item_drop_chance
-
-        # 20% chance of a permanent combat item from rare pool
-        if use_rare_pool and random.random() < 0.20:
-            item_key, emoji, item_name = random.choice(self._combat_drop_table)
-            inventory = self.repo.get_user_inventory(user_id)
-            current = inventory.get(item_key, 0)
-            if current <= 0:
-                self.repo.update_user_inventory(user_id, item_key, 1)
-                return f"{emoji} **RARE {item_name}** — Tier 3 combat gear! Equip with `!equip {item_name.lower()}`"
+        if is_rare_chest:
+            # Rare chest: 60% rare fish, 40% rare effect item
+            if random.random() < 0.40:
+                # Rare effect item
+                item_key, emoji, item_name, amount = random.choice(self._rare_effect_drops)
+                inventory = self.repo.get_user_inventory(user_id)
+                current = inventory.get(item_key, 0)
+                self.repo.update_user_inventory(user_id, item_key, current + amount)
+                return f"{emoji} **RARE {item_name}** (x{amount})"
             else:
-                # Already owns — grant stars instead
-                current_stars = self.repo.get_user_stars(user_id, username)
-                self.repo.update_user_stars(user_id, username, current_stars + 250)
-                return f"{emoji} **RARE {item_name}** found but you already own one — sold for **250** stars."
-
-        table = self._rare_drop_table if use_rare_pool else self._common_drop_table
-        item_key, emoji, item_name, amount = random.choice(table)
-
-        inventory = self.repo.get_user_inventory(user_id)
-        current = inventory.get(item_key, 0)
-        self.repo.update_user_inventory(user_id, item_key, current + amount)
-
-        rarity_prefix = "RARE " if use_rare_pool else ""
-        return f"{emoji} **{rarity_prefix}{item_name}** (x{amount})"
+                # Rare fishing item
+                item_key, emoji, item_name, category, sell_value = random.choice(self._rare_fish_drops)
+                self.repo.add_item(user_id, item_key, category, sell_value)
+                return f"{emoji} **{item_name}** (sell value: {sell_value} stars)"
+        else:
+            # Standard chest: 75% rare mining mineral, 25% rare/legendary fish
+            if random.random() < 0.75:
+                item_key, emoji, item_name, category, sell_value = random.choice(self._standard_mining_drops)
+            else:
+                item_key, emoji, item_name, category, sell_value = random.choice(self._standard_fish_drops)
+            self.repo.add_item(user_id, item_key, category, sell_value)
+            return f"{emoji} **{item_name}** (sell value: {sell_value} stars)"
 
     @staticmethod
     def _compute_feedback(combo: tuple[int, ...], guess: list[int]) -> tuple[int, int]:

@@ -174,131 +174,131 @@ MOBS: Final[dict[str, Mob]] = {
     # ── Level 1: Training Grounds ──────────────────────────────
     "slime": Mob(
         key="slime", name="Slime", emoji="🟢",
-        level=1, hp=30, attack=5, defense=2, stamina=40,
-        star_reward=15, is_boss=False,
+        level=1, hp=38, attack=6, defense=3, stamina=50,
+        star_reward=30, is_boss=False,
     ),
     "rat": Mob(
         key="rat", name="Giant Rat", emoji="🐀",
-        level=1, hp=35, attack=7, defense=3, stamina=50,
-        star_reward=20, is_boss=False,
+        level=1, hp=44, attack=9, defense=4, stamina=60,
+        star_reward=35, is_boss=False,
     ),
     "bat": Mob(
         key="bat", name="Cave Bat", emoji="🦇",
-        level=1, hp=25, attack=8, defense=1, stamina=30,
-        star_reward=18, is_boss=False,
+        level=1, hp=32, attack=10, defense=2, stamina=38,
+        star_reward=32, is_boss=False,
     ),
     "mushroom_fiend": Mob(
         key="mushroom_fiend", name="Mushroom Fiend", emoji="🍄",
-        level=1, hp=40, attack=6, defense=4, stamina=60,
-        star_reward=25, is_boss=False,
+        level=1, hp=50, attack=8, defense=5, stamina=75,
+        star_reward=40, is_boss=False,
     ),
     "goblin_chief": Mob(
         key="goblin_chief", name="Goblin Chief", emoji="👺",
-        level=1, hp=80, attack=12, defense=6, stamina=80,
-        star_reward=75, is_boss=True,
+        level=1, hp=100, attack=15, defense=8, stamina=100,
+        star_reward=130, is_boss=True,
     ),
 
     # ── Level 2: Dark Corridors ────────────────────────────────
     "skeleton": Mob(
         key="skeleton", name="Skeleton Warrior", emoji="💀",
-        level=2, hp=60, attack=14, defense=8, stamina=70,
-        star_reward=45, is_boss=False,
+        level=2, hp=75, attack=18, defense=10, stamina=88,
+        star_reward=80, is_boss=False,
     ),
     "spider": Mob(
         key="spider", name="Giant Spider", emoji="🕷️",
-        level=2, hp=50, attack=16, defense=5, stamina=60,
-        star_reward=40, is_boss=False,
+        level=2, hp=62, attack=20, defense=6, stamina=75,
+        star_reward=70, is_boss=False,
     ),
     "zombie": Mob(
         key="zombie", name="Armored Zombie", emoji="🧟",
-        level=2, hp=75, attack=12, defense=12, stamina=80,
-        star_reward=50, is_boss=False,
+        level=2, hp=94, attack=15, defense=15, stamina=100,
+        star_reward=85, is_boss=False,
     ),
     "ghost": Mob(
         key="ghost", name="Phantom", emoji="👻",
-        level=2, hp=45, attack=18, defense=3, stamina=50,
-        star_reward=55, is_boss=False,
+        level=2, hp=56, attack=22, defense=4, stamina=62,
+        star_reward=95, is_boss=False,
     ),
     "troll_warlord": Mob(
         key="troll_warlord", name="Troll Warlord", emoji="🧌",
-        level=2, hp=150, attack=22, defense=14, stamina=110,
-        star_reward=150, is_boss=True,
+        level=2, hp=188, attack=28, defense=18, stamina=138,
+        star_reward=260, is_boss=True,
     ),
 
     # ── Level 3: Cursed Halls ──────────────────────────────────
     "dark_knight": Mob(
         key="dark_knight", name="Dark Knight", emoji="🖤",
-        level=3, hp=120, attack=24, defense=18, stamina=100,
-        star_reward=100, is_boss=False,
+        level=3, hp=150, attack=30, defense=22, stamina=125,
+        star_reward=175, is_boss=False,
     ),
     "fire_elemental": Mob(
         key="fire_elemental", name="Fire Elemental", emoji="🔥",
-        level=3, hp=90, attack=30, defense=10, stamina=90,
-        star_reward=110, is_boss=False,
+        level=3, hp=112, attack=38, defense=12, stamina=112,
+        star_reward=190, is_boss=False,
     ),
     "gargoyle": Mob(
         key="gargoyle", name="Stone Gargoyle", emoji="🗿",
-        level=3, hp=140, attack=20, defense=25, stamina=120,
-        star_reward=120, is_boss=False,
+        level=3, hp=175, attack=25, defense=32, stamina=150,
+        star_reward=210, is_boss=False,
     ),
     "wraith": Mob(
         key="wraith", name="Soul Wraith", emoji="😈",
-        level=3, hp=100, attack=28, defense=12, stamina=80,
-        star_reward=115, is_boss=False,
+        level=3, hp=125, attack=35, defense=15, stamina=100,
+        star_reward=200, is_boss=False,
     ),
     "lich": Mob(
         key="lich", name="The Lich", emoji="☠️",
-        level=3, hp=250, attack=32, defense=20, stamina=140,
-        star_reward=300, is_boss=True,
+        level=3, hp=312, attack=40, defense=25, stamina=175,
+        star_reward=525, is_boss=True,
     ),
 
     # ── Level 4: Infernal Depths ───────────────────────────────
     "demon": Mob(
         key="demon", name="Infernal Demon", emoji="👿",
-        level=4, hp=200, attack=36, defense=22, stamina=130,
-        star_reward=200, is_boss=False,
+        level=4, hp=250, attack=45, defense=28, stamina=162,
+        star_reward=350, is_boss=False,
     ),
     "golem": Mob(
         key="golem", name="Iron Golem", emoji="🤖",
-        level=4, hp=280, attack=28, defense=35, stamina=160,
-        star_reward=220, is_boss=False,
+        level=4, hp=350, attack=35, defense=44, stamina=200,
+        star_reward=385, is_boss=False,
     ),
     "hydra": Mob(
         key="hydra", name="Lesser Hydra", emoji="🐍",
-        level=4, hp=220, attack=38, defense=18, stamina=120,
-        star_reward=230, is_boss=False,
+        level=4, hp=275, attack=48, defense=22, stamina=150,
+        star_reward=400, is_boss=False,
     ),
     "shadow_dragon": Mob(
         key="shadow_dragon", name="Shadow Drake", emoji="🐲",
-        level=4, hp=240, attack=34, defense=28, stamina=140,
-        star_reward=250, is_boss=False,
+        level=4, hp=300, attack=42, defense=35, stamina=175,
+        star_reward=440, is_boss=False,
     ),
     "balrog": Mob(
         key="balrog", name="The Balrog", emoji="😤",
-        level=4, hp=400, attack=42, defense=30, stamina=180,
-        star_reward=500, is_boss=True,
+        level=4, hp=500, attack=52, defense=38, stamina=225,
+        star_reward=875, is_boss=True,
     ),
 
     # ── Level 5: The Void ──────────────────────────────────────
     "void_sentinel": Mob(
         key="void_sentinel", name="Void Sentinel", emoji="🌌",
-        level=5, hp=350, attack=45, defense=35, stamina=170,
-        star_reward=400, is_boss=False,
+        level=5, hp=438, attack=56, defense=44, stamina=212,
+        star_reward=700, is_boss=False,
     ),
     "cosmic_horror": Mob(
         key="cosmic_horror", name="Cosmic Horror", emoji="👁️",
-        level=5, hp=300, attack=50, defense=25, stamina=150,
-        star_reward=450, is_boss=False,
+        level=5, hp=375, attack=62, defense=32, stamina=188,
+        star_reward=800, is_boss=False,
     ),
     "noodle_titan": Mob(
         key="noodle_titan", name="Noodle Titan", emoji="🍝",
-        level=5, hp=400, attack=42, defense=40, stamina=180,
-        star_reward=500, is_boss=False,
+        level=5, hp=500, attack=52, defense=50, stamina=225,
+        star_reward=875, is_boss=False,
     ),
     "the_void_king": Mob(
         key="the_void_king", name="The Void King", emoji="💀",
-        level=5, hp=600, attack=55, defense=40, stamina=200,
-        star_reward=1000, is_boss=True,
+        level=5, hp=750, attack=68, defense=50, stamina=250,
+        star_reward=1750, is_boss=True,
     ),
 }
 
@@ -653,70 +653,71 @@ _Drop = tuple[str, str, int, float]  # (item_key, category, sell_value, chance)
 
 DUNGEON_DROPS: Final[dict[int, list[_Drop]]] = {
     1: [
-        # Consumables — common
-        ("raw_potato", "consumable", 2, 0.30),
-        ("health_potion", "consumable", 50, 0.10),
-        # Minerals — level 1 resources
-        ("coal", "mineral", 10, 0.25),
-        ("iron", "mineral", 20, 0.15),
-        ("gold", "mineral", 40, 0.05),
+        # Consumables
+        ("raw_potato", "consumable", 2, 0.35),
+        ("health_potion", "consumable", 50, 0.15),
+        # Minerals — L1 resources at higher rates
+        ("coal", "mineral", 10, 0.30),
+        ("iron", "mineral", 20, 0.25),
+        ("gold", "mineral", 40, 0.15),
+        ("diamond", "mineral", 100, 0.08),
     ],
     2: [
-        ("raw_potato", "consumable", 2, 0.25),
-        ("health_potion", "consumable", 50, 0.15),
-        ("golden_mushroom", "consumable", 25, 0.10),
-        # Minerals — level 2
-        ("copper", "mineral", 15, 0.20),
-        ("silver", "mineral", 30, 0.15),
-        ("emerald", "mineral", 60, 0.06),
-        # Fish consumables
-        ("salmon", "fish", 20, 0.10),
-    ],
-    3: [
         ("health_potion", "consumable", 50, 0.20),
         ("golden_mushroom", "consumable", 25, 0.15),
-        # Minerals — level 3
-        ("tin", "mineral", 25, 0.18),
-        ("platinum", "mineral", 50, 0.12),
-        ("sapphire", "mineral", 90, 0.06),
-        ("amethyst", "mineral", 225, 0.02),
-        # Crafting fish
-        ("golden_fish", "fish", 0, 0.04),
-        ("river_dragon", "fish", 0, 0.03),
-        # Stamina potion material
-        ("seaweed", "fish", 10, 0.12),
+        # Minerals — L2 resources
+        ("copper", "mineral", 15, 0.25),
+        ("silver", "mineral", 30, 0.25),
+        ("emerald", "mineral", 60, 0.15),
+        ("ruby", "mineral", 150, 0.08),
+        # Fish
+        ("salmon", "fish", 160, 0.12),
+        ("tuna", "fish", 260, 0.08),
     ],
-    4: [
+    3: [
         ("health_potion", "consumable", 50, 0.25),
         ("golden_mushroom", "consumable", 25, 0.20),
-        # Minerals — level 4
-        ("titanium", "mineral", 40, 0.15),
-        ("mithril", "mineral", 80, 0.10),
-        ("opal", "mineral", 140, 0.06),
-        ("star_fragment", "mineral", 350, 0.02),
-        # Crafting fish
-        ("neptunes_trident", "fish", 0, 0.03),
-        ("phantom_captain", "fish", 0, 0.03),
-        ("diamond_anchor", "fish", 0, 0.02),
-        # Stamina materials
-        ("bioluminescent_jelly", "fish", 24, 0.08),
+        # Minerals — L3 resources
+        ("platinum", "mineral", 50, 0.22),
+        ("sapphire", "mineral", 90, 0.15),
+        ("amethyst", "mineral", 225, 0.08),
+        # Rare fish
+        ("reef_shark", "fish", 295, 0.10),
+        ("giant_clam", "fish", 550, 0.06),
+        ("golden_seahorse", "fish", 3665, 0.03),
+        # Stamina material
+        ("seaweed", "fish", 0, 0.15),
     ],
-    5: [
+    4: [
         ("health_potion", "consumable", 50, 0.30),
         ("golden_mushroom", "consumable", 25, 0.25),
-        # Minerals — level 5
-        ("adamantium", "mineral", 60, 0.12),
-        ("dragonstone", "mineral", 120, 0.08),
-        ("void_crystal", "mineral", 200, 0.04),
-        ("noodle_gem", "mineral", 500, 0.01),
-        # Crafting fish — endgame
-        ("leviathan_scale", "fish", 0, 0.03),
-        ("poseidons_eye", "fish", 0, 0.02),
-        ("world_serpent_fang", "fish", 0, 0.02),
-        ("heart_of_the_abyss", "fish", 0, 0.01),
+        # Minerals — L4 resources
+        ("mithril", "mineral", 80, 0.20),
+        ("opal", "mineral", 140, 0.12),
+        ("star_fragment", "mineral", 350, 0.06),
+        # Rare fish
+        ("hammerhead_shark", "fish", 415, 0.10),
+        ("pirates_hoard", "fish", 2255, 0.05),
+        ("phantom_captain", "fish", 5210, 0.03),
+        # Stamina material
+        ("bioluminescent_jelly", "fish", 0, 0.12),
+    ],
+    5: [
+        ("health_potion", "consumable", 50, 0.35),
+        ("golden_mushroom", "consumable", 25, 0.30),
+        # Minerals — L5 resources
+        ("dragonstone", "mineral", 120, 0.18),
+        ("void_crystal", "mineral", 200, 0.10),
+        ("noodle_gem", "mineral", 500, 0.05),
+        # Legendary fish
+        ("megalodon_tooth", "fish", 1300, 0.08),
+        ("trench_treasure", "fish", 3715, 0.05),
+        ("leviathan_scale", "fish", 9280, 0.03),
+        ("poseidons_eye", "fish", 18565, 0.02),
         # Space ores
-        ("dark_matter", "ore", 0, 0.03),
-        ("void_coral", "fish", 20, 0.10),
+        ("dark_matter", "ore", 700, 0.06),
+        ("plutonium_core", "ore", 1150, 0.04),
+        ("void_coral", "fish", 0, 0.12),
     ],
 }
 
