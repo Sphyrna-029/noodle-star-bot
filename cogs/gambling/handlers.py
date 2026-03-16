@@ -791,18 +791,37 @@ class GamblingCog(commands.Cog):
             return
 
         if result.won:
+            mult = int(result.multiplier)
+            if mult >= 100:
+                header = f"\U0001f3b0\U0001f4a5 {ctx.author.mention} gambled **{amount}** stars..."
+                label = "\U0001f451\U0001f451 **JACKPOT!!!** \U0001f451\U0001f451"
+            elif mult >= 50:
+                header = f"\U0001f3b0\u2728 {ctx.author.mention} gambled **{amount}** stars..."
+                label = "\U0001f525 **MEGA WIN!!!** \U0001f525"
+            elif mult >= 25:
+                header = f"\U0001f3b0\u2728 {ctx.author.mention} gambled **{amount}** stars..."
+                label = "\U0001f4b0 **BIG WIN!!** \U0001f4b0"
+            elif mult >= 10:
+                header = f"\U0001f3b0 {ctx.author.mention} gambled **{amount}** stars..."
+                label = "\U0001f389 **GREAT WIN!** \U0001f389"
+            elif mult >= 3:
+                header = f"\U0001f3b0 {ctx.author.mention} gambled **{amount}** stars..."
+                label = "\U0001f389 **Nice win!**"
+            else:
+                header = f"\U0001f3b0 {ctx.author.mention} gambled **{amount}** stars..."
+                label = "\U0001f389 **You win!**"
             await ctx.send(
-                f"\U0001f3b0 {ctx.author.mention} gambled **{amount}** stars and rolled a **{result.roll}**! \U0001f389\n"
-                f"**YOU WIN!** Multiplier: **{result.multiplier}x**\n"
-                f"You won **{result.amount_changed}** noodle stars!\n"
-                f"New balance: **{result.new_balance}** stars! \u2b50"
+                f"{header}\n"
+                f"{label} Multiplier: **{mult}x**\n"
+                f"You won **{result.amount_changed:,}** noodle stars!\n"
+                f"New balance: **{result.new_balance:,}** stars! \u2b50"
             )
         else:
             await ctx.send(
-                f"\U0001f3b0 {ctx.author.mention} gambled **{amount}** stars and rolled a **{result.roll}**... \U0001f494\n"
-                f"**YOU LOSE!** You needed a 7!\n"
-                f"You lost **{result.amount_changed}** noodle stars!\n"
-                f"New balance: **{result.new_balance}** stars! \U0001f622"
+                f"\U0001f3b0 {ctx.author.mention} gambled **{amount}** stars... \U0001f494\n"
+                f"**YOU LOSE!** Better luck next time!\n"
+                f"You lost **{abs(result.amount_changed):,}** noodle stars.\n"
+                f"New balance: **{result.new_balance:,}** stars \U0001f622"
             )
 
     @commands.command(name="coinflip")

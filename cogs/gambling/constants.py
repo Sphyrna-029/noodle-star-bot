@@ -1,9 +1,7 @@
 from typing import Final
 
 __all__ = [
-    "GAMBLE_DICE_SIDES",
-    "GAMBLE_WIN_TARGET",
-    "GAMBLE_MULTIPLIER_CDF",
+    "GAMBLE_TIER_CDF",
     "COINFLIP_WIN_MULTIPLIER",
     "COINFLIP_MIN_BET",
     "DUEL_INVITE_TIMEOUT",
@@ -25,15 +23,18 @@ __all__ = [
     "PICKPOCKET_STAMINA_REGEN_MAX_EXTRA_MINUTES",
 ]
 
-# -- Gambling
-GAMBLE_MULTIPLIER_CDF: Final[tuple[tuple[int, float], ...]] = (
-    (20, 0.01),
-    (5, 0.34),
-    (7, 0.67),
-    (8, 1.00),
+# -- Gambling  (single-roll tier system, 4% house edge, EV = 0.96)
+# Format: (multiplier, cumulative_probability)
+# Probabilities: 100x 0.05%, 50x 0.10%, 25x 0.40%, 10x 1.50%, 3x 7%, 2x 20%, loss 70.95%
+GAMBLE_TIER_CDF: Final[tuple[tuple[int, float], ...]] = (
+    (100, 0.0005),
+    (50, 0.0015),
+    (25, 0.0055),
+    (10, 0.0205),
+    (3, 0.0905),
+    (2, 0.2905),
+    (0, 1.0),
 )
-GAMBLE_DICE_SIDES: Final[int] = 7
-GAMBLE_WIN_TARGET: Final[int] = 7
 
 # -- Coinflip
 COINFLIP_WIN_MULTIPLIER: Final[float] = 1.95

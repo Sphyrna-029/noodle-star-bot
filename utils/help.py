@@ -636,8 +636,8 @@ def _gambling_embed() -> discord.Embed:
             "PvP only: challenge another player, they accept, then each turn pick a chamber with "
             "`!russian fire <1-6>`. You have **1 hour** per turn or you forfeit.\n\n"
             "**🎲 Gamble** — `!gamble 50`\n"
-            "Roll a d7, win only on 7 (14% chance). Can pay up to 20x. "
-            "**Very risky!**"
+            "Single roll with tiered payouts! ~29% win rate. "
+            "2x, 3x, 10x, 25x, 50x, or the legendary **100x JACKPOT!**"
         ),
         inline=False,
     )
@@ -648,9 +648,9 @@ def _gambling_embed() -> discord.Embed:
             "🦹 **Pickpocket** — Fair dice roll (0% house edge), quick and simple\n"
             "🃏 **Blackjack** — Almost fair (~1% house edge), fun card game\n"
             "🪙 **Coinflip** — Simple and quick (2.5% house edge)\n"
-            "🎲 **Gamble** — You'll probably lose (46% house edge) but jackpots are huge\n\n"
+            "🎲 **Gamble** — Fair odds (4% house edge) with jackpot potential up to 100x\n\n"
             "**If you want to make money:** Duel, Pickpocket, or Blackjack\n"
-            "**If you want excitement:** Gamble (but expect to lose!)"
+            "**If you want excitement:** Gamble for jackpot potential!"
         ),
         inline=False,
     )

@@ -1,11 +1,7 @@
 import random
 from typing import Optional
 
-from cogs.gambling.constants import (
-    GAMBLE_DICE_SIDES,
-    GAMBLE_MULTIPLIER_CDF,
-    GAMBLE_WIN_TARGET,
-)
+from cogs.gambling.constants import GAMBLE_TIER_CDF
 from cogs.gambling.dto import GambleResult
 from .base import BaseGamblingUseCase
 
@@ -13,25 +9,17 @@ from .base import BaseGamblingUseCase
 class GambleUseCase(BaseGamblingUseCase):
     """Handles the basic gamble game logic."""
 
-    def _select_multiplier(self) -> float:
-        """
-        Select a random multiplier based on weighted probabilities.
-
-        Uses the original bot's logic:
-        - 1% chance for 5x
-        - 33% chance for 1.25x
-        - 33% chance for 1.5x
-        - 33% chance for 2x
-        """
+    def _roll_tier(self) -> int:
+        """Roll once against the tier CDF and return the multiplier (0 = loss)."""
         rand = random.random()
-        for multiplier, threshold in GAMBLE_MULTIPLIER_CDF:
+        for multiplier, threshold in GAMBLE_TIER_CDF:
             if rand < threshold:
                 return multiplier
-        return GAMBLE_MULTIPLIER_CDF[-1][0]  # Default to last multiplier
+        return 0
 
     def execute(self, user_id: int, username: str, amount: Optional[int]) -> GambleResult:
         """
-        Play the gamble game (roll to 7).
+        Play the gamble game (single-roll tier system).
 
         Args:
             user_id: Discord user ID
@@ -71,12 +59,10 @@ class GambleUseCase(BaseGamblingUseCase):
                 message=f"You only have **{current_stars}** stars! You can't gamble **{amount}** stars!",
             )
 
-        multiplier = self._select_multiplier()
-        roll = random.randint(1, GAMBLE_DICE_SIDES)
-
+        multiplier = self._roll_tier()
         deducted_balance = current_stars - amount
 
-        if roll == GAMBLE_WIN_TARGET:
+        if multiplier > 0:
             winnings = int(amount * multiplier)
             new_balance = deducted_balance + winnings
             self.repo.update_user_stars(
@@ -87,7 +73,6 @@ class GambleUseCase(BaseGamblingUseCase):
                 success=True,
                 won=True,
                 message="WIN",
-                roll=roll,
                 multiplier=multiplier,
                 amount_changed=winnings - amount,
                 new_balance=new_balance,
@@ -102,8 +87,7 @@ class GambleUseCase(BaseGamblingUseCase):
                 success=True,
                 won=False,
                 message="LOSE",
-                roll=roll,
-                multiplier=multiplier,
+                multiplier=0,
                 amount_changed=-amount,
                 new_balance=new_balance,
             )
