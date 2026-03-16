@@ -162,22 +162,18 @@ class EconomyCog(commands.Cog):
     async def start(self, ctx):
         """Claim your one-time starter kit and learn the basics!"""
         inventory = self.repo.get_user_inventory(ctx.author.id)
-        if inventory.get("starter_claimed", 0):
-            await ctx.send(
-                f"\u274c {ctx.author.mention}, you've already claimed your starter kit! "
-                f"Use `!help` if you need a refresher."
-            )
-            return
+        already_claimed = inventory.get("starter_claimed", 0)
 
-        # Grant items
-        self.repo.update_user_inventory(ctx.author.id, "wooden_sword", 1)
-        self.repo.update_user_inventory(ctx.author.id, "wooden_shield", 1)
-        self.repo.update_user_inventory(ctx.author.id, "health_potion", 5)
+        if not already_claimed:
+            # Grant items
+            self.repo.update_user_inventory(ctx.author.id, "wooden_sword", 1)
+            self.repo.update_user_inventory(ctx.author.id, "wooden_shield", 1)
+            self.repo.update_user_inventory(ctx.author.id, "health_potion", 5)
 
-        # Mark as claimed
-        self.repo.update_user_inventory(ctx.author.id, "starter_claimed", 1)
+            # Mark as claimed
+            self.repo.update_user_inventory(ctx.author.id, "starter_claimed", 1)
 
-        # Show tutorial
+        # Show tutorial (always accessible)
         view = _TutorialView(ctx.author.id)
         msg = await ctx.send(embed=_TUTORIAL_PAGES[0], view=view)
         view.message = msg
