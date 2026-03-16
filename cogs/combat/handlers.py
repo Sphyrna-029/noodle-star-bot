@@ -498,7 +498,16 @@ class BattleView(discord.ui.View):
                     embed = self._create_embed()
                     embed.add_field(
                         name="🏃 FLED",
-                        value=f"You escaped the fight! ({pct}% chance)\n⚡ The effort drained all your stamina!",
+                        value=f"You escaped the fight! ({pct}% chance)",
+                        inline=False,
+                    )
+                    embed.add_field(
+                        name="⚡ STAMINA DRAINED ⚡",
+                        value=(
+                            "**Fleeing took ALL your stamina!**\n"
+                            "Stamina: **0 / {max}**\n"
+                            "You'll need to wait for it to regenerate before your next activity."
+                        ).format(max=self.battle.player_max_stamina),
                         inline=False,
                     )
                     await interaction.edit_original_response(embed=embed, view=self)
