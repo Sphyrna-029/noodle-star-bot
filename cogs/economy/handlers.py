@@ -30,6 +30,23 @@ _TUTORIAL_PAGES = [
         color=discord.Color.green(),
     ),
     discord.Embed(
+        title="\U0001f4cb Two Commands You Need to Know",
+        description=(
+            "You don't need to memorize commands! These two have you covered:\n\n"
+            "**`!action`** (or `!a`)\n"
+            "Your personal dashboard. Shows your HP, stamina, stars, inventory, "
+            "and location \u2014 plus **quick-action buttons** for everything you can "
+            "do right now. This is your universal button that will do most things "
+            "regardless of where you are.\n\n"
+            "**`!help`**\n"
+            "The full guide to every feature in the game. Browse by category "
+            "with buttons \u2014 Mining, Fishing, Combat, Gambling, Items, and more.\n\n"
+            "Between `!a` for doing things and `!help` for learning things, "
+            "you'll always know what to do next."
+        ),
+        color=discord.Color.teal(),
+    ),
+    discord.Embed(
         title="\u26cf\ufe0f Mining \u2014 Your Main Income",
         description=(
             "Type `!mine` to dig for minerals. They go into your **backpack**.\n\n"
