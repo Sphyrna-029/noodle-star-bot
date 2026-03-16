@@ -19,11 +19,11 @@ _TUTORIAL_PAGES = [
     discord.Embed(
         title="\u2728 Welcome to Noodle Star Bot!",
         description=(
-            "You've claimed your **Starter Kit**:\n"
+            "Your **Starter Kit** includes:\n"
             "\u2022 \U0001f5e1\ufe0f **Wooden Sword** \u2014 +8 Attack\n"
             "\u2022 \U0001f6e1\ufe0f **Wooden Shield** \u2014 +6 Defense\n"
             "\u2022 \u2764\ufe0f\u200d\U0001fa79 **Health Potion** x5 \u2014 Restores 20 HP each\n\n"
-            "These will help you survive your first fights! "
+            "Read through the tutorial to claim your kit! "
             "Let\u2019s walk you through the basics.\n\n"
             "*Use the buttons below to navigate.*"
         ),
@@ -105,9 +105,11 @@ for _i, _page in enumerate(_TUTORIAL_PAGES):
 class _TutorialView(discord.ui.View):
     """Paginated tutorial shown after !start."""
 
-    def __init__(self, author_id: int):
+    def __init__(self, author_id: int, repo: "UserRepository", already_claimed: bool):
         super().__init__(timeout=180)
         self.author_id = author_id
+        self.repo = repo
+        self.already_claimed = already_claimed
         self.page = 0
         self.message = None
         self._update_buttons()
@@ -119,8 +121,23 @@ class _TutorialView(discord.ui.View):
         return True
 
     def _update_buttons(self):
+        last_page = self.page == len(_TUTORIAL_PAGES) - 1
         self.prev_button.disabled = self.page == 0
-        self.next_button.disabled = self.page == len(_TUTORIAL_PAGES) - 1
+        self.next_button.disabled = last_page
+        # Show claim button only on last page
+        if last_page and not self.already_claimed:
+            self.claim_button.disabled = False
+            self.claim_button.label = "\u2b50 Claim Starter Kit!"
+            self.claim_button.style = discord.ButtonStyle.success
+        elif last_page and self.already_claimed:
+            self.claim_button.disabled = True
+            self.claim_button.label = "Already Claimed"
+            self.claim_button.style = discord.ButtonStyle.secondary
+        else:
+            # Hide on non-last pages by disabling
+            self.claim_button.disabled = True
+            self.claim_button.label = "Finish tutorial to claim"
+            self.claim_button.style = discord.ButtonStyle.secondary
 
     @discord.ui.button(label="Back", style=discord.ButtonStyle.secondary)
     async def prev_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -133,6 +150,35 @@ class _TutorialView(discord.ui.View):
         self.page = min(len(_TUTORIAL_PAGES) - 1, self.page + 1)
         self._update_buttons()
         await interaction.response.edit_message(embed=_TUTORIAL_PAGES[self.page], view=self)
+
+    @discord.ui.button(label="Finish tutorial to claim", style=discord.ButtonStyle.secondary, disabled=True)
+    async def claim_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.already_claimed:
+            await interaction.response.send_message("You already claimed your starter kit!", ephemeral=True)
+            return
+        # Grant starter kit
+        self.repo.update_user_inventory(self.author_id, "wooden_sword", 1)
+        self.repo.update_user_inventory(self.author_id, "wooden_shield", 1)
+        self.repo.update_user_inventory(self.author_id, "health_potion", 5)
+        self.repo.update_user_inventory(self.author_id, "starter_claimed", 1)
+        self.already_claimed = True
+        # Disable claim button after claiming
+        self.claim_button.disabled = True
+        self.claim_button.label = "Claimed!"
+        self.claim_button.style = discord.ButtonStyle.secondary
+        claimed_embed = discord.Embed(
+            title="\U0001f381 Starter Kit Claimed!",
+            description=(
+                "You received:\n"
+                "\u2022 \U0001f5e1\ufe0f **Wooden Sword** \u2014 +8 Attack\n"
+                "\u2022 \U0001f6e1\ufe0f **Wooden Shield** \u2014 +6 Defense\n"
+                "\u2022 \u2764\ufe0f\u200d\U0001fa79 **Health Potion** x5\n\n"
+                "Equip your gear with `!equip wooden sword` and `!equip wooden shield`, "
+                "then head to the **Crystal Cave** and `!mine` to start earning stars!"
+            ),
+            color=discord.Color.gold(),
+        )
+        await interaction.response.edit_message(embed=claimed_embed, view=self)
 
     async def on_timeout(self):
         for child in self.children:
@@ -162,19 +208,9 @@ class EconomyCog(commands.Cog):
     async def start(self, ctx):
         """Claim your one-time starter kit and learn the basics!"""
         inventory = self.repo.get_user_inventory(ctx.author.id)
-        already_claimed = inventory.get("starter_claimed", 0)
+        already_claimed = bool(inventory.get("starter_claimed", 0))
 
-        if not already_claimed:
-            # Grant items
-            self.repo.update_user_inventory(ctx.author.id, "wooden_sword", 1)
-            self.repo.update_user_inventory(ctx.author.id, "wooden_shield", 1)
-            self.repo.update_user_inventory(ctx.author.id, "health_potion", 5)
-
-            # Mark as claimed
-            self.repo.update_user_inventory(ctx.author.id, "starter_claimed", 1)
-
-        # Show tutorial (always accessible)
-        view = _TutorialView(ctx.author.id)
+        view = _TutorialView(ctx.author.id, self.repo, already_claimed)
         msg = await ctx.send(embed=_TUTORIAL_PAGES[0], view=view)
         view.message = msg
 
