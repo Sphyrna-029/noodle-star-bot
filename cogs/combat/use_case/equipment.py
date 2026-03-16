@@ -110,6 +110,51 @@ class EquipmentUseCases:
             total_hp_bonus=total_hp,
         )
 
+    def equip_best(self, user_id: int) -> EquipResult:
+        """Auto-equip the best owned item in each slot (highest tier, then total stats)."""
+        equipment = self.repo.get_user_equipment(user_id)
+        stats = self.repo.get_combat_stats(user_id)
+        changes: list[str] = []
+
+        for slot in ("weapon", "shield", "armor"):
+            # Find all owned combat items for this slot
+            candidates = []
+            for key, uses in equipment.items():
+                if uses <= 0:
+                    continue
+                item_def = COMBAT_ITEMS.get(key)
+                if item_def and item_def.slot == slot:
+                    score = (item_def.tier, item_def.attack + item_def.defense + item_def.hp_bonus)
+                    candidates.append((score, key, item_def))
+
+            if not candidates:
+                continue
+
+            candidates.sort(reverse=True)
+            best_key = candidates[0][1]
+            best_def = candidates[0][2]
+            current = stats.get(f"equipped_{slot}")
+
+            if current == best_key:
+                continue  # already best
+
+            self.repo.set_equipped_combat_item(user_id, slot, best_key)
+            old_name = ""
+            if current and current in COMBAT_ITEMS:
+                old_name = f" (was {COMBAT_ITEMS[current].name})"
+            changes.append(f"{best_def.emoji} **{best_def.name}** → {slot}{old_name}")
+
+        # Recalculate max HP after all equips
+        new_max_hp = self._calc_max_hp(user_id)
+        current_hp = min(stats["current_hp"], new_max_hp)
+        self.repo.update_hp(user_id, current_hp, new_max_hp)
+
+        if not changes:
+            return EquipResult(success=True, message="You already have the best gear equipped!")
+
+        msg = "**Best gear equipped!**\n" + "\n".join(changes)
+        return EquipResult(success=True, message=msg)
+
     def _calc_max_hp(self, user_id: int) -> int:
         """Calculate max HP from base + equipped items."""
         stats = self.repo.get_combat_stats(user_id)

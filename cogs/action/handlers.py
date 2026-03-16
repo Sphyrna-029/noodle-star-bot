@@ -8,6 +8,7 @@ from cogs.combat.constants import COMBAT_ITEMS
 from cogs.locations.constants import LOCATIONS, TRAVEL_COOLDOWN_SECONDS
 from cogs.locations.handlers import TravelView, _build_travel_embed
 from cogs.locations.use_case import LocationUseCases
+from cogs.combat.use_case.equipment import EquipmentUseCases
 from cogs.combat.use_case.health import HealthUseCases
 from cogs.fishing.use_case import FishingUseCases
 from cogs.fishing.dto import FishingState
@@ -101,6 +102,23 @@ class _TravelButton(discord.ui.Button):
         await interaction.response.send_message(embed=embed, view=travel_view, ephemeral=False)
 
 
+class _EquipBestButton(discord.ui.Button):
+    """Equips the best owned gear in every slot."""
+
+    def __init__(self, row: int = 1):
+        super().__init__(label="Equip Best Gear", emoji="\u2694\ufe0f", style=discord.ButtonStyle.success, row=row)
+
+    async def callback(self, interaction: discord.Interaction):
+        view = self.view
+        if not isinstance(view, ActionView) or interaction.user.id != view.author_id:
+            await interaction.response.send_message("Not your menu!", ephemeral=True)
+            return
+
+        equip_uc = EquipmentUseCases()
+        result = equip_uc.equip_best(interaction.user.id)
+        await interaction.response.send_message(result.message, ephemeral=True)
+
+
 class ActionView(discord.ui.View):
     """Action hub view with context-aware buttons."""
 
@@ -119,7 +137,8 @@ class ActionView(discord.ui.View):
                 row=0,
             ))
 
-        # Add travel button (row 1)
+        # Add equip best gear and travel buttons (row 1)
+        self.add_item(_EquipBestButton(row=1))
         self.add_item(_TravelButton(row=1))
 
     async def on_timeout(self):

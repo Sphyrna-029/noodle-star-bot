@@ -343,6 +343,14 @@ class InventoryView(discord.ui.View):
         bag_capacity = data["bag_capacity"]
         progression = data["progression"]
 
+        # Get equipped combat gear keys
+        combat_stats = self.shop.repo.get_combat_stats(self.member.id)
+        equipped_keys = set()
+        for slot in ("equipped_weapon", "equipped_shield", "equipped_armor"):
+            key = combat_stats.get(slot)
+            if key:
+                equipped_keys.add(key)
+
         if bag_capacity > 0:
             fill_pct = bag_count / bag_capacity
         else:
@@ -359,7 +367,7 @@ class InventoryView(discord.ui.View):
             color=embed_color,
         )
 
-        equip_lines = ShopCog._build_equipment_lines(equipment, progression)
+        equip_lines = ShopCog._build_equipment_lines(equipment, progression, equipped_keys)
         if equip_lines:
             embed.add_field(
                 name="\u2500\u2500 EQUIPMENT \u2500\u2500",
@@ -596,7 +604,7 @@ class ShopCog(commands.Cog):
         view.message = msg
 
     @staticmethod
-    def _build_equipment_lines(equipment: dict, progression: dict) -> list[str]:
+    def _build_equipment_lines(equipment: dict, progression: dict, equipped: set[str] | None = None) -> list[str]:
         """Build formatted equipment display lines from equipment dict."""
         # Equipment display mapping: item_key -> (emoji, display_name, format_type)
         # format_type: "permanent", "leveled", "stackable", "uses"
@@ -626,22 +634,25 @@ class ShopCog(commands.Cog):
             "growbot": "growbot_level",
             "preserver": "preserver_level",
         }
+        if equipped is None:
+            equipped = set()
 
         parts: list[str] = []
         for item_key, emoji, name, fmt in _EQUIP_MAP:
             uses = equipment.get(item_key, 0)
             if uses <= 0:
                 continue
+            tag = " **(equipped)**" if item_key in equipped else ""
             if fmt == "permanent":
-                parts.append(f"{emoji} {name}")
+                parts.append(f"{emoji} {name}{tag}")
             elif fmt == "leveled":
                 level_key = _LEVEL_KEYS[item_key]
                 level = max(1, progression.get(level_key, 1))
-                parts.append(f"{emoji} {name} (Lv.{level})")
+                parts.append(f"{emoji} {name} (Lv.{level}){tag}")
             elif fmt == "stackable":
-                parts.append(f"{emoji} {name} x{uses}")
+                parts.append(f"{emoji} {name} x{uses}{tag}")
             elif fmt == "uses":
-                parts.append(f"{emoji} {name} ({uses} uses)")
+                parts.append(f"{emoji} {name} ({uses} uses){tag}")
 
         # Join into lines of up to ~3 items each for readability
         if not parts:
