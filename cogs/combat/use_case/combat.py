@@ -17,6 +17,49 @@ from cogs.shop.resources import get_resource
 from database.repository import UserRepository
 
 
+def _pick_guaranteed_resources(activity: str, level: int, count: int = 2) -> list[tuple[str, str, int, str]]:
+    """Pick guaranteed common resource drops from the activity's level table.
+
+    Returns list of (item_key, category, sell_value, display_name).
+    """
+    results = []
+    if activity == "mining":
+        from cogs.mining.constants import MINERAL_TABLES
+        table = MINERAL_TABLES.get(level, {})
+        minerals = table.get("normal", [])
+        if minerals:
+            picks = random.choices(minerals, weights=[m.weight for m in minerals], k=count)
+            for m in picks:
+                key = m.name.lower().replace(" ", "_")
+                res = get_resource(key)
+                display = res.display_name if res else m.name
+                results.append((key, "mineral", m.stars, display))
+    elif activity == "fishing":
+        from cogs.fishing.constants import CATCH_TABLES
+        tables = CATCH_TABLES.get(level, {})
+        # Pick from common bucket
+        common = tables.get("common")
+        if common and common.catches:
+            picks = random.choices(common.catches, weights=[c.weight for c in common.catches], k=count)
+            for c in picks:
+                key = c.name.lower().replace(" ", "_").replace("'", "")
+                res = get_resource(key)
+                display = res.display_name if res else c.name
+                results.append((key, "fish", c.stars, display))
+    elif activity == "space":
+        from cogs.space.constants import SPACE_MINERAL_TABLES
+        table = SPACE_MINERAL_TABLES.get(level, {})
+        minerals = table.get("normal", [])
+        if minerals:
+            picks = random.choices(minerals, weights=[m.weight for m in minerals], k=count)
+            for m in picks:
+                key = m.name.lower().replace(" ", "_").replace("-", "_")
+                res = get_resource(key)
+                display = res.display_name if res else m.name
+                results.append((key, "ore", m.stars, display))
+    return results
+
+
 class CombatUseCases:
     """Core combat business logic — fights, death penalties, level management."""
 
@@ -59,6 +102,13 @@ class CombatUseCases:
                 res = get_resource(item_key)
                 display = res.display_name if res else item_key.replace("_", " ").title()
                 drops.append((item_key, category, sell_value, display))
+
+        # Guaranteed resource drops for ambush wins (1-2 common items from the level)
+        if battle.ambush and battle.ambush.activity != "alien":
+            guaranteed = _pick_guaranteed_resources(
+                battle.ambush.activity, battle.ambush.activity_level,
+            )
+            drops.extend(guaranteed)
 
         return drops
 

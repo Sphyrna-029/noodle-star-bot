@@ -225,49 +225,49 @@ AMBUSH_DEFEAT_PENALTIES: Final[dict[str, dict[int, dict]]] = {
 AMBUSH_MOB_BONUS_DROPS: Final[dict[str, list[_Drop]]] = {
     # ── Mining mobs ────────────────────────────────────────────
     # L1 — rare: gold, diamond
-    "rock_critter":     [("gold", "mineral", 40, 0.10), ("diamond", "mineral", 100, 0.10)],
-    "tunnel_rat":       [("gold", "mineral", 40, 0.20), ("diamond", "mineral", 100, 0.15)],
+    "rock_critter":     [("gold", "mineral", 40, 0.20), ("diamond", "mineral", 100, 0.20)],
+    "tunnel_rat":       [("gold", "mineral", 40, 0.40), ("diamond", "mineral", 100, 0.30)],
     # L2 — rare: emerald, ruby
-    "cave_bat":         [("emerald", "mineral", 60, 0.10), ("ruby", "mineral", 150, 0.10)],
-    "mine_goblin":      [("emerald", "mineral", 60, 0.20), ("ruby", "mineral", 150, 0.15)],
+    "cave_bat":         [("emerald", "mineral", 60, 0.20), ("ruby", "mineral", 150, 0.20)],
+    "mine_goblin":      [("emerald", "mineral", 60, 0.40), ("ruby", "mineral", 150, 0.30)],
     # L3 — rare: sapphire, amethyst
-    "crystal_golem":    [("sapphire", "mineral", 90, 0.12), ("amethyst", "mineral", 225, 0.10)],
-    "cave_troll":       [("sapphire", "mineral", 90, 0.25), ("amethyst", "mineral", 225, 0.15)],
+    "crystal_golem":    [("sapphire", "mineral", 90, 0.24), ("amethyst", "mineral", 225, 0.20)],
+    "cave_troll":       [("sapphire", "mineral", 90, 0.50), ("amethyst", "mineral", 225, 0.30)],
     # L4 — rare: opal, star fragment
-    "magma_elemental":  [("opal", "mineral", 140, 0.12), ("star_fragment", "mineral", 350, 0.10)],
-    "lava_worm":        [("opal", "mineral", 140, 0.25), ("star_fragment", "mineral", 350, 0.15)],
+    "magma_elemental":  [("opal", "mineral", 140, 0.24), ("star_fragment", "mineral", 350, 0.20)],
+    "lava_worm":        [("opal", "mineral", 140, 0.50), ("star_fragment", "mineral", 350, 0.30)],
     # L5 — rare: void crystal, noodle gem
-    "shadow_crawler":   [("void_crystal", "mineral", 200, 0.15), ("noodle_gem", "mineral", 500, 0.10)],
-    "abyss_wraith":     [("void_crystal", "mineral", 200, 0.30), ("noodle_gem", "mineral", 500, 0.15)],
+    "shadow_crawler":   [("void_crystal", "mineral", 200, 0.30), ("noodle_gem", "mineral", 500, 0.20)],
+    "abyss_wraith":     [("void_crystal", "mineral", 200, 0.60), ("noodle_gem", "mineral", 500, 0.30)],
 
     # ── Fishing mobs ───────────────────────────────────────────
     # L2 — rare: river salmon, sturgeon; legendary: platinum trout
-    "snapping_eel":     [("river_salmon", "fish", 225, 0.12), ("sturgeon", "fish", 375, 0.10)],
-    "river_serpent":    [("sturgeon", "fish", 375, 0.20), ("platinum_trout", "fish", 2805, 0.10)],
+    "snapping_eel":     [("river_salmon", "fish", 225, 0.24), ("sturgeon", "fish", 375, 0.20)],
+    "river_serpent":    [("sturgeon", "fish", 375, 0.40), ("platinum_trout", "fish", 2805, 0.20)],
     # L3 — rare: sea turtle, sunken treasure; legendary: golden seahorse
-    "reef_guardian":    [("sea_turtle", "fish", 1280, 0.12), ("sunken_treasure", "fish", 1650, 0.10)],
-    "whirlpool_spirit": [("sunken_treasure", "fish", 1650, 0.20), ("golden_seahorse", "fish", 3665, 0.10)],
+    "reef_guardian":    [("sea_turtle", "fish", 1280, 0.24), ("sunken_treasure", "fish", 1650, 0.20)],
+    "whirlpool_spirit": [("sunken_treasure", "fish", 1650, 0.40), ("golden_seahorse", "fish", 3665, 0.20)],
     # L4 — rare: pirate's hoard; legendary: phantom captain, diamond anchor
-    "ghost_captain":    [("pirates_hoard", "fish", 2255, 0.15), ("phantom_captain", "fish", 5210, 0.10)],
-    "kraken_spawn":     [("pirates_hoard", "fish", 2255, 0.25), ("diamond_anchor", "fish", 10420, 0.10)],
+    "ghost_captain":    [("pirates_hoard", "fish", 2255, 0.30), ("phantom_captain", "fish", 5210, 0.20)],
+    "kraken_spawn":     [("pirates_hoard", "fish", 2255, 0.50), ("diamond_anchor", "fish", 10420, 0.20)],
     # L5 — rare: trench treasure; legendary: leviathan scale, poseidon's eye
-    "siren":            [("trench_treasure", "fish", 3715, 0.15), ("leviathan_scale", "fish", 9280, 0.10)],
-    "leviathan":        [("trench_treasure", "fish", 3715, 0.30), ("poseidons_eye", "fish", 18565, 0.10)],
+    "siren":            [("trench_treasure", "fish", 3715, 0.30), ("leviathan_scale", "fish", 9280, 0.20)],
+    "leviathan":        [("trench_treasure", "fish", 3715, 0.60), ("poseidons_eye", "fish", 18565, 0.20)],
 
     # ── Space mobs (rare resources + rare effect items) ────────
     # P1 — rare ores + effect items
-    "lunar_drone":      [("cosmic_pearl", "ore", 750, 0.10), ("rune_fragment", "equipment", 0, 0.10)],
-    "moon_stalker":     [("cosmic_pearl", "ore", 750, 0.20), ("rune_fragment", "equipment", 0, 0.15)],
+    "lunar_drone":      [("cosmic_pearl", "ore", 750, 0.20), ("rune_fragment", "equipment", 0, 0.20)],
+    "moon_stalker":     [("cosmic_pearl", "ore", 750, 0.40), ("rune_fragment", "equipment", 0, 0.30)],
     # P2
-    "mars_raider":      [("stardust_crystal", "ore", 1075, 0.10), ("fossilized_noodle", "equipment", 0, 0.10)],
-    "dust_devil":       [("stardust_crystal", "ore", 1075, 0.20), ("fossilized_noodle", "equipment", 0, 0.15)],
+    "mars_raider":      [("stardust_crystal", "ore", 1075, 0.20), ("fossilized_noodle", "equipment", 0, 0.20)],
+    "dust_devil":       [("stardust_crystal", "ore", 1075, 0.40), ("fossilized_noodle", "equipment", 0, 0.30)],
     # P3
-    "ring_wraith":      [("nova_core", "ore", 1500, 0.12), ("star_magnet", "equipment", 0, 0.10)],
-    "solar_sentinel":   [("nova_core", "ore", 1500, 0.25), ("star_magnet", "equipment", 0, 0.15)],
+    "ring_wraith":      [("nova_core", "ore", 1500, 0.24), ("star_magnet", "equipment", 0, 0.20)],
+    "solar_sentinel":   [("nova_core", "ore", 1500, 0.50), ("star_magnet", "equipment", 0, 0.30)],
     # P4
-    "void_stalker":     [("nebula_shard", "ore", 2075, 0.12), ("lucky_charm", "equipment", 0, 0.10)],
-    "cosmic_dread":     [("nebula_shard", "ore", 2075, 0.25), ("lucky_charm", "equipment", 0, 0.15)],
+    "void_stalker":     [("nebula_shard", "ore", 2075, 0.24), ("lucky_charm", "equipment", 0, 0.20)],
+    "cosmic_dread":     [("nebula_shard", "ore", 2075, 0.50), ("lucky_charm", "equipment", 0, 0.30)],
     # P5
-    "dark_matter_beast": [("eternity_gem", "ore", 2875, 0.15), ("bucktail_jig", "equipment", 0, 0.10)],
-    "void_sovereign":    [("eternity_gem", "ore", 2875, 0.35), ("ray_gun", "equipment", 0, 0.10)],
+    "dark_matter_beast": [("eternity_gem", "ore", 2875, 0.30), ("bucktail_jig", "equipment", 0, 0.20)],
+    "void_sovereign":    [("eternity_gem", "ore", 2875, 0.70), ("ray_gun", "equipment", 0, 0.20)],
 }

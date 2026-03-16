@@ -299,17 +299,18 @@ class CoopCombatUseCases:
 
         if escaped:
             player.alive = False  # removed from fight
-            # Save HP/stamina — they fled, no penalty
+            player.stamina = 0  # Fleeing drains all stamina
+            # Save HP/stamina — no death penalty, but stamina drained
             self.repo.update_hp(player.user_id, player.hp)
-            self.repo.update_stamina(player.user_id, player.stamina)
+            self.repo.update_stamina(player.user_id, 0)
             return BattleTurn(
                 turn_number=state.round,
                 actor=player.username,
                 action="flee",
                 actor_hp=player.hp,
                 target_hp=state.mob_hp,
-                actor_stamina=player.stamina,
-                message=f"🏃 **{player.username}** fled the battle! ({pct}%)",
+                actor_stamina=0,
+                message=f"🏃 **{player.username}** fled the battle! ({pct}%) ⚡ Stamina drained!",
             )
         else:
             return BattleTurn(
@@ -469,6 +470,9 @@ class CoopCombatUseCases:
                 drop_table = list(SPACE_AMBUSH_DROPS.get(level, []))
             elif activity == "alien":
                 drop_table = list(ALIEN_AMBUSH_DROPS)
+            # Per-mob bonus drops (rare resources / effect items)
+            from cogs.combat.ambush_constants import AMBUSH_MOB_BONUS_DROPS
+            drop_table.extend(AMBUSH_MOB_BONUS_DROPS.get(state.mob_key, []))
         else:
             drop_table = list(DUNGEON_DROPS.get(state.dungeon_level, []))
             mob = MOBS.get(state.mob_key)
@@ -481,6 +485,15 @@ class CoopCombatUseCases:
                 res = get_resource(item_key)
                 display = res.display_name if res else item_key.replace("_", " ").title()
                 drops.append((item_key, category, sell_value, display))
+
+        # Guaranteed resource drops for ambush wins (1-2 common items from the level)
+        if state.ambush and state.ambush.activity != "alien":
+            from cogs.combat.use_case.combat import _pick_guaranteed_resources
+            guaranteed = _pick_guaranteed_resources(
+                state.ambush.activity, state.ambush.activity_level,
+            )
+            drops.extend(guaranteed)
+
         return drops
 
     def _grant_drops(self, user_id: int, drops: list[tuple[str, str, int, str]]) -> list[tuple[str, str]]:

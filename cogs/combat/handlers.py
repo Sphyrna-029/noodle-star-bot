@@ -488,16 +488,17 @@ class BattleView(discord.ui.View):
 
                 if escaped:
                     self.battle.finished = True
+                    self.battle.player_stamina = 0  # Fleeing drains all stamina
                     self._finish_battle()
 
-                    # Save current HP/stamina (no death penalty)
+                    # Save current HP/stamina (no death penalty, but stamina drained)
                     self.combat_uc.repo.update_hp(self.author_id, self.battle.player_hp)
-                    self.combat_uc.repo.update_stamina(self.author_id, self.battle.player_stamina)
+                    self.combat_uc.repo.update_stamina(self.author_id, 0)
 
                     embed = self._create_embed()
                     embed.add_field(
                         name="🏃 FLED",
-                        value=f"You escaped the fight! ({pct}% chance)\nNo penalties, but no rewards either.",
+                        value=f"You escaped the fight! ({pct}% chance)\n⚡ The effort drained all your stamina!",
                         inline=False,
                     )
                     await interaction.edit_original_response(embed=embed, view=self)

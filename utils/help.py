@@ -1239,7 +1239,9 @@ def _combat_embed() -> discord.Embed:
             "• Flee chance depends on your **stamina** and **defense vs enemy attack**\n"
             "• Full stamina = ~90% flee chance\n"
             "• 0 stamina = 50-75% (higher defense = higher floor)\n"
-            "• Failed flee = enemy gets a free attack on you!"
+            "• **Successful flee drains ALL your stamina!**\n"
+            "• Failed flee = enemy gets a free attack on you!\n"
+            "• Fighting is often better — ambush wins guarantee resource drops!"
         ),
         inline=False,
     )
