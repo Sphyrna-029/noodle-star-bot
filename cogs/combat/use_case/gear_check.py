@@ -1,6 +1,7 @@
 """Gear danger check — warns players when their equipment is weak for the area."""
 
 from cogs.combat.constants import BASE_HP, COMBAT_ITEMS
+from cogs.combat.use_case.health import HealthUseCases
 from database.repository import UserRepository
 
 
@@ -29,7 +30,9 @@ def gear_warning(user_id: int, mobs: list, repo: UserRepository = None) -> str |
             hp_bonus += item.hp_bonus
 
     max_hp = BASE_HP + hp_bonus
-    current_hp = stats.get("current_hp") or max_hp
+    # Apply regen so we use up-to-date HP, not stale DB value
+    health = HealthUseCases(repo).get_status(user_id)
+    current_hp = health.current_hp
 
     # Pick the toughest mob
     mob = max(mobs, key=lambda m: m.attack)
