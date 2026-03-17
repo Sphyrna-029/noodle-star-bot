@@ -32,7 +32,7 @@ _LOCATION_ACTIONS: dict[str, list[dict]] = {
         {"label": "Inventory", "emoji": "🎒", "command": "inventory"},
     ],
     "starfish_bay": [
-        {"label": "Cast", "emoji": "🎣", "command": "cast"},
+        {"label": "Fish", "emoji": "🎣", "command": "fish"},
         {"label": "Consume", "emoji": "🍽️", "command": "consume"},
         {"label": "Inventory", "emoji": "🎒", "command": "inventory"},
     ],
