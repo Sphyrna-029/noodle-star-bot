@@ -376,42 +376,42 @@ DEATH_PENALTIES: Final[dict[int, dict]] = {
 # ---------------------------------------------------------------------------
 
 CROP_HEAL_VALUES: Final[dict[str, int]] = {
-    "wheat": 5,
-    "carrot": 10,
-    "corn": 15,
-    "tomato": 20,
-    "melon": 30,
+    "wheat": 8,       # sell 40
+    "carrot": 18,     # sell 90
+    "corn": 35,       # sell 200
+    "tomato": 55,     # sell 440
+    "melon": 80,      # sell 960 — also restores stamina (see STAMINA_RECOVERY)
 }
 
 FISH_HEAL_VALUES: Final[dict[str, int]] = {
-    # Level 1 fish (keys match stored inventory format)
-    "small_fish": 8,
-    "crab": 10,
-    "shrimp": 12,
-    "salmon": 20,
-    "tuna": 25,
-    "lobster": 30,
-    "octopus": 35,
+    # Level 1 fish — sell value → HP (diminishing-returns curve)
+    "small_fish": 8,       # sell 30
+    "crab": 14,            # sell 50
+    "shrimp": 16,          # sell 60
+    "salmon": 34,          # sell 160
+    "tuna": 44,            # sell 260
+    "lobster": 52,         # sell 360
+    "octopus": 62,         # sell 520 — also restores stamina
     # Level 2 fish
-    "trout": 12,
-    "catfish": 15,
-    "bass": 18,
-    "river_salmon": 25,
-    "sturgeon": 30,
-    "snapping_turtle": 35,
-    "giant_catfish": 40,
+    "trout": 12,           # sell 45
+    "catfish": 18,         # sell 65
+    "bass": 22,            # sell 95
+    "river_salmon": 40,    # sell 225
+    "sturgeon": 55,        # sell 375
+    "snapping_turtle": 65, # sell 560 — also restores stamina
+    "giant_catfish": 75,   # sell 750 — also restores stamina
     # Level 3 fish
-    "clownfish": 10,
-    "parrotfish": 18,
-    "sea_urchin": 20,
-    "moray_eel": 22,
-    "reef_shark": 35,
+    "clownfish": 10,       # sell 35
+    "parrotfish": 20,      # sell 75
+    "sea_urchin": 26,      # sell 110
+    "moray_eel": 30,       # sell 145
+    "reef_shark": 48,      # sell 295
     # Level 4 fish
-    "anglerfish": 15,
-    "barracuda": 25,
-    "swordfish": 30,
+    "anglerfish": 14,      # sell 50
+    "barracuda": 24,       # sell 105
+    "swordfish": 32,       # sell 155
     # Level 5 fish
-    "abyssal_crab": 20,
+    "abyssal_crab": 20,    # sell 75
 }
 
 # ---------------------------------------------------------------------------
@@ -437,6 +437,11 @@ STAMINA_RECOVERY: Final[dict[str, int]] = {
     "minor_stamina_brew": 50,
     "stamina_tonic": 80,
     "void_energy_flask": 100,
+    # High-value dual-restore food (also restores HP — see FISH/CROP heal values)
+    "octopus": 15,
+    "snapping_turtle": 20,
+    "giant_catfish": 30,
+    "melon": 40,
 }
 
 # ---------------------------------------------------------------------------

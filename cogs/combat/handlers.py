@@ -232,8 +232,13 @@ class BattleView(discord.ui.View):
                 display = key.replace("_", " ").title()
                 res = get_resource(key)
                 emoji = res.emoji if res else "🍽️"
+                stam_bonus = STAMINA_RECOVERY.get(key)
+                label = f"{display} (+{heal} HP"
+                if stam_bonus:
+                    label += f" +{stam_bonus} stam"
+                label += f") x{count}"
                 hp_options.append(discord.SelectOption(
-                    label=f"{display} (+{heal} HP) x{count}",
+                    label=label[:100],
                     value=key,
                     emoji=emoji,
                     default=(key == self._consume_selected_item and self._consume_selected_type == "hp"),
@@ -307,6 +312,18 @@ class BattleView(discord.ui.View):
                     self.battle.player_hp = min(self.battle.player_max_hp, old_hp + heal)
                     actual = self.battle.player_hp - old_hp
 
+                    # Dual-restore: also apply stamina if applicable
+                    stam_bonus = STAMINA_RECOVERY.get(item_key, 0)
+                    actual_stam = 0
+                    if stam_bonus and self.battle.player_stamina < self.battle.player_max_stamina:
+                        old_stam = self.battle.player_stamina
+                        self.battle.player_stamina = min(self.battle.player_max_stamina, old_stam + stam_bonus)
+                        actual_stam = self.battle.player_stamina - old_stam
+
+                    msg = f"🍖 You consumed **{display}** and restored **{actual} HP**!"
+                    if actual_stam:
+                        msg = f"🍖 You consumed **{display}** and restored **{actual} HP** and **{actual_stam} stamina**!"
+
                     self.battle.turn += 1
                     turn = BattleTurn(
                         turn_number=self.battle.turn,
@@ -315,7 +332,7 @@ class BattleView(discord.ui.View):
                         actor_hp=self.battle.player_hp,
                         target_hp=self.battle.mob_hp,
                         actor_stamina=self.battle.player_stamina,
-                        message=f"🍖 You consumed **{display}** and restored **{actual} HP**!",
+                        message=msg,
                     )
                     self.battle.turns.append(turn)
 
@@ -904,8 +921,13 @@ class CoopBattleView(discord.ui.View):
                 display = key.replace("_", " ").title()
                 res = get_resource(key)
                 emoji = res.emoji if res else "🍽️"
+                stam_bonus = STAMINA_RECOVERY.get(key)
+                label = f"{display} (+{heal} HP"
+                if stam_bonus:
+                    label += f" +{stam_bonus} stam"
+                label += ")"
                 hp_opts.append(discord.SelectOption(
-                    label=f"{display} (+{heal} HP)",
+                    label=label[:100],
                     value=key,
                     emoji=emoji,
                 ))

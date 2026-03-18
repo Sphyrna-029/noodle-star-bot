@@ -156,10 +156,22 @@ class HealthUseCases:
         actual_heal = new_hp - old_hp
         self.repo.update_hp(user_id, new_hp, max_hp)
 
+        # Dual-restore: also apply stamina if item is in STAMINA_RECOVERY
+        stam_recovery = STAMINA_RECOVERY.get(item_key, 0)
+        actual_stam = 0
+        if stam_recovery and stats["current_stamina"] < stats["max_stamina"]:
+            old_stam = stats["current_stamina"]
+            new_stam = min(stats["max_stamina"], old_stam + stam_recovery)
+            actual_stam = new_stam - old_stam
+            self.repo.update_stamina(user_id, new_stam)
+
         display = item_key.replace("_", " ").title()
+        msg = f"You consumed **{display}** and restored **{actual_heal} HP**!"
+        if actual_stam:
+            msg = f"You consumed **{display}** and restored **{actual_heal} HP** and **{actual_stam} stamina**!"
         return EatResult(
             success=True,
-            message=f"You consumed **{display}** and restored **{actual_heal} HP**!",
+            message=msg,
             hp_restored=actual_heal,
             current_hp=new_hp,
             max_hp=max_hp,

@@ -248,8 +248,19 @@ class CoopCombatUseCases:
             if heal > 0 and self._health_uc._find_and_remove(player.user_id, item_key):
                 old_hp = player.hp
                 player.hp = min(player.max_hp, old_hp + heal)
-                actual = player.hp - old_hp
-                msg = f"🍖 **{player.username}** consumed **{display}** (+{actual} HP)!"
+                actual_hp = player.hp - old_hp
+                # Dual-restore: also apply stamina if applicable
+                from cogs.combat.constants import STAMINA_RECOVERY
+                stam_bonus = STAMINA_RECOVERY.get(item_key, 0)
+                actual_stam = 0
+                if stam_bonus and player.stamina < player.max_stamina:
+                    old_stam = player.stamina
+                    player.stamina = min(player.max_stamina, old_stam + stam_bonus)
+                    actual_stam = player.stamina - old_stam
+                if actual_stam:
+                    msg = f"🍖 **{player.username}** consumed **{display}** (+{actual_hp} HP, +{actual_stam} stamina)!"
+                else:
+                    msg = f"🍖 **{player.username}** consumed **{display}** (+{actual_hp} HP)!"
             else:
                 msg = f"❌ **{player.username}** failed to consume **{display}**!"
         else:
