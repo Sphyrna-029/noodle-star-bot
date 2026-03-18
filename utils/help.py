@@ -750,14 +750,13 @@ def _shop_embed() -> discord.Embed:
     embed.add_field(
         name="Trading With Other Players",
         value=(
-            "`!trade @Bob 100 stars for 2 potato` — Propose a 2-way trade\n"
-            "`!trade @Bob 50 stars` — Send a gift (they still have to accept)\n"
-            "`!trade accept` — Accept a trade someone sent you\n"
-            "`!trade cancel` — Cancel a trade\n\n"
+            "`!trade @Bob` — Open a trade with another player\n"
+            "`!trade cancel` — Cancel your current trade\n\n"
             "**How it works:**\n"
-            "1. You propose → they get 60 seconds to accept\n"
-            "2. After accepting → 10 second safety countdown\n"
-            "3. Either side can cancel before it goes through"
+            "1. Both players add up to **3 items** and/or **stars** using buttons\n"
+            "2. Both **Lock In** → moves to a review screen\n"
+            "3. Wait 5 seconds, then both **Confirm** to finalise\n"
+            "4. Either side can cancel at any time"
         ),
         inline=False,
     )

@@ -1,531 +1,264 @@
 """Trading use-cases for player-to-player trades."""
 
-import asyncio
-from typing import Callable, Dict, Optional
+from __future__ import annotations
 
-from cogs.shop.constants import SHOP_ITEMS, get_item_by_alias
+from typing import Optional
+
+from cogs.shop.constants import SHOP_ITEMS
+from cogs.trading.dto import TradeOffer, TradeResult
 from database.repository import UserRepository
 
-
-# =============================================================================
-# Constants
-# =============================================================================
-
-TRADE_PENDING_TIMEOUT = 60  # seconds before pending trade auto-cancels
-TRADE_COUNTDOWN_SECONDS = 10  # seconds after accept before execution
-
-
-# =============================================================================
-# Enums and Data Classes
-# =============================================================================
-
-
-from ..dto import TradeOffer, TradeResult, TradeSession, TradeState
-
-
-# =============================================================================
-# Parser
-# =============================================================================
-
-
-def parse_trade_offer(args: list[str]) -> tuple[Optional[TradeOffer], Optional[TradeOffer], str]:
-    """
-    Parse trade arguments into two TradeOffer objects.
-
-    Format: "50 stars 1 sword for 2 helmet"
-    The 'for' keyword splits proposer's offer from opponent's offer.
-    Omitting 'for' means a one-sided gift.
-
-    Returns:
-        (proposer_offer, opponent_offer, error_message)
-        On error, offers are None and error_message is set.
-    """
-    if not args:
-        return TradeOffer(), TradeOffer(), ""
-
-    # Split on 'for' keyword
-    for_index = None
-    for i, arg in enumerate(args):
-        if arg.lower() == "for":
-            for_index = i
-            break
-
-    if for_index is not None:
-        give_args = args[:for_index]
-        want_args = args[for_index + 1:]
-    else:
-        give_args = args
-        want_args = []
-
-    proposer_offer, err = _parse_half(give_args)
-    if err:
-        return None, None, f"Error in your offer: {err}"
-
-    if proposer_offer is None:
-        return None, None, "Invalid offer"
-
-    opponent_offer, err = _parse_half(want_args)
-    if err:
-        return None, None, f"Error in requested items: {err}"
-
-    if opponent_offer is None:
-        return None, None, "Invalid offer"
-
-    # Must offer or request something
-    if (proposer_offer.stars == 0 and not proposer_offer.items
-            and opponent_offer.stars == 0 and not opponent_offer.items):
-        return None, None, "You must offer or request something."
-
-    return proposer_offer, opponent_offer, ""
-
-
-def _parse_half(args: list[str]) -> tuple[Optional[TradeOffer], str]:
-    """
-    Parse one side of a trade offer.
-
-    Tokens are consumed as: [amount] <item_or_stars>
-    Amount defaults to 1 if the next token isn't a number.
-    """
-    offer = TradeOffer()
-    i = 0
-
-    while i < len(args):
-        token = args[i]
-
-        # Try to read a quantity
-        try:
-            amount = int(token)
-            if amount <= 0:
-                return None, f"Amount must be positive (got {amount})."
-            i += 1
-            if i >= len(args):
-                return None, f"Expected item name after {amount}."
-            token = args[i]
-        except ValueError:
-            amount = 1
-
-        # Check if it's "stars"
-        if token.lower() == "stars" or token.lower() == "star":
-            offer.stars += amount
-            i += 1
-            continue
-
-        # Try to resolve as item — might be multi-word alias
-        # Greedily try longest match first (2 words, then 1 word)
-        matched = False
-        for length in range(min(3, len(args) - i), 0, -1):
-            candidate = " ".join(args[i:i + length])
-            match = get_item_by_alias(candidate)
-            if match is not None:
-                key, _shop_item = match
-                offer.items[key] = offer.items.get(key, 0) + amount
-                i += length
-                matched = True
-                break
-
-        if not matched:
-            return None, f"Unknown item: '{token}'."
-
-    return offer, ""
-
-
-# =============================================================================
-# Trade Use-Cases
-# =============================================================================
+MAX_TRADE_ITEMS = 3
 
 
 class TradeUseCases:
-    """
-    Handles all trade-related business logic.
+    """Handles trade locking, inventory queries, validation, and execution."""
 
-    State machine:
-    1. Proposer creates trade (!trade @user ...) -> PENDING
-    2. Opponent accepts (!trade accept) -> COUNTDOWN (10s)
-    3. After 10s countdown, trade executes -> COMPLETED
-    Either party can cancel at any point -> CANCELLED
-    """
-
-    def __init__(self, repository: UserRepository = None):
+    def __init__(self, repository: UserRepository | None = None):
         self.repo = repository or UserRepository()
-        self._sessions: Dict[int, TradeSession] = {}  # keyed by proposer_id
-        self._user_in_trade: Dict[int, int] = {}  # user_id -> proposer_id
-        self._trade_callback: Optional[Callable] = None
+        self._user_in_trade: dict[int, int] = {}  # user_id -> proposer_id
 
-    def set_trade_callback(self, callback: Callable) -> None:
-        """Set the callback for trade notifications (countdown, complete, cancel)."""
-        self._trade_callback = callback
+    # ------------------------------------------------------------------
+    # Trade lock management
+    # ------------------------------------------------------------------
 
-    def get_session_for_user(self, user_id: int) -> Optional[TradeSession]:
-        """Get the active trade session a user is involved in."""
-        proposer_id = self._user_in_trade.get(user_id)
-        if proposer_id is None:
-            return None
-        return self._sessions.get(proposer_id)
-
-    # -------------------------------------------------------------------------
-    # Private Helpers
-    # -------------------------------------------------------------------------
-
-    def _cleanup_session(self, proposer_id: int) -> None:
-        """Clean up a trade session and its async task."""
-        session = self._sessions.pop(proposer_id, None)
-        if session:
-            self._user_in_trade.pop(session.proposer_id, None)
-            self._user_in_trade.pop(session.opponent_id, None)
-            if session.task and not session.task.done():
-                session.task.cancel()
-
-    def _validate_offer(self, user_id: int, username: str, offer: TradeOffer) -> Optional[str]:
-        """
-        Check that a user has enough stars and items to fulfill an offer.
-
-        Returns an error message if validation fails, None if OK.
-        """
-        user = self.repo.get_user(user_id, username)
-
-        if offer.stars > 0 and user.stars < offer.stars:
-            return f"Not enough stars (have {user.stars}, need {offer.stars})."
-
-        if offer.items:
-            inventory = self.repo.get_user_inventory(user_id)
-            for item_key, qty in offer.items.items():
-                item_info = SHOP_ITEMS.get(item_key)
-                if not item_info:
-                    return f"Unknown item: {item_key}."
-                db_col = item_info.db_column
-                have = inventory.get(db_col, 0)
-                if have < qty:
-                    return (
-                        f"Not enough {item_info.display_name} "
-                        f"(have {have}, need {qty})."
-                    )
-
+    def start_trade(self, proposer_id: int, opponent_id: int) -> Optional[str]:
+        """Register both users as in-trade. Returns error message or None."""
+        if proposer_id == opponent_id:
+            return "You can't trade with yourself."
+        if proposer_id in self._user_in_trade:
+            return "You're already in a trade. Cancel it first."
+        if opponent_id in self._user_in_trade:
+            return "That player is already in a trade."
+        self._user_in_trade[proposer_id] = proposer_id
+        self._user_in_trade[opponent_id] = proposer_id
         return None
 
-    def _format_offer(self, offer: TradeOffer) -> str:
-        """Format a TradeOffer as a human-readable string."""
-        parts = []
-        if offer.stars > 0:
-            parts.append(f"**{offer.stars}** stars")
-        for item_key, qty in offer.items.items():
-            item_info = SHOP_ITEMS.get(item_key, {})
-            emoji = getattr(item_info, "emoji", "")
-            name = getattr(item_info, "display_name", item_key)
-            parts.append(f"{emoji} **{qty}x** {name}")
-        return ", ".join(parts) if parts else "*nothing*"
+    def end_trade(self, proposer_id: int, opponent_id: int) -> None:
+        """Remove both users from the trade lock."""
+        self._user_in_trade.pop(proposer_id, None)
+        self._user_in_trade.pop(opponent_id, None)
 
-    def _transfer_offer(
-        self,
-        cursor,
-        from_id: int,
-        from_name: str,
-        to_id: int,
-        to_name: str,
-        offer: TradeOffer,
-    ) -> None:
-        """Transfer stars and items from one user to another."""
+    def is_in_trade(self, user_id: int) -> bool:
+        return user_id in self._user_in_trade
+
+    # ------------------------------------------------------------------
+    # Item queries
+    # ------------------------------------------------------------------
+
+    def get_tradeable_items(self, user_id: int) -> list[tuple[str, str, str, int]]:
+        """Return all tradeable items for a user.
+
+        Returns list of ``(item_key, display_name, emoji, count)``.
+        Equipment items always have count=1 (whole-item trade).
+        """
+        items: list[tuple[str, str, str, int]] = []
+        with self.repo.db.get_cursor() as cursor:
+            cursor.execute(
+                "SELECT item_key, uses FROM user_equipment "
+                "WHERE user_id = ? AND uses > 0",
+                (user_id,),
+            )
+            for row in cursor.fetchall():
+                key = row["item_key"]
+                name, emoji = self.item_display(key)
+                items.append((key, name, emoji, 1))
+
+            cursor.execute(
+                "SELECT item_key, COUNT(*) as cnt FROM user_inventory_items "
+                "WHERE user_id = ? GROUP BY item_key",
+                (user_id,),
+            )
+            for row in cursor.fetchall():
+                key = row["item_key"]
+                name, emoji = self.item_display(key)
+                items.append((key, name, emoji, row["cnt"]))
+
+        return sorted(items, key=lambda x: x[1])
+
+    @staticmethod
+    def item_display(item_key: str) -> tuple[str, str]:
+        """Return ``(display_name, emoji)`` for an item key."""
+        shop = SHOP_ITEMS.get(item_key)
+        if shop:
+            return shop.display_name, shop.emoji
+        return item_key.replace("_", " ").title(), "\U0001f4e6"
+
+    # ------------------------------------------------------------------
+    # Validation
+    # ------------------------------------------------------------------
+
+    def validate_offer(self, user_id: int, offer: TradeOffer) -> Optional[str]:
+        """Check that the user can fulfil their offer. Returns error or None."""
         if offer.stars > 0:
-            cursor.execute(
-                "SELECT stars FROM noodle_stars WHERE user_id = ?",
-                (from_id,),
-            )
-            row = cursor.fetchone()
-            from_stars = row["stars"] if row else 0
-            if from_stars < offer.stars:
-                raise ValueError(
-                    f"Not enough stars (have {from_stars}, need {offer.stars})."
-                )
-            cursor.execute(
-                "UPDATE noodle_stars SET stars = ?, username = ? WHERE user_id = ?",
-                (from_stars - offer.stars, from_name, from_id),
-            )
-            cursor.execute(
-                "UPDATE noodle_stars SET stars = stars + ?, username = ? WHERE user_id = ?",
-                (offer.stars, to_name, to_id),
-            )
+            user = self.repo.get_user(user_id, "")
+            if user.stars < offer.stars:
+                return f"Not enough stars (have {user.stars}, need {offer.stars})."
 
         if offer.items:
-            for item_key, qty in offer.items.items():
-                db_col = SHOP_ITEMS[item_key].db_column
-                # Use the repository shim to read/write (routes to correct table)
-                from_inv = self.repo.get_user_inventory(from_id)
-                have = from_inv.get(db_col, 0)
-                if have < qty:
-                    item_name = SHOP_ITEMS[item_key].display_name
-                    raise ValueError(
-                        f"Not enough {item_name} (have {have}, need {qty})."
+            needed: dict[str, int] = {}
+            for key in offer.items:
+                needed[key] = needed.get(key, 0) + 1
+            with self.repo.db.get_cursor() as cursor:
+                for key, qty in needed.items():
+                    # Equipment table
+                    cursor.execute(
+                        "SELECT uses FROM user_equipment "
+                        "WHERE user_id = ? AND item_key = ?",
+                        (user_id, key),
                     )
-                self.repo.update_user_inventory(from_id, db_col, have - qty)
-                to_inv = self.repo.get_user_inventory(to_id)
-                to_have = to_inv.get(db_col, 0)
-                self.repo.update_user_inventory(to_id, db_col, to_have + qty)
+                    equip = cursor.fetchone()
+                    if equip:
+                        if qty > 1:
+                            name, _ = self.item_display(key)
+                            return f"You only have one {name}."
+                        continue
+                    # Inventory items
+                    cursor.execute(
+                        "SELECT COUNT(*) as cnt FROM user_inventory_items "
+                        "WHERE user_id = ? AND item_key = ?",
+                        (user_id, key),
+                    )
+                    cnt = cursor.fetchone()["cnt"]
+                    if cnt < qty:
+                        name, _ = self.item_display(key)
+                        return f"Not enough {name} (have {cnt}, need {qty})."
+        return None
 
-    # -------------------------------------------------------------------------
-    # Public API
-    # -------------------------------------------------------------------------
+    # ------------------------------------------------------------------
+    # Execution
+    # ------------------------------------------------------------------
 
-    def propose_trade(
+    def execute_trade(
         self,
         proposer_id: int,
         proposer_name: str,
         opponent_id: int,
         opponent_name: str,
-        channel_id: int,
-        args: list[str],
+        proposer_offer: TradeOffer,
+        opponent_offer: TradeOffer,
     ) -> TradeResult:
-        """
-        Create a new trade proposal.
-
-        Validates:
-        - Not self-trade
-        - Neither party already in a trade
-        - Proposer has offered items/stars
-        """
-        # Self-trade check
-        if proposer_id == opponent_id:
-            return TradeResult(False, "You can't trade with yourself.")
-
-        # Already in trade check
-        if proposer_id in self._user_in_trade:
-            return TradeResult(
-                False,
-                "You're already in a trade. Use `!trade cancel` first.",
-            )
-        if opponent_id in self._user_in_trade:
-            return TradeResult(
-                False,
-                f"{opponent_name} is already in a trade.",
-            )
-
-        # Parse the offer
-        proposer_offer, opponent_offer, err = parse_trade_offer(args)
+        """Validate and execute the trade atomically."""
+        err = self.validate_offer(proposer_id, proposer_offer)
         if err:
-            return TradeResult(False, err)
+            return TradeResult(False, f"{proposer_name}: {err}")
+        err = self.validate_offer(opponent_id, opponent_offer)
+        if err:
+            return TradeResult(False, f"{opponent_name}: {err}")
 
-        if proposer_offer is None:
-            return TradeResult(False, "Invalid offer")
-
-        # Validate proposer has what they're offering
-        if proposer_offer.stars > 0 or proposer_offer.items:
-            validation_err = self._validate_offer(
-                proposer_id, proposer_name, proposer_offer
-            )
-            if validation_err:
-                return TradeResult(False, validation_err)
-
-        # Create session
-        session = TradeSession(
-            proposer_id=proposer_id,
-            proposer_name=proposer_name,
-            opponent_id=opponent_id,
-            opponent_name=opponent_name,
-            proposer_offer=proposer_offer,
-            opponent_offer=opponent_offer,
-            channel_id=channel_id,
-        )
-        self._sessions[proposer_id] = session
-        self._user_in_trade[proposer_id] = proposer_id
-        self._user_in_trade[opponent_id] = proposer_id
-
-        # Schedule auto-timeout
-        session.task = asyncio.create_task(
-            self._pending_timeout(proposer_id)
-        )
-
-        return TradeResult(True, "", session=session)
-
-    async def _pending_timeout(self, proposer_id: int) -> None:
-        """Auto-cancel a pending trade after timeout."""
-        try:
-            await asyncio.sleep(TRADE_PENDING_TIMEOUT)
-            session = self._sessions.get(proposer_id)
-            if session and session.state == TradeState.PENDING:
-                session.state = TradeState.CANCELLED
-                channel_id = session.channel_id
-                self._cleanup_session(proposer_id)
-                if self._trade_callback:
-                    try:
-                        await self._trade_callback(
-                            "timeout", proposer_id, channel_id, session
-                        )
-                    except Exception:
-                        pass
-        except asyncio.CancelledError:
-            pass
-
-    def accept_trade(self, user_id: int, username: str) -> TradeResult:
-        """
-        Accept a pending trade (must be the opponent).
-
-        Validates:
-        - User is in a trade as opponent
-        - Trade is in PENDING state
-        - Both parties still have their offered items/stars
-        """
-        session = self.get_session_for_user(user_id)
-        if session is None:
-            return TradeResult(False, "You don't have a pending trade.")
-
-        if user_id != session.opponent_id:
-            return TradeResult(
-                False,
-                "Only the other party can accept. You proposed this trade.",
-            )
-
-        if session.state != TradeState.PENDING:
-            return TradeResult(False, "This trade is no longer pending.")
-
-        # Re-validate both sides
-        if session.proposer_offer.stars > 0 or session.proposer_offer.items:
-            err = self._validate_offer(
-                session.proposer_id, session.proposer_name, session.proposer_offer
-            )
-            if err:
-                self._cleanup_session(session.proposer_id)
-                return TradeResult(
-                    False,
-                    f"Trade cancelled — {session.proposer_name} {err}",
-                )
-
-        if session.opponent_offer.stars > 0 or session.opponent_offer.items:
-            err = self._validate_offer(
-                session.opponent_id, session.opponent_name, session.opponent_offer
-            )
-            if err:
-                self._cleanup_session(session.proposer_id)
-                return TradeResult(False, f"Trade cancelled — {username} {err}")
-
-        # Cancel the pending timeout task
-        if session.task and not session.task.done():
-            session.task.cancel()
-
-        # Transition to COUNTDOWN
-        session.state = TradeState.COUNTDOWN
-        session.task = asyncio.create_task(
-            self._countdown_then_execute(session.proposer_id)
-        )
-
-        return TradeResult(True, "", session=session)
-
-    async def _countdown_then_execute(self, proposer_id: int) -> None:
-        """Wait for countdown, then execute the trade."""
-        try:
-            await asyncio.sleep(TRADE_COUNTDOWN_SECONDS)
-            session = self._sessions.get(proposer_id)
-            if session and session.state == TradeState.COUNTDOWN:
-                await self._execute_trade(session)
-        except asyncio.CancelledError:
-            pass
-
-    async def _execute_trade(self, session: TradeSession) -> None:
-        """Re-validate and execute the trade, transferring items and stars."""
-        # Final validation — triple check
-        if session.proposer_offer.stars > 0 or session.proposer_offer.items:
-            err = self._validate_offer(
-                session.proposer_id, session.proposer_name, session.proposer_offer
-            )
-            if err:
-                session.state = TradeState.CANCELLED
-                channel_id = session.channel_id
-                self._cleanup_session(session.proposer_id)
-                if self._trade_callback:
-                    try:
-                        await self._trade_callback(
-                            "failed", session.proposer_id, channel_id, session,
-                            f"Trade failed — {session.proposer_name} {err}",
-                        )
-                    except Exception:
-                        pass
-                return
-
-        if session.opponent_offer.stars > 0 or session.opponent_offer.items:
-            err = self._validate_offer(
-                session.opponent_id, session.opponent_name, session.opponent_offer
-            )
-            if err:
-                session.state = TradeState.CANCELLED
-                channel_id = session.channel_id
-                self._cleanup_session(session.proposer_id)
-                if self._trade_callback:
-                    try:
-                        await self._trade_callback(
-                            "failed", session.proposer_id, channel_id, session,
-                            f"Trade failed — {session.opponent_name} {err}",
-                        )
-                    except Exception:
-                        pass
-                return
-
-        # Execute transfers atomically
         try:
             with self.repo.db.get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute(
-                    "INSERT INTO noodle_stars (user_id, username, stars, bank) "
-                    "VALUES (?, ?, 0, 0) ON CONFLICT(user_id) DO NOTHING",
-                    (session.proposer_id, session.proposer_name),
-                )
-                cursor.execute(
-                    "INSERT INTO noodle_stars (user_id, username, stars, bank) "
-                    "VALUES (?, ?, 0, 0) ON CONFLICT(user_id) DO NOTHING",
-                    (session.opponent_id, session.opponent_name),
-                )
-                self.repo._ensure_inventory_row(cursor, session.proposer_id)
-                self.repo._ensure_inventory_row(cursor, session.opponent_id)
-
-                self._transfer_offer(
-                    cursor,
-                    session.proposer_id, session.proposer_name,
-                    session.opponent_id, session.opponent_name,
-                    session.proposer_offer,
-                )
-                self._transfer_offer(
-                    cursor,
-                    session.opponent_id, session.opponent_name,
-                    session.proposer_id, session.proposer_name,
-                    session.opponent_offer,
-                )
-        except Exception as exc:
-            session.state = TradeState.CANCELLED
-            channel_id = session.channel_id
-            self._cleanup_session(session.proposer_id)
-            if self._trade_callback:
-                try:
-                    await self._trade_callback(
-                        "failed", session.proposer_id, channel_id, session,
-                        f"Trade failed — {exc}",
+                for uid, uname in [
+                    (proposer_id, proposer_name),
+                    (opponent_id, opponent_name),
+                ]:
+                    cursor.execute(
+                        "INSERT INTO noodle_stars (user_id, username, stars, bank) "
+                        "VALUES (?, ?, 0, 0) ON CONFLICT(user_id) DO NOTHING",
+                        (uid, uname),
                     )
-                except Exception:
-                    pass
-            return
+                    self.repo._ensure_inventory_row(cursor, uid)
 
-        session.state = TradeState.COMPLETED
-        channel_id = session.channel_id
-        self._cleanup_session(session.proposer_id)
-
-        if self._trade_callback:
-            try:
-                await self._trade_callback(
-                    "completed", session.proposer_id, channel_id, session
+                self._transfer_stars(
+                    cursor, proposer_id, proposer_name,
+                    opponent_id, opponent_name, proposer_offer.stars,
                 )
-            except Exception:
-                pass
+                self._transfer_items(cursor, proposer_id, opponent_id, proposer_offer.items)
 
-    def cancel_trade(self, user_id: int) -> TradeResult:
-        """
-        Cancel a trade. Either party can cancel at any point.
+                self._transfer_stars(
+                    cursor, opponent_id, opponent_name,
+                    proposer_id, proposer_name, opponent_offer.stars,
+                )
+                self._transfer_items(cursor, opponent_id, proposer_id, opponent_offer.items)
 
-        Returns TradeResult with the cancelled session.
-        """
-        session = self.get_session_for_user(user_id)
-        if session is None:
-            return TradeResult(False, "You don't have an active trade.")
+        except Exception as exc:
+            return TradeResult(False, f"Trade failed — {exc}")
 
-        session.state = TradeState.CANCELLED
-        proposer_id = session.proposer_id
-        self._cleanup_session(proposer_id)
-        return TradeResult(True, "Trade cancelled.", session=session)
+        return TradeResult(True, "Trade completed successfully!")
+
+    # ------------------------------------------------------------------
+    # Transfer helpers (called inside a transaction)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _transfer_stars(cursor, from_id, from_name, to_id, to_name, amount):
+        if amount <= 0:
+            return
+        cursor.execute(
+            "SELECT stars FROM noodle_stars WHERE user_id = ?", (from_id,),
+        )
+        row = cursor.fetchone()
+        from_stars = row["stars"] if row else 0
+        if from_stars < amount:
+            raise ValueError(f"Insufficient stars ({from_stars} < {amount})")
+        cursor.execute(
+            "UPDATE noodle_stars SET stars = ?, username = ? WHERE user_id = ?",
+            (from_stars - amount, from_name, from_id),
+        )
+        cursor.execute(
+            "UPDATE noodle_stars SET stars = stars + ?, username = ? WHERE user_id = ?",
+            (amount, to_name, to_id),
+        )
+
+    @staticmethod
+    def _transfer_items(cursor, from_id, to_id, items: list[str]):
+        for item_key in items:
+            # Try equipment table first
+            cursor.execute(
+                "SELECT uses FROM user_equipment "
+                "WHERE user_id = ? AND item_key = ?",
+                (from_id, item_key),
+            )
+            equip_row = cursor.fetchone()
+            if equip_row:
+                uses = equip_row["uses"]
+                cursor.execute(
+                    "DELETE FROM user_equipment "
+                    "WHERE user_id = ? AND item_key = ?",
+                    (from_id, item_key),
+                )
+                cursor.execute(
+                    "INSERT INTO user_equipment (user_id, item_key, uses) "
+                    "VALUES (?, ?, ?) "
+                    "ON CONFLICT(user_id, item_key) DO UPDATE SET uses = uses + ?",
+                    (to_id, item_key, uses, uses),
+                )
+                continue
+
+            # Inventory items — move one row
+            cursor.execute(
+                "SELECT id FROM user_inventory_items "
+                "WHERE user_id = ? AND item_key = ? LIMIT 1",
+                (from_id, item_key),
+            )
+            inv_row = cursor.fetchone()
+            if inv_row:
+                cursor.execute(
+                    "UPDATE user_inventory_items SET user_id = ? WHERE id = ?",
+                    (to_id, inv_row["id"]),
+                )
+                continue
+
+            raise ValueError(f"Item not found: {item_key}")
+
+    # ------------------------------------------------------------------
+    # Formatting
+    # ------------------------------------------------------------------
 
     def format_offer(self, offer: TradeOffer) -> str:
-        """Public access to offer formatting."""
-        return self._format_offer(offer)
+        """Format a TradeOffer as human-readable lines."""
+        parts: list[str] = []
+        if offer.stars > 0:
+            parts.append(f"\u2b50 **{offer.stars}** stars")
+        # Group duplicate items
+        counts: dict[str, int] = {}
+        for key in offer.items:
+            counts[key] = counts.get(key, 0) + 1
+        for key, qty in counts.items():
+            name, emoji = self.item_display(key)
+            if qty > 1:
+                parts.append(f"{emoji} **{qty}\u00d7** {name}")
+            else:
+                parts.append(f"{emoji} {name}")
+        return "\n".join(parts) if parts else "*nothing*"

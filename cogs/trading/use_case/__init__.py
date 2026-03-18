@@ -1,3 +1,3 @@
-from .trading import TRADE_COUNTDOWN_SECONDS, TradeUseCases, parse_trade_offer
+from .trading import MAX_TRADE_ITEMS, TradeUseCases
 
-__all__ = ["TRADE_COUNTDOWN_SECONDS", "TradeUseCases", "parse_trade_offer"]
+__all__ = ["MAX_TRADE_ITEMS", "TradeUseCases"]
