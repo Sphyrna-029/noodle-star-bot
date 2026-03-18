@@ -53,10 +53,7 @@ class _ItemSelectView(discord.ui.View):
         items = self.trade_view._get_items(self.user_id)
         items.append(item_key)
 
-        name, _emoji = self.trade_view.cog.trading.item_display(item_key)
-        await interaction.response.edit_message(
-            content=f"\u2705 Added **{name}** to your offer.", view=None,
-        )
+        await interaction.response.edit_message(content="\u200b", view=None)
         await self.trade_view._refresh()
 
 
@@ -87,15 +84,8 @@ class _RemoveSelectView(discord.ui.View):
         idx = int(self._select.values[0])
         items = self.trade_view._get_items(self.user_id)
         if 0 <= idx < len(items):
-            removed_key = items.pop(idx)
-            name, _ = self.trade_view.cog.trading.item_display(removed_key)
-            await interaction.response.edit_message(
-                content=f"\u2705 Removed **{name}**.", view=None,
-            )
-        else:
-            await interaction.response.edit_message(
-                content="Item not found.", view=None,
-            )
+            items.pop(idx)
+        await interaction.response.edit_message(content="\u200b", view=None)
         await self.trade_view._refresh()
 
 
@@ -137,9 +127,7 @@ class _StarsModal(discord.ui.Modal, title="Set Stars"):
             return
 
         self.trade_view._set_stars(self.user_id, amount)
-        await interaction.response.send_message(
-            f"\u2b50 Offering **{amount}** stars.", ephemeral=True,
-        )
+        await interaction.response.defer(ephemeral=True)
         await self.trade_view._refresh()
 
 
