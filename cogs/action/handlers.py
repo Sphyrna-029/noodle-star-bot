@@ -225,7 +225,7 @@ def _build_crystal_cave_items() -> list:
 
 def _build_starfish_bay_items(bait_inventory: dict, equipped_bait: str | None) -> list:
     items = [
-        _ActionButton(label="Pull", emoji="\U0001f3a3", command_str="pull", row=0),
+        _ActionButton(label="Fish", emoji="\U0001f3a3", command_str="fish", row=0),
         _ActionButton(label="Sell All", emoji="\U0001f4b5", command_str="sell all", row=0),
         _ActionButton(label="Consume", emoji="\U0001f37d\ufe0f", command_str="consume", row=0),
         _ActionButton(label="Inventory", emoji="\U0001f392", command_str="inventory", row=0),
