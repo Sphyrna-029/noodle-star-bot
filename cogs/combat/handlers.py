@@ -976,11 +976,14 @@ class CoopBattleView(discord.ui.View):
         # Mob stats
         mob_hp_pct = s.mob_hp / s.mob_max_hp if s.mob_max_hp else 0
         mob_hp_bar = _progress_bar(mob_hp_pct)
+        mob_stam_pct = s.mob_stamina / s.mob_max_stamina if s.mob_max_stamina else 0
+        mob_stam_bar = _progress_bar(mob_stam_pct)
 
         embed.add_field(
             name=f"{s.mob_emoji} {s.mob_name}",
             value=(
                 f"❤️ HP: {s.mob_hp}/{s.mob_max_hp} {mob_hp_bar}\n"
+                f"⚡ Stamina: {s.mob_stamina}/{s.mob_max_stamina} {mob_stam_bar}\n"
                 f"⚔️ ATK: {s.mob_attack}  🛡️ DEF: {s.mob_defense}"
             ),
             inline=False,
