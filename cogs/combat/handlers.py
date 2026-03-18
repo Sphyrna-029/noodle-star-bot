@@ -866,12 +866,64 @@ class CoopBattleView(discord.ui.View):
         return True
 
     def _rebuild_view(self):
-        """Rebuild view components."""
+        """Rebuild view components including consume dropdowns."""
         self.clear_items()
         self.add_item(self.attack_button)
         self.add_item(self.defend_button)
         self.add_item(self.flee_button)
+
+        if not self.coop_state.finished:
+            self._add_consume_selects()
+
         self.add_item(self.consume_button)
+
+    def _add_consume_selects(self):
+        """Add HP and stamina item dropdowns from all alive players' inventories."""
+        hp_items: dict[str, int] = {}
+        stam_items: dict[str, int] = {}
+
+        for player in self.coop_state.players:
+            if not player.alive:
+                continue
+            items = self.combat_uc.repo.get_inventory_items(player.user_id)
+            for item in items:
+                key = item["item_key"]
+                if key not in hp_items:
+                    heal = self._health_uc.get_hp_value(key)
+                    if heal:
+                        hp_items[key] = heal
+                if key not in stam_items:
+                    recovery = STAMINA_RECOVERY.get(key)
+                    if recovery:
+                        stam_items[key] = recovery
+
+        if hp_items:
+            hp_opts = []
+            for key in sorted(hp_items):
+                heal = hp_items[key]
+                display = key.replace("_", " ").title()
+                res = get_resource(key)
+                emoji = res.emoji if res else "🍽️"
+                hp_opts.append(discord.SelectOption(
+                    label=f"{display} (+{heal} HP)",
+                    value=key,
+                    emoji=emoji,
+                ))
+            self.add_item(_CoopHPSelect(hp_opts[:25]))
+
+        if stam_items:
+            stam_opts = []
+            for key in sorted(stam_items):
+                recovery = stam_items[key]
+                display = key.replace("_", " ").title()
+                res = get_resource(key)
+                emoji = res.emoji if res else "⚡"
+                stam_opts.append(discord.SelectOption(
+                    label=f"{display} (+{recovery} stam)",
+                    value=key,
+                    emoji=emoji,
+                ))
+            self.add_item(_CoopStaminaSelect(stam_opts[:25]))
 
     def create_embed(self) -> discord.Embed:
         s = self.coop_state
@@ -1007,6 +1059,7 @@ class CoopBattleView(discord.ui.View):
             else:
                 # Round resolved but fight continues — reset timer
                 self.timeout = COOP_ROUND_TIMEOUT
+                self._rebuild_view()
                 embed = self.create_embed()
                 await self._update_message(embed)
 
@@ -1074,38 +1127,15 @@ class CoopBattleView(discord.ui.View):
         pending = self._pending_consume.get(uid)
 
         if not pending:
-            # Show item selection via ephemeral dropdowns
-            items = self.combat_uc.repo.get_inventory_items(uid)
-            item_counts: dict[str, int] = {}
-            for item in items:
-                key = item["item_key"]
-                item_counts[key] = item_counts.get(key, 0) + 1
-
-            hp_lines = []
-            stam_lines = []
-            for key, count in sorted(item_counts.items()):
-                heal = self._health_uc.get_hp_value(key)
-                if heal and count > 0:
-                    display = key.replace("_", " ").title()
-                    hp_lines.append(f"🍖 **{display}** (+{heal} HP) x{count} — type: `{key}`")
-                recovery = STAMINA_RECOVERY.get(key)
-                if recovery and count > 0:
-                    display = key.replace("_", " ").title()
-                    stam_lines.append(f"⚡ **{display}** (+{recovery} stam) x{count} — type: `{key}`")
-
-            if not hp_lines and not stam_lines:
-                await interaction.response.send_message("You have no consumable items!", ephemeral=True)
-                return
-
-            text = "**Select an item from the dropdowns above**, then click Consume again.\n\n"
-            if hp_lines:
-                text += "**HP Items:**\n" + "\n".join(hp_lines[:10]) + "\n\n"
-            if stam_lines:
-                text += "**Stamina Items:**\n" + "\n".join(stam_lines[:10])
-
-            # Build ephemeral view with selects
-            ephemeral_view = _CoopConsumeSelectView(self, uid)
-            await interaction.response.send_message(text, view=ephemeral_view, ephemeral=True)
+            # Check if dropdowns are even available
+            has_selects = any(isinstance(c, discord.ui.Select) for c in self.children)
+            if not has_selects:
+                await interaction.response.send_message("No one has any consumable items!", ephemeral=True)
+            else:
+                await interaction.response.send_message(
+                    "Select an item from the **HP** or **Stamina** dropdown first, then click Consume!",
+                    ephemeral=True,
+                )
             return
 
         # Consume the pending item
@@ -1169,62 +1199,13 @@ class CoopBattleView(discord.ui.View):
                     await self._update_message(embed)
             else:
                 # Fight continues, but timed out — just show the result
+                self._rebuild_view()
                 embed = self.create_embed()
                 embed.set_footer(text="⏰ Round auto-resolved (idle players defended)")
                 await self._update_message(embed)
                 # Restart the timeout for next round
                 self.timeout = COOP_ROUND_TIMEOUT
 
-
-class _CoopConsumeSelectView(discord.ui.View):
-    """Ephemeral view for selecting a consume item in coop."""
-
-    def __init__(self, parent_view: CoopBattleView, user_id: int):
-        super().__init__(timeout=30)
-        self.parent_view = parent_view
-        self.user_id = user_id
-        self._build_selects()
-
-    def _build_selects(self):
-        items = self.parent_view.combat_uc.repo.get_inventory_items(self.user_id)
-        item_counts: dict[str, int] = {}
-        for item in items:
-            key = item["item_key"]
-            item_counts[key] = item_counts.get(key, 0) + 1
-
-        hp_opts = []
-        stam_opts = []
-        health_uc = self.parent_view._health_uc
-
-        for key, count in sorted(item_counts.items()):
-            heal = health_uc.get_hp_value(key)
-            if heal and count > 0:
-                display = key.replace("_", " ").title()
-                res = get_resource(key)
-                emoji = res.emoji if res else "🍽️"
-                hp_opts.append(discord.SelectOption(
-                    label=f"{display} (+{heal} HP) x{count}",
-                    value=key,
-                    emoji=emoji,
-                ))
-            recovery = STAMINA_RECOVERY.get(key)
-            if recovery and count > 0:
-                display = key.replace("_", " ").title()
-                res = get_resource(key)
-                emoji = res.emoji if res else "⚡"
-                stam_opts.append(discord.SelectOption(
-                    label=f"{display} (+{recovery} stam) x{count}",
-                    value=key,
-                    emoji=emoji,
-                ))
-
-        if hp_opts:
-            self.add_item(_CoopHPSelect(hp_opts[:25]))
-        if stam_opts:
-            self.add_item(_CoopStaminaSelect(stam_opts[:25]))
-
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        return interaction.user.id == self.user_id
 
 
 # ---------------------------------------------------------------------------
