@@ -17,77 +17,56 @@ TRADE_VIEW_TIMEOUT = 120  # seconds of inactivity before auto-cancel
 
 
 # ---------------------------------------------------------------------------
-# Ephemeral helper views / modals
+# Inline item select (sits on the main trade message, one per user)
 # ---------------------------------------------------------------------------
 
-class _ItemSelectView(discord.ui.View):
-    """Ephemeral dropdown for adding an item to a trade."""
+class _TradeItemSelect(discord.ui.Select):
+    """Dropdown for one user to add an item to their offer."""
 
     def __init__(
         self,
         trade_view: TradeView,
-        user_id: int,
+        owner_id: int,
+        owner_name: str,
         available: list[tuple[str, str, str, int]],
+        row: int,
     ):
-        super().__init__(timeout=30)
         self.trade_view = trade_view
-        self.user_id = user_id
+        self.owner_id = owner_id
 
         options = []
         for key, name, emoji, count in available[:25]:
             label = f"{name} (\u00d7{count})" if count > 1 else name
-            # Emoji may be multi-char (custom); use only standard single-char ones
             opt = discord.SelectOption(label=label, value=key)
             if len(emoji) == 1 or emoji.startswith("<"):
                 opt.emoji = emoji
             options.append(opt)
 
-        self._select = discord.ui.Select(
-            placeholder="Choose an item\u2026", options=options,
+        super().__init__(
+            placeholder=f"\U0001f4e6 {owner_name} \u2014 add item",
+            options=options,
+            row=row,
         )
-        self._select.callback = self._on_select
-        self.add_item(self._select)
 
-    async def _on_select(self, interaction: discord.Interaction):
-        item_key = self._select.values[0]
-        items = self.trade_view._get_items(self.user_id)
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.owner_id:
+            await interaction.response.send_message(
+                "That's not your dropdown!", ephemeral=True,
+            )
+            return
+
+        item_key = self.values[0]
+        items = self.trade_view._get_items(self.owner_id)
         items.append(item_key)
 
-        await interaction.response.edit_message(content="\u200b", view=None)
-        await self.trade_view._refresh()
+        self.trade_view._rebuild()
+        embed = self.trade_view.build_embed()
+        await interaction.response.edit_message(embed=embed, view=self.trade_view)
 
 
-class _RemoveSelectView(discord.ui.View):
-    """Ephemeral dropdown for removing an item from a trade."""
-
-    def __init__(self, trade_view: TradeView, user_id: int):
-        super().__init__(timeout=30)
-        self.trade_view = trade_view
-        self.user_id = user_id
-
-        my_items = trade_view._get_items(user_id)
-        options = []
-        for i, key in enumerate(my_items):
-            name, emoji = trade_view.cog.trading.item_display(key)
-            opt = discord.SelectOption(label=name, value=str(i))
-            if len(emoji) == 1 or emoji.startswith("<"):
-                opt.emoji = emoji
-            options.append(opt)
-
-        self._select = discord.ui.Select(
-            placeholder="Remove which item?", options=options,
-        )
-        self._select.callback = self._on_select
-        self.add_item(self._select)
-
-    async def _on_select(self, interaction: discord.Interaction):
-        idx = int(self._select.values[0])
-        items = self.trade_view._get_items(self.user_id)
-        if 0 <= idx < len(items):
-            items.pop(idx)
-        await interaction.response.edit_message(content="\u200b", view=None)
-        await self.trade_view._refresh()
-
+# ---------------------------------------------------------------------------
+# Stars modal (only popup — needs text input)
+# ---------------------------------------------------------------------------
 
 class _StarsModal(discord.ui.Modal, title="Set Stars"):
     stars_input = discord.ui.TextInput(
@@ -161,7 +140,7 @@ class TradeView(discord.ui.View):
         self.proposer_locked: bool = False
         self.opponent_locked: bool = False
 
-        self.phase: str = "editing"  # "editing" | "review"
+        self.phase: str = "pending"  # "pending" | "editing" | "review"
         self.review_started_at: datetime | None = None
         self.proposer_confirmed: bool = False
         self.opponent_confirmed: bool = False
@@ -201,6 +180,16 @@ class TradeView(discord.ui.View):
         else:
             self.opponent_locked = locked
 
+    def _get_available_items(self, user_id: int):
+        """Items the user can still add (inventory minus already offered)."""
+        all_items = self.cog.trading.get_tradeable_items(user_id)
+        in_trade = Counter(self._get_items(user_id))
+        return [
+            (key, name, emoji, count - in_trade.get(key, 0))
+            for key, name, emoji, count in all_items
+            if count - in_trade.get(key, 0) > 0
+        ]
+
     async def _refresh(self):
         """Rebuild components and edit the main message."""
         self._rebuild()
@@ -217,38 +206,71 @@ class TradeView(discord.ui.View):
     def _rebuild(self):
         self.clear_items()
 
-        if self.phase == "editing":
-            add_btn = discord.ui.Button(
-                label="Add Item", emoji="\U0001f4e6",
-                style=discord.ButtonStyle.primary, row=0,
+        if self.phase == "pending":
+            accept_btn = discord.ui.Button(
+                label="Accept Trade", emoji="\u2705",
+                style=discord.ButtonStyle.success, row=0,
             )
-            add_btn.callback = self._add_item_cb
-            self.add_item(add_btn)
+            accept_btn.callback = self._accept_cb
+            self.add_item(accept_btn)
 
+            decline_btn = discord.ui.Button(
+                label="Decline", emoji="\u274c",
+                style=discord.ButtonStyle.danger, row=0,
+            )
+            decline_btn.callback = self._decline_cb
+            self.add_item(decline_btn)
+
+        elif self.phase == "editing":
+            current_row = 0
+
+            # Proposer's inline item select
+            if (not self.proposer_locked
+                    and len(self.proposer_items) < MAX_TRADE_ITEMS):
+                available = self._get_available_items(self.proposer_id)
+                if available:
+                    self.add_item(_TradeItemSelect(
+                        self, self.proposer_id, self.proposer_name,
+                        available, row=current_row,
+                    ))
+                    current_row += 1
+
+            # Opponent's inline item select
+            if (not self.opponent_locked
+                    and len(self.opponent_items) < MAX_TRADE_ITEMS):
+                available = self._get_available_items(self.opponent_id)
+                if available:
+                    self.add_item(_TradeItemSelect(
+                        self, self.opponent_id, self.opponent_name,
+                        available, row=current_row,
+                    ))
+                    current_row += 1
+
+            # Buttons row
             stars_btn = discord.ui.Button(
                 label="Set Stars", emoji="\u2b50",
-                style=discord.ButtonStyle.primary, row=0,
+                style=discord.ButtonStyle.primary, row=current_row,
             )
             stars_btn.callback = self._set_stars_cb
             self.add_item(stars_btn)
 
             remove_btn = discord.ui.Button(
-                label="Remove Item", emoji="\U0001f5d1\ufe0f",
-                style=discord.ButtonStyle.secondary, row=0,
+                label="Remove Last", emoji="\U0001f5d1\ufe0f",
+                style=discord.ButtonStyle.secondary, row=current_row,
             )
-            remove_btn.callback = self._remove_item_cb
+            remove_btn.callback = self._remove_last_cb
             self.add_item(remove_btn)
 
             lock_btn = discord.ui.Button(
                 label="Lock In", emoji="\U0001f512",
-                style=discord.ButtonStyle.success, row=1,
+                style=discord.ButtonStyle.success, row=current_row,
             )
             lock_btn.callback = self._lock_cb
             self.add_item(lock_btn)
 
             cancel_btn = discord.ui.Button(
-                label="Cancel Trade", emoji="\u274c",
-                style=discord.ButtonStyle.danger, row=1,
+                label="Cancel", emoji="\u274c",
+                style=discord.ButtonStyle.danger, row=current_row,
             )
             cancel_btn.callback = self._cancel_cb
             self.add_item(cancel_btn)
@@ -269,7 +291,7 @@ class TradeView(discord.ui.View):
             self.add_item(back_btn)
 
             cancel_btn = discord.ui.Button(
-                label="Cancel Trade", emoji="\u274c",
+                label="Cancel", emoji="\u274c",
                 style=discord.ButtonStyle.danger, row=0,
             )
             cancel_btn.callback = self._cancel_cb
@@ -292,6 +314,17 @@ class TradeView(discord.ui.View):
         return "\n".join(lines)
 
     def build_embed(self) -> discord.Embed:
+        if self.phase == "pending":
+            return discord.Embed(
+                title="\U0001f91d Trade Request",
+                description=(
+                    f"**{self.proposer_name}** wants to trade with "
+                    f"**{self.opponent_name}**!\n\n"
+                    f"{self.opponent_name}, click **Accept Trade** to begin."
+                ),
+                color=discord.Color.blue(),
+            )
+
         if self.phase == "editing":
             p_lock = "\u2705 Locked" if self.proposer_locked else "\U0001f513 Editing"
             o_lock = "\u2705 Locked" if self.opponent_locked else "\U0001f513 Editing"
@@ -303,12 +336,19 @@ class TradeView(discord.ui.View):
                 f"{self.proposer_name}: {p_lock} | {self.opponent_name}: {o_lock}"
             )
             embed = discord.Embed(
-                title=f"\U0001f91d Trade \u2014 {self.proposer_name} \u2194 {self.opponent_name}",
+                title=(
+                    f"\U0001f91d Trade \u2014 "
+                    f"{self.proposer_name} \u2194 {self.opponent_name}"
+                ),
                 description=desc,
                 color=discord.Color.blue(),
             )
             embed.set_footer(
-                text="Both players must Lock In to proceed. Click Lock In again to unlock.",
+                text=(
+                    "Use your dropdown to add items. "
+                    "Both players must Lock In to proceed. "
+                    "Click Lock In again to unlock."
+                ),
             )
             return embed
 
@@ -321,7 +361,8 @@ class TradeView(discord.ui.View):
                 f"**\U0001f464 {self.opponent_name} gives:**\n"
                 f"{self._format_side(self.opponent_stars, self.opponent_items)}\n\n"
                 "\u26a0\ufe0f **Review carefully before confirming!**\n"
-                f"You must wait **{REVIEW_WAIT_SECONDS} seconds** before confirming.\n\n"
+                f"You must wait **{REVIEW_WAIT_SECONDS} seconds** "
+                "before confirming.\n\n"
                 f"{self.proposer_name}: {p_st} | {self.opponent_name}: {o_st}"
             )
             return discord.Embed(
@@ -332,63 +373,68 @@ class TradeView(discord.ui.View):
 
         return discord.Embed(title="Trade", color=discord.Color.dark_gray())
 
-    # ---- callbacks ----
+    # ---- callbacks: pending phase ----
 
-    async def _add_item_cb(self, interaction: discord.Interaction):
+    async def _accept_cb(self, interaction: discord.Interaction):
+        uid = interaction.user.id
+        if uid == self.proposer_id:
+            await interaction.response.send_message(
+                "Waiting for the other player to accept!", ephemeral=True,
+            )
+            return
+        if uid != self.opponent_id:
+            await interaction.response.send_message(
+                "This trade isn't for you!", ephemeral=True,
+            )
+            return
+
+        self.phase = "editing"
+        self._rebuild()
+        embed = self.build_embed()
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    async def _decline_cb(self, interaction: discord.Interaction):
         uid = interaction.user.id
         if not self._is_participant(uid):
-            await interaction.response.send_message("Not your trade!", ephemeral=True)
-            return
-        if self._is_locked(uid):
             await interaction.response.send_message(
-                "Unlock first to edit your offer!", ephemeral=True,
+                "This trade isn't for you!", ephemeral=True,
             )
             return
 
-        my_items = self._get_items(uid)
-        if len(my_items) >= MAX_TRADE_ITEMS:
-            await interaction.response.send_message(
-                f"Max {MAX_TRADE_ITEMS} items! Remove one first.", ephemeral=True,
-            )
-            return
-
-        all_items = self.cog.trading.get_tradeable_items(uid)
-        in_trade = Counter(my_items)
-        available = [
-            (key, name, emoji, count - in_trade.get(key, 0))
-            for key, name, emoji, count in all_items
-            if count - in_trade.get(key, 0) > 0
-        ]
-
-        if not available:
-            await interaction.response.send_message(
-                "You have no items to trade!", ephemeral=True,
-            )
-            return
-
-        view = _ItemSelectView(self, uid, available)
-        await interaction.response.send_message(
-            "Select an item to add:", view=view, ephemeral=True,
+        self._do_cleanup()
+        embed = discord.Embed(
+            title="\u274c Trade Declined",
+            description=(
+                f"**{interaction.user.display_name}** declined the trade."
+            ),
+            color=discord.Color.red(),
         )
+        self.clear_items()
+        await interaction.response.edit_message(embed=embed, view=self)
+        self.stop()
+
+    # ---- callbacks: editing phase ----
 
     async def _set_stars_cb(self, interaction: discord.Interaction):
         uid = interaction.user.id
         if not self._is_participant(uid):
-            await interaction.response.send_message("Not your trade!", ephemeral=True)
+            await interaction.response.send_message(
+                "Not your trade!", ephemeral=True,
+            )
             return
         if self._is_locked(uid):
             await interaction.response.send_message(
                 "Unlock first to edit your offer!", ephemeral=True,
             )
             return
+        await interaction.response.send_modal(_StarsModal(self, uid))
 
-        modal = _StarsModal(self, uid)
-        await interaction.response.send_modal(modal)
-
-    async def _remove_item_cb(self, interaction: discord.Interaction):
+    async def _remove_last_cb(self, interaction: discord.Interaction):
         uid = interaction.user.id
         if not self._is_participant(uid):
-            await interaction.response.send_message("Not your trade!", ephemeral=True)
+            await interaction.response.send_message(
+                "Not your trade!", ephemeral=True,
+            )
             return
         if self._is_locked(uid):
             await interaction.response.send_message(
@@ -403,41 +449,41 @@ class TradeView(discord.ui.View):
             )
             return
 
-        view = _RemoveSelectView(self, uid)
-        await interaction.response.send_message(
-            "Select an item to remove:", view=view, ephemeral=True,
-        )
+        my_items.pop()
+        self._rebuild()
+        embed = self.build_embed()
+        await interaction.response.edit_message(embed=embed, view=self)
 
     async def _lock_cb(self, interaction: discord.Interaction):
         uid = interaction.user.id
         if not self._is_participant(uid):
-            await interaction.response.send_message("Not your trade!", ephemeral=True)
+            await interaction.response.send_message(
+                "Not your trade!", ephemeral=True,
+            )
             return
 
         if self._is_locked(uid):
             # Unlock
             self._set_locked(uid, False)
-            self._rebuild()
-            embed = self.build_embed()
-            await interaction.response.edit_message(embed=embed, view=self)
-            return
-
-        # Lock in
-        self._set_locked(uid, True)
-
-        # Both locked → transition to review
-        if self.proposer_locked and self.opponent_locked:
-            self.phase = "review"
-            self.review_started_at = datetime.now(timezone.utc)
+        else:
+            # Lock in
+            self._set_locked(uid, True)
+            if self.proposer_locked and self.opponent_locked:
+                self.phase = "review"
+                self.review_started_at = datetime.now(timezone.utc)
 
         self._rebuild()
         embed = self.build_embed()
         await interaction.response.edit_message(embed=embed, view=self)
 
+    # ---- callbacks: review phase ----
+
     async def _back_cb(self, interaction: discord.Interaction):
         uid = interaction.user.id
         if not self._is_participant(uid):
-            await interaction.response.send_message("Not your trade!", ephemeral=True)
+            await interaction.response.send_message(
+                "Not your trade!", ephemeral=True,
+            )
             return
 
         self.phase = "editing"
@@ -450,31 +496,15 @@ class TradeView(discord.ui.View):
         embed = self.build_embed()
         await interaction.response.edit_message(embed=embed, view=self)
 
-    async def _cancel_cb(self, interaction: discord.Interaction):
-        uid = interaction.user.id
-        if not self._is_participant(uid):
-            await interaction.response.send_message("Not your trade!", ephemeral=True)
-            return
-
-        self._do_cleanup()
-        embed = discord.Embed(
-            title="\u274c Trade Cancelled",
-            description=(
-                f"**{interaction.user.display_name}** cancelled the trade."
-            ),
-            color=discord.Color.red(),
-        )
-        self.clear_items()
-        await interaction.response.edit_message(embed=embed, view=self)
-        self.stop()
-
     async def _confirm_cb(self, interaction: discord.Interaction):
         uid = interaction.user.id
         if not self._is_participant(uid):
-            await interaction.response.send_message("Not your trade!", ephemeral=True)
+            await interaction.response.send_message(
+                "Not your trade!", ephemeral=True,
+            )
             return
 
-        # Enforce 5-second wait
+        # Enforce wait
         if self.review_started_at:
             elapsed = (
                 datetime.now(timezone.utc) - self.review_started_at
@@ -487,13 +517,11 @@ class TradeView(discord.ui.View):
                 )
                 return
 
-        # Mark confirmed
         if uid == self.proposer_id:
             self.proposer_confirmed = True
         else:
             self.opponent_confirmed = True
 
-        # Both confirmed → execute
         if self.proposer_confirmed and self.opponent_confirmed:
             p_offer = TradeOffer(
                 stars=self.proposer_stars, items=list(self.proposer_items),
@@ -501,7 +529,6 @@ class TradeView(discord.ui.View):
             o_offer = TradeOffer(
                 stars=self.opponent_stars, items=list(self.opponent_items),
             )
-
             result: TradeResult = self.cog.trading.execute_trade(
                 self.proposer_id, self.proposer_name,
                 self.opponent_id, self.opponent_name,
@@ -532,10 +559,31 @@ class TradeView(discord.ui.View):
             self.stop()
             return
 
-        # Only one confirmed so far — update embed
         self._rebuild()
         embed = self.build_embed()
         await interaction.response.edit_message(embed=embed, view=self)
+
+    # ---- shared callbacks ----
+
+    async def _cancel_cb(self, interaction: discord.Interaction):
+        uid = interaction.user.id
+        if not self._is_participant(uid):
+            await interaction.response.send_message(
+                "Not your trade!", ephemeral=True,
+            )
+            return
+
+        self._do_cleanup()
+        embed = discord.Embed(
+            title="\u274c Trade Cancelled",
+            description=(
+                f"**{interaction.user.display_name}** cancelled the trade."
+            ),
+            color=discord.Color.red(),
+        )
+        self.clear_items()
+        await interaction.response.edit_message(embed=embed, view=self)
+        self.stop()
 
     async def on_timeout(self):
         self._do_cleanup()
@@ -580,7 +628,6 @@ class TradingCog(commands.Cog):
             await self._handle_cancel(ctx)
             return
 
-        # Must be a mention
         if not ctx.message.mentions:
             await ctx.send(
                 "Usage: `!trade @user` to start a trade, `!trade help` for info.",
@@ -631,7 +678,6 @@ class TradingCog(commands.Cog):
                 pass
             view.stop()
         else:
-            # Fallback cleanup
             if proposer_id is not None:
                 for uid, pid in list(self.trading._user_in_trade.items()):
                     if pid == proposer_id and uid != proposer_id:
@@ -651,19 +697,20 @@ class TradingCog(commands.Cog):
         )
         embed.add_field(
             name="Start a trade",
-            value="`!trade @user` \u2014 opens the trade interface",
+            value="`!trade @user` \u2014 sends a trade request",
             inline=False,
         )
         embed.add_field(
             name="How it works",
             value=(
-                "1. Both players add items and/or stars using buttons.\n"
-                f"2. Each side can offer up to **{MAX_TRADE_ITEMS} items** "
+                "1. The other player must **Accept** the trade request.\n"
+                "2. Both players add items and/or stars using dropdowns.\n"
+                f"3. Each side can offer up to **{MAX_TRADE_ITEMS} items** "
                 "and any amount of **stars**.\n"
-                "3. When both players **Lock In**, the trade moves to review.\n"
-                f"4. Both must wait **{REVIEW_WAIT_SECONDS} seconds** "
+                "4. When both players **Lock In**, the trade moves to review.\n"
+                f"5. Both must wait **{REVIEW_WAIT_SECONDS} seconds** "
                 "then **Confirm** to finalise.\n"
-                "5. Either player can **Cancel** at any time."
+                "6. Either player can **Cancel** at any time."
             ),
             inline=False,
         )
