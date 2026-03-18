@@ -10,6 +10,7 @@ from config.bot import DEV_USER_IDS
 from cogs.economy.use_case import EconomyUseCases
 from cogs.events.farming_weather import WEATHER_EVENT_CHANCE, FarmingWeatherCog
 from cogs.farming.use_case import FarmingUseCases
+from database.connection import get_connection
 
 
 class DevCog(commands.Cog):
@@ -29,7 +30,7 @@ class DevCog(commands.Cog):
         """Developer command group."""
         await self._send_private(
             ctx,
-            "🛠️ Dev commands: `weathertest`, `staractivity`, `growallcrops`, `finishpreserver`",
+            "🛠️ Dev commands: `weathertest`, `staractivity`, `growallcrops`, `finishpreserver`, `feedback`, `chest`",
         )
 
     @dev_group.command(name="weathertest", hidden=True)
@@ -146,6 +147,53 @@ class DevCog(commands.Cog):
                 "Run `!farm preserver collect` to claim the queued stars."
             ),
         )
+
+    @dev_group.command(name="feedback", hidden=True)
+    async def view_feedback(self, ctx, limit: int = 10):
+        """View recent player feedback submissions."""
+        if limit < 1:
+            limit = 1
+        if limit > 50:
+            limit = 50
+
+        db = get_connection()
+        with db.get_cursor() as cursor:
+            cursor.execute(
+                "SELECT id, user_id, username, feedback_text, created_at "
+                "FROM user_feedback ORDER BY id DESC LIMIT ?",
+                (limit,),
+            )
+            rows = cursor.fetchall()
+
+        if not rows:
+            await self._send_private(ctx, "No feedback submitted yet.")
+            return
+
+        lines = []
+        for row in rows:
+            ts = row[4][:16].replace("T", " ")
+            lines.append(f"**#{row[0]}** — {row[2]} ({ts})\n> {row[3]}")
+
+        header = f"📝 **Recent feedback** (latest {len(rows)}):\n"
+        text = header + "\n\n".join(lines)
+
+        # Discord DM limit is 2000 chars; chunk if needed
+        while text:
+            chunk, text = text[:1990], text[1990:]
+            await self._send_private(ctx, chunk)
+
+    @dev_group.command(name="chest", hidden=True)
+    async def spawn_chest(self, ctx):
+        """Spawn a test treasure chest in the current channel."""
+        treasure_cog = self.bot.get_cog("TreasureCog")
+        if treasure_cog is None:
+            await self._send_private(ctx, "❌ TreasureCog is not loaded.")
+            return
+        result = await treasure_cog._spawn_and_announce(ctx.channel, force=True)
+        if not result.success:
+            await self._send_private(ctx, f"❌ {result.message}")
+            return
+        await self._send_private(ctx, "✅ Test chest spawned in this channel.")
 
     async def _send_private(self, ctx, message: str):
         """Send dev command output privately to the caller via DM."""

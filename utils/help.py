@@ -7,10 +7,13 @@ Each category opens a detailed, beginner-friendly sub-page.
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Iterable, List, Optional
 
 import discord
 from discord.ext import commands
+
+from database.connection import get_connection
 
 # ---------------------------------------------------------------------------
 # Embed builders — one per category, written for non-tech-savvy users
@@ -1361,6 +1364,30 @@ _CATEGORY_HELP_BUILDERS = {
 # Interactive help views with navigation buttons
 # ---------------------------------------------------------------------------
 
+class _FeedbackModal(discord.ui.Modal, title="Send Feedback"):
+    """Modal for submitting player feedback."""
+
+    feedback = discord.ui.TextInput(
+        label="Your feedback",
+        style=discord.TextStyle.paragraph,
+        placeholder="Bug reports, suggestions, ideas — anything helps!",
+        max_length=1000,
+        required=True,
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        db = get_connection()
+        with db.get_cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO user_feedback (user_id, username, feedback_text, created_at) "
+                "VALUES (?, ?, ?, ?)",
+                (interaction.user.id, str(interaction.user), self.feedback.value, datetime.now().isoformat()),
+            )
+        await interaction.response.send_message(
+            "Thanks for your feedback! The devs will see it.", ephemeral=True,
+        )
+
+
 class HelpView(discord.ui.View):
     """Main help menu with category buttons."""
 
@@ -1445,6 +1472,10 @@ class HelpView(discord.ui.View):
     async def items_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = ItemsHelpView(self.author_id)
         await interaction.response.edit_message(embed=_items_overview_embed(), view=view)
+
+    @discord.ui.button(label="Send Feedback", style=discord.ButtonStyle.success, emoji="📝", row=3)
+    async def feedback_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(_FeedbackModal())
 
 
 class SubHelpView(discord.ui.View):
@@ -1536,6 +1567,10 @@ class SubHelpView(discord.ui.View):
     async def items_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = ItemsHelpView(self.author_id)
         await interaction.response.edit_message(embed=_items_overview_embed(), view=view)
+
+    @discord.ui.button(label="Send Feedback", style=discord.ButtonStyle.success, emoji="📝", row=4)
+    async def feedback_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(_FeedbackModal())
 
 
 class FarmingHelpView(discord.ui.View):
