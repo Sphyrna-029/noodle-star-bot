@@ -783,16 +783,20 @@ class ShopCog(commands.Cog):
             )
             return
 
-        # Parse optional count
+        # Parse optional count — "all" trashes everything, otherwise default 1
         parts = args.rsplit(maxsplit=1)
         target = args
-        count = 0
+        count = 1
         if len(parts) == 2:
-            try:
-                count = int(parts[1])
+            if parts[1].lower() == "all":
+                count = 0  # 0 = all in use_case
                 target = parts[0]
-            except ValueError:
-                pass
+            else:
+                try:
+                    count = int(parts[1])
+                    target = parts[0]
+                except ValueError:
+                    pass
 
         result = self.sell_uc.trash(ctx.author.id, str(ctx.author), target, count)
 
