@@ -21,7 +21,6 @@ from cogs.aetherdepths.constants import (
     ELITE_STAT_BONUS,
     HAZARD_BASE_CHANCE,
     KEY_MATERIAL_DROPS,
-    WINS_PER_AETHER_LEVEL,
 )
 from cogs.aetherdepths.dto import AetherState, DailyModifier, HazardResult
 from cogs.combat.constants import BASE_HP, BASE_STAMINA, COMBAT_ITEMS, STAMINA_PER_ATTACK
@@ -39,7 +38,7 @@ class AetherdepthsUseCases:
     # ── Dungeon entry ────────────────────────────────────────
 
     def enter_dungeon(self, user_id: int, username: str, level: int) -> tuple[bool, str]:
-        """Attempt to enter/unlock an Aether level.
+        """Unlock or switch to an Aether level.
 
         Returns (success, message).
         """
@@ -62,10 +61,9 @@ class AetherdepthsUseCases:
         if aether["aether_level"] >= level:
             # Already unlocked — just set active level
             self.repo.update_active_aether_level(user_id, level)
-            self.repo.set_aether_active(user_id, 1)
             floor = AETHER_LEVELS[level]
             return True, (
-                f"Entered **{floor['name']}** {floor['emoji']} (Level {level})!"
+                f"Now fighting on **{floor['name']}** {floor['emoji']} (Level {level})!"
             )
 
         # Must unlock sequentially
@@ -85,22 +83,12 @@ class AetherdepthsUseCases:
         self.repo.update_user_stars(user_id, username, current_stars - cost)
         self.repo.update_aether_level(user_id, level)
         self.repo.update_active_aether_level(user_id, level)
-        self.repo.set_aether_active(user_id, 1)
 
         floor = AETHER_LEVELS[level]
         return True, (
             f"Unlocked **{floor['name']}** {floor['emoji']}! "
             f"Cost: **{cost:,}** stars."
         )
-
-    def exit_dungeon(self, user_id: int) -> str:
-        """Exit the Aetherdepths and return stashed items."""
-        self.repo.set_aether_active(user_id, 0)
-        returned = self.repo.return_stashed_items(user_id)
-        msg = "You've exited The Aetherdepths."
-        if returned > 0:
-            msg += f" **{returned}** stashed item(s) returned to your inventory."
-        return msg
 
     # ── Fight initialization ─────────────────────────────────
 
@@ -522,22 +510,6 @@ class AetherdepthsUseCases:
         result.description = desc
 
         return result
-
-    # ── Gate mechanic ────────────────────────────────────────
-
-    def check_gate(self, kills: int, target_level: int) -> tuple[bool, str]:
-        """Check if the player can advance to the next level.
-
-        On L2+, requires at least 1 kill on current level.
-        """
-        if target_level <= 1:
-            return True, ""
-        if kills < 1:
-            return False, (
-                f"You need at least **1 kill** on your current level before "
-                f"advancing to Level {target_level}!"
-            )
-        return True, ""
 
     # ── Daily modifier ───────────────────────────────────────
 

@@ -16,12 +16,11 @@ from cogs.aetherdepths.constants import (
     BLAZE_GOBLIN_CHANCE,
     BLAZE_GOBLIN_COOLDOWN,
     BLAZE_GOBLIN_INTERVAL,
-    BLAZE_GOBLIN_STOCK,
     BLAZE_GOBLIN_TIMEOUT,
     DAILY_MODIFIER_CHANCE,
     HAZARD_BASE_CHANCE,
-    WINS_PER_AETHER_LEVEL,
 )
+from cogs.locations.use_case.locations import LocationUseCases
 from cogs.aetherdepths.dto import AetherState
 from cogs.aetherdepths.use_case.aetherdepths import AetherdepthsUseCases
 from cogs.aetherdepths.use_case.blaze_goblin import BlazeGoblinUseCases
@@ -41,11 +40,7 @@ from database.repository import UserRepository
 # ---------------------------------------------------------------------------
 
 _active_aether_battles: set[int] = set()
-# user_id -> level they're on in the dungeon
-_players_in_dungeon: dict[int, int] = {}
-# user_id -> kills on current level (for gate)
-_gate_kills: dict[int, int] = {}
-# user_id -> AetherState for hazard tracking
+# user_id -> AetherState for hazard tracking between fights
 _player_states: dict[int, AetherState] = {}
 # user_id -> last goblin encounter time
 _last_goblin: dict[int, datetime] = {}
@@ -55,23 +50,14 @@ def is_in_aether_battle(user_id: int) -> bool:
     return user_id in _active_aether_battles
 
 
-def is_in_aether_dungeon(user_id: int) -> bool:
-    return user_id in _players_in_dungeon
-
-
-def exit_aether_cleanup(user_id: int) -> str:
-    """Public helper to exit a player from Aetherdepths (DB + module state).
-
-    Returns the exit message. Safe to call even if not in dungeon.
-    """
-    if user_id not in _players_in_dungeon:
-        return ""
-    uc = AetherdepthsUseCases()
-    msg = uc.exit_dungeon(user_id)
-    _players_in_dungeon.pop(user_id, None)
-    _gate_kills.pop(user_id, None)
+def return_stash_on_leave(user_id: int) -> str:
+    """Return stashed items when player leaves Aetherdepths. Called by travel."""
     _player_states.pop(user_id, None)
-    return msg
+    repo = UserRepository()
+    returned = repo.return_stashed_items(user_id)
+    if returned > 0:
+        return f"**{returned}** stashed item(s) returned to your inventory."
+    return ""
 
 
 # ---------------------------------------------------------------------------
@@ -406,9 +392,8 @@ class AetherBattleView(discord.ui.View):
             traceback.print_exc()
 
     async def _post_victory(self, interaction, embed, result):
-        """Handle post-victory: gate kills, hazard roll."""
+        """Handle post-victory: hazard roll."""
         uid = self.author_id
-        _gate_kills[uid] = _gate_kills.get(uid, 0) + 1
 
         # Roll hazard
         hazard = self.aether_uc.roll_hazard(
@@ -432,17 +417,7 @@ class AetherBattleView(discord.ui.View):
         await interaction.edit_original_response(embed=embed, view=self)
 
     async def _post_defeat(self, interaction, embed):
-        """Handle post-defeat: reset gate kills, eject if L3+."""
-        uid = self.author_id
-        _gate_kills.pop(uid, None)
-        level = self.battle.dungeon_level
-
-        if level >= 3:
-            # Eject from dungeon
-            exit_msg = self.aether_uc.exit_dungeon(uid)
-            _players_in_dungeon.pop(uid, None)
-            _player_states.pop(uid, None)
-            embed.add_field(name="🚪 Ejected", value=exit_msg, inline=False)
+        """Handle post-defeat."""
         await interaction.edit_original_response(embed=embed, view=self)
 
     @discord.ui.button(label="Attack", style=discord.ButtonStyle.danger, emoji="⚔️", row=0)
@@ -692,9 +667,6 @@ class PvPBattleView(discord.ui.View):
             embed = self._create_embed()
             embed.add_field(name="🏆 PvP Result", value=result.message, inline=False)
 
-            # PvP kill counts toward gate
-            _gate_kills[self.state.winner_id] = _gate_kills.get(self.state.winner_id, 0) + 1
-
             await interaction.edit_original_response(embed=embed, view=self)
             return True
         return False
@@ -749,8 +721,6 @@ class PvPBattleView(discord.ui.View):
             winner_name = self.state.attacker_name
             loser_name = self.state.defender_name
             result = self.pvp_uc.resolve_pvp(self.state, winner_name, loser_name)
-
-            _gate_kills[self.state.winner_id] = _gate_kills.get(self.state.winner_id, 0) + 1
 
             embed = self._create_embed()
             embed.add_field(
@@ -852,20 +822,11 @@ class AetherdepthsCog(commands.Cog, name="Aetherdepths"):
         self.pvp_uc = PvPUseCases(self.repo)
         self.goblin_uc = BlazeGoblinUseCases(self.repo)
         self.combat_uc = CombatUseCases(self.repo)
+        self.locations = LocationUseCases()
         # user_id -> channel_id for goblin encounters
         self._last_channel: dict[int, int] = {}
 
     async def cog_load(self) -> None:
-        """Rebuild in-memory state from DB on startup."""
-        players = self.repo.get_all_active_aether_players()
-        for p in players:
-            _players_in_dungeon[p["user_id"]] = p["level"]
-            _player_states[p["user_id"]] = AetherState(
-                user_id=p["user_id"], level=p["level"],
-            )
-        if players:
-            print(f"  - Aetherdepths: recovered {len(players)} active player(s)")
-
         self.blaze_goblin_check.start()
         self.daily_modifier_check.start()
 
@@ -873,15 +834,28 @@ class AetherdepthsCog(commands.Cog, name="Aetherdepths"):
         self.blaze_goblin_check.cancel()
         self.daily_modifier_check.cancel()
 
-    # ── !aether — status command ─────────────────────────────
+    # ── !aether — status / level switch ─────────────────────
 
     @commands.command(name="aether", aliases=["aetherdepths", "ad"])
-    async def aether_status(self, ctx: commands.Context):
-        """View your Aetherdepths status."""
+    async def aether_status(self, ctx: commands.Context, level: int = None):
+        """View Aetherdepths status or switch/unlock levels. Usage: !aether [level]"""
         uid = ctx.author.id
         aether = self.repo.get_aether_stats(uid)
         combat = self.repo.get_combat_stats(uid)
 
+        # Level switch mode
+        if level is not None:
+            if not await require_location(ctx, "aetherdepths"):
+                return
+            from cogs.combat.handlers import is_in_battle
+            if is_in_battle(uid) or is_in_aether_battle(uid):
+                await ctx.send("❌ You're currently in combat!")
+                return
+            success, msg = self.aether_uc.enter_dungeon(uid, ctx.author.name, level)
+            await ctx.send(msg)
+            return
+
+        # Status mode
         embed = discord.Embed(
             title="🕳️ The Aetherdepths",
             color=discord.Color.dark_purple(),
@@ -896,17 +870,13 @@ class AetherdepthsCog(commands.Cog, name="Aetherdepths"):
             await ctx.send(embed=embed)
             return
 
-        # Show unlocked levels
         unlocked = aether["aether_level"]
-        active = aether["active_aether_level"]
-        in_dungeon = uid in _players_in_dungeon
+        active = aether["active_aether_level"] or 1
 
         level_lines = []
         for lvl, info in AETHER_LEVELS.items():
             if lvl <= unlocked:
-                marker = "✅" if lvl != active or not in_dungeon else "📍"
-                if in_dungeon and lvl == _players_in_dungeon.get(uid):
-                    marker = "📍"
+                marker = "⚔️ Active" if lvl == active else "✅"
                 level_lines.append(f"{marker} **L{lvl}** {info['emoji']} {info['name']}")
             else:
                 cost = AETHER_UNLOCK[lvl]["cost"]
@@ -914,15 +884,6 @@ class AetherdepthsCog(commands.Cog, name="Aetherdepths"):
 
         embed.add_field(name="Dungeon Levels", value="\n".join(level_lines), inline=False)
 
-        if in_dungeon:
-            kills = _gate_kills.get(uid, 0)
-            embed.add_field(
-                name="Status",
-                value=f"Currently in dungeon on **Level {_players_in_dungeon[uid]}**\nGate kills: **{kills}**",
-                inline=False,
-            )
-
-        # Show daily modifier
         modifier = self.aether_uc.get_active_modifier()
         if modifier:
             embed.add_field(
@@ -931,31 +892,8 @@ class AetherdepthsCog(commands.Cog, name="Aetherdepths"):
                 inline=False,
             )
 
-        embed.set_footer(text="!aenter <level> to enter | !afight to fight | !travel to leave")
+        embed.set_footer(text="!aether <level> to switch/unlock | !afight to fight")
         await ctx.send(embed=embed)
-
-    # ── !aenter — enter/unlock a level ───────────────────────
-
-    @commands.command(name="aenter")
-    async def aether_enter(self, ctx: commands.Context, level: int = 1):
-        """Enter or unlock an Aetherdepths level."""
-        if not await require_location(ctx, "aetherdepths"):
-            return
-
-        uid = ctx.author.id
-
-        # Check not in combat
-        from cogs.combat.handlers import is_in_battle
-        if is_in_battle(uid) or is_in_aether_battle(uid):
-            await ctx.send("❌ You're currently in combat!")
-            return
-
-        success, msg = self.aether_uc.enter_dungeon(uid, ctx.author.name, level)
-        if success:
-            _players_in_dungeon[uid] = level
-            _gate_kills[uid] = 0
-            _player_states[uid] = AetherState(user_id=uid, level=level)
-        await ctx.send(msg)
 
     # ── !afight — fight a mob ────────────────────────────────
 
@@ -967,16 +905,17 @@ class AetherdepthsCog(commands.Cog, name="Aetherdepths"):
 
         uid = ctx.author.id
 
-        if uid not in _players_in_dungeon:
-            await ctx.send("❌ You're not in The Aetherdepths! Use `!aenter <level>` first.")
-            return
-
         from cogs.combat.handlers import is_in_battle
         if is_in_battle(uid) or is_in_aether_battle(uid):
             await ctx.send("❌ You're already in combat!")
             return
 
-        level = _players_in_dungeon[uid]
+        aether = self.repo.get_aether_stats(uid)
+        level = aether["active_aether_level"] or 0
+        if level < 1:
+            await ctx.send("❌ You haven't unlocked any Aetherdepths level! Use `!aether 1` to unlock.")
+            return
+
         self._last_channel[uid] = ctx.channel.id
 
         # Death confirm for L3+
@@ -1003,6 +942,8 @@ class AetherdepthsCog(commands.Cog, name="Aetherdepths"):
         if state and state.hp_penalty > 0:
             battle.player_hp = max(1, battle.player_hp - state.hp_penalty)
             state.hp_penalty = 0
+        else:
+            _player_states[uid] = AetherState(user_id=uid, level=level)
 
         view = AetherBattleView(
             battle, self.combat_uc, self.aether_uc,
@@ -1012,92 +953,19 @@ class AetherdepthsCog(commands.Cog, name="Aetherdepths"):
         msg = await ctx.send(embed=embed, view=view)
         view.message = msg
 
-    # ── !advance / !retreat — move between levels ────────────
-
-    @commands.command(name="advance")
-    async def aether_advance(self, ctx: commands.Context):
-        """Advance to the next Aetherdepths level."""
-        uid = ctx.author.id
-        if uid not in _players_in_dungeon:
-            await ctx.send("❌ You're not in The Aetherdepths!")
-            return
-
-        if is_in_aether_battle(uid):
-            await ctx.send("❌ You're in combat!")
-            return
-
-        current_level = _players_in_dungeon[uid]
-        target_level = current_level + 1
-
-        if target_level > 5:
-            await ctx.send("❌ You're already at the deepest level!")
-            return
-
-        aether = self.repo.get_aether_stats(uid)
-        if aether["aether_level"] < target_level:
-            await ctx.send(f"❌ You haven't unlocked Level {target_level}! Use `!aenter {target_level}` to unlock it.")
-            return
-
-        # Gate check
-        kills = _gate_kills.get(uid, 0)
-        can_advance, gate_msg = self.aether_uc.check_gate(kills, target_level)
-        if not can_advance:
-            await ctx.send(f"❌ {gate_msg}")
-            return
-
-        _players_in_dungeon[uid] = target_level
-        _gate_kills[uid] = 0
-        self.repo.update_active_aether_level(uid, target_level)
-        state = _player_states.get(uid)
-        if state:
-            state.level = target_level
-
-        floor = AETHER_LEVELS[target_level]
-        await ctx.send(f"Descended to **{floor['name']}** {floor['emoji']} (Level {target_level})!")
-
-    @commands.command(name="retreat")
-    async def aether_retreat(self, ctx: commands.Context):
-        """Retreat to the previous Aetherdepths level."""
-        uid = ctx.author.id
-        if uid not in _players_in_dungeon:
-            await ctx.send("❌ You're not in The Aetherdepths!")
-            return
-
-        if is_in_aether_battle(uid):
-            await ctx.send("❌ You're in combat!")
-            return
-
-        current_level = _players_in_dungeon[uid]
-        if current_level <= 1:
-            await ctx.send("❌ You're already at Level 1! Use `!travel` to leave the dungeon.")
-            return
-
-        target_level = current_level - 1
-        _players_in_dungeon[uid] = target_level
-        _gate_kills[uid] = 0
-        self.repo.update_active_aether_level(uid, target_level)
-        state = _player_states.get(uid)
-        if state:
-            state.level = target_level
-
-        floor = AETHER_LEVELS[target_level]
-        await ctx.send(f"Retreated to **{floor['name']}** {floor['emoji']} (Level {target_level}).")
-
     # ── !pvp — attack another player ─────────────────────────
 
     @commands.command(name="pvp")
     async def aether_pvp(self, ctx: commands.Context, target: discord.Member = None):
         """Attack another player in The Aetherdepths (L2+ only)."""
+        if not await require_location(ctx, "aetherdepths"):
+            return
         if not target:
             await ctx.send("Usage: `!pvp @player`")
             return
 
         uid = ctx.author.id
         tid = target.id
-
-        if uid not in _players_in_dungeon:
-            await ctx.send("❌ You're not in The Aetherdepths!")
-            return
 
         from cogs.combat.handlers import is_in_battle
         if is_in_battle(uid) or is_in_aether_battle(uid):
@@ -1107,8 +975,16 @@ class AetherdepthsCog(commands.Cog, name="Aetherdepths"):
             await ctx.send("❌ Your target is in combat!")
             return
 
-        attacker_level = _players_in_dungeon[uid]
-        defender_level = _players_in_dungeon.get(tid)
+        # Check target is also at aetherdepths
+        target_loc = self.locations.get_location(tid)
+        if target_loc != "aetherdepths":
+            await ctx.send("❌ That player is not in The Aetherdepths!")
+            return
+
+        attacker_aether = self.repo.get_aether_stats(uid)
+        defender_aether = self.repo.get_aether_stats(tid)
+        attacker_level = attacker_aether["active_aether_level"] or 1
+        defender_level = defender_aether["active_aether_level"] or 1
 
         modifier = self.aether_uc.get_active_modifier()
         valid, err = self.pvp_uc.validate_pvp(uid, tid, attacker_level, defender_level, modifier)
@@ -1161,15 +1037,15 @@ class AetherdepthsCog(commands.Cog, name="Aetherdepths"):
     @commands.command(name="gbuy", aliases=["goblinbuy"])
     async def goblin_buy(self, ctx: commands.Context, *, item_name: str = ""):
         """Buy an item from the Blaze Goblin."""
-        uid = ctx.author.id
-        if uid not in _players_in_dungeon:
-            await ctx.send("You're not in The Aetherdepths!")
+        if not await require_location(ctx, "aetherdepths"):
             return
+        uid = ctx.author.id
         if not item_name:
             await ctx.send("Usage: `!gbuy <item name>` — use the Blaze Goblin's Buy Menu to see available items.")
             return
 
-        level = _players_in_dungeon[uid]
+        aether = self.repo.get_aether_stats(uid)
+        level = aether["active_aether_level"] or 1
         stock = self.goblin_uc.get_stock(level)
 
         # Match by display name (case-insensitive) or item key
@@ -1195,10 +1071,9 @@ class AetherdepthsCog(commands.Cog, name="Aetherdepths"):
     @commands.command(name="gstash", aliases=["goblinstash"])
     async def goblin_stash(self, ctx: commands.Context, *, item_name: str = ""):
         """Stash an inventory item (survives death). Requires Blaze Goblin."""
-        uid = ctx.author.id
-        if uid not in _players_in_dungeon:
-            await ctx.send("You're not in The Aetherdepths!")
+        if not await require_location(ctx, "aetherdepths"):
             return
+        uid = ctx.author.id
         if not item_name:
             await ctx.send("Usage: `!gstash <item name>` — stash an item to protect it from death.")
             return
@@ -1233,18 +1108,27 @@ class AetherdepthsCog(commands.Cog, name="Aetherdepths"):
 
     @tasks.loop(minutes=BLAZE_GOBLIN_INTERVAL)
     async def blaze_goblin_check(self):
-        """Periodically check for Blaze Goblin encounters."""
+        """Periodically check for Blaze Goblin encounters for players at Aetherdepths."""
         modifier = self.aether_uc.get_active_modifier()
         goblin_mult = 1.0
         if modifier:
             goblin_mult = modifier.get("goblin_mult", 1.0)
 
         now = datetime.utcnow()
-        for uid, level in list(_players_in_dungeon.items()):
-            if level < 2:
-                continue  # Blaze Goblin only appears on L2-5
+        # Check all players who recently fought (tracked via _last_channel)
+        for uid, channel_id in list(self._last_channel.items()):
             if uid in _active_aether_battles:
                 continue
+
+            # Verify still at aetherdepths
+            if self.locations.get_location(uid) != "aetherdepths":
+                self._last_channel.pop(uid, None)
+                continue
+
+            aether = self.repo.get_aether_stats(uid)
+            level = aether["active_aether_level"] or 0
+            if level < 2:
+                continue  # Blaze Goblin only appears on L2-5
 
             # Cooldown check
             last = _last_goblin.get(uid)
@@ -1256,9 +1140,6 @@ class AetherdepthsCog(commands.Cog, name="Aetherdepths"):
                 continue
 
             _last_goblin[uid] = now
-            channel_id = self._last_channel.get(uid)
-            if not channel_id:
-                continue
 
             try:
                 channel = self.bot.get_channel(channel_id)
@@ -1270,7 +1151,7 @@ class AetherdepthsCog(commands.Cog, name="Aetherdepths"):
                     continue
 
                 view = BlazeGoblinView(uid, user.name, level, self.goblin_uc)
-                msg = await channel.send(
+                await channel.send(
                     f"🧌 {user.mention}, a **Blaze Goblin** appears from the shadows!\n"
                     "Quick — deposit your stars, buy supplies, or stash items before it vanishes!",
                     view=view,

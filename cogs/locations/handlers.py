@@ -99,9 +99,25 @@ class TravelButton(discord.ui.Button):
             )
             return
 
+        from cogs.aetherdepths.handlers import is_in_aether_battle, return_stash_on_leave
+        uid = interaction.user.id
+
+        if is_in_aether_battle(uid):
+            await interaction.response.send_message(
+                "❌ You're in an Aetherdepths battle! Finish your fight first.",
+                ephemeral=True,
+            )
+            return
+
         location_uc = LocationUseCases()
-        previous = location_uc.get_location(interaction.user.id)
-        result = location_uc.travel(interaction.user.id, self.location_key)
+        previous = location_uc.get_location(uid)
+
+        # Return stashed items when leaving Aetherdepths
+        stash_msg = ""
+        if previous == "aetherdepths" and self.location_key != "aetherdepths":
+            stash_msg = return_stash_on_leave(uid)
+
+        result = location_uc.travel(uid, self.location_key)
 
         if not result.success:
             await interaction.response.edit_message(
@@ -118,6 +134,8 @@ class TravelButton(discord.ui.Button):
             description=f"{loc.description}\n\nSelect another destination or close this menu.",
             color=discord.Color.green(),
         )
+        if stash_msg:
+            embed.description = f"🕳️ Ascended from The Aetherdepths. {stash_msg}\n\n{embed.description}"
         embed.set_footer(text=f"📍 You are now at {loc.name}")
         await interaction.response.edit_message(embed=embed, view=new_view)
         await _check_alien_arrival(interaction.client, interaction, self.location_key)
@@ -225,26 +243,27 @@ class LocationsCog(commands.Cog):
             )
             return
 
-        # Auto-exit Aetherdepths if the player is inside
-        from cogs.aetherdepths.handlers import (
-            is_in_aether_dungeon, is_in_aether_battle, exit_aether_cleanup,
-        )
+        # Block travel if in an active Aetherdepths battle
+        from cogs.aetherdepths.handlers import is_in_aether_battle, return_stash_on_leave
         uid = ctx.author.id
         if is_in_aether_battle(uid):
             await ctx.send(f"❌ {ctx.author.mention}, you're in an Aetherdepths battle! Finish your fight first.")
             return
-        aether_msg = ""
-        if is_in_aether_dungeon(uid):
-            aether_msg = exit_aether_cleanup(uid)
 
         previous = self.locations.get_location(ctx.author.id)
+
+        # Return stashed items when leaving Aetherdepths
+        stash_msg = ""
+        if previous == "aetherdepths" and loc_key != "aetherdepths":
+            stash_msg = return_stash_on_leave(uid)
+
         result = self.locations.travel(ctx.author.id, loc_key)
         if not result.success:
             await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
             return
 
-        if aether_msg:
-            await ctx.send(f"🕳️ {ctx.author.mention} ascended from The Aetherdepths. {aether_msg}")
+        if stash_msg:
+            await ctx.send(f"🕳️ {ctx.author.mention} ascended from The Aetherdepths. {stash_msg}")
 
         loc = LOCATIONS[loc_key]
         await ctx.send(f"🚶 {ctx.author.mention} traveled to **{loc.name}** {loc.emoji}")

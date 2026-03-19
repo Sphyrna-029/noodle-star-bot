@@ -157,7 +157,7 @@ def _travel_embed(has_aether: bool = True) -> discord.Embed:
         "**🏟️ Noodle Colosseum** — `!fight` `!dungeon`"
     )
     if has_aether:
-        works_where += "\n**🕳️ The Aetherdepths** — `!afight` `!aether` `!aenter` `!advance` `!retreat` `!pvp` `!astash`"
+        works_where += "\n**🕳️ The Aetherdepths** — `!afight` `!aether` `!pvp` `!astash`"
     embed.add_field(
         name="What Works Where?",
         value=works_where,
@@ -1323,23 +1323,21 @@ def _aetherdepths_embed() -> discord.Embed:
         value=(
             "**Step 1:** Reach Combat Level 5 in the Noodle Colosseum\n"
             "**Step 2:** Travel to The Aetherdepths with `!travel`\n"
-            "**Step 3:** Enter Level 1 with `!aenter 1` (costs 15,000 stars)\n"
+            "**Step 3:** Unlock Level 1 with `!aether 1` (costs 15,000 stars)\n"
             "**Step 4:** Fight mobs with `!afight`\n"
-            "**Step 5:** Advance deeper with `!advance` after getting a kill"
+            "**Step 5:** Switch levels with `!aether <level>`"
         ),
         inline=False,
     )
     embed.add_field(
         name="Aetherdepths Commands",
         value=(
-            "`!aether` (or `!ad`) — View your dungeon status & daily modifier\n"
-            "`!aenter <level>` — Enter/unlock a dungeon level\n"
+            "`!aether` (or `!ad`) — View dungeon status & daily modifier\n"
+            "`!aether <level>` — Switch to or unlock a dungeon level\n"
             "`!afight` (or `!af`) — Fight a mob on your current level\n"
-            "`!advance` — Move to the next level (requires 1 kill)\n"
-            "`!retreat` — Move back to the previous level\n"
-            "`!travel` — Leave the dungeon by traveling anywhere (stashed items returned)\n"
             "`!pvp @player` — Attack another player (L2+ only)\n"
-            "`!astash` — View your protected item stash"
+            "`!astash` — View your protected item stash\n"
+            "Stashed items are returned when you `!travel` away"
         ),
         inline=False,
     )
@@ -1362,8 +1360,7 @@ def _aetherdepths_embed() -> discord.Embed:
             "📅 **Daily Modifiers** — 20%/day: Fortified Foes, Key Surge, Calm Depths, or Goblin Market\n"
             "🧌 **Blaze Goblin** — Random trader: deposit, buy (`!gbuy`), stash (`!gstash`, max 5)\n"
             "⛏️ **Jackhammer** — 25,000⭐ from Blaze Goblin (L4-5), halves stamina (not with Gold Pickaxe)\n"
-            "⚔️ **PvP** — L2+ `!pvp @player`, loser gets death penalty, winner gets 25% of lost stars\n"
-            "🚪 **Gate** — Need 5 kills per level to `!advance` deeper"
+            "⚔️ **PvP** — L2+ `!pvp @player`, loser gets death penalty, winner gets 25% of lost stars"
         ),
         inline=False,
     )

@@ -1663,13 +1663,10 @@ class CombatCog(commands.Cog):
             await ctx.send(f"❌ {ctx.author.mention}, you're in a PvP duel! Finish it first.")
             return
 
-        from cogs.aetherdepths.handlers import is_in_aether_dungeon, is_in_aether_battle, exit_aether_cleanup
+        from cogs.aetherdepths.handlers import is_in_aether_battle
         if is_in_aether_battle(ctx.author.id):
             await ctx.send(f"❌ {ctx.author.mention}, you're in an Aetherdepths battle! Finish your fight first.")
             return
-        if is_in_aether_dungeon(ctx.author.id):
-            aether_msg = exit_aether_cleanup(ctx.author.id)
-            await ctx.send(f"🕳️ {ctx.author.mention} ascended from The Aetherdepths. {aether_msg}")
 
         # Gear warning
         from cogs.combat.use_case.gear_check import gear_warning
