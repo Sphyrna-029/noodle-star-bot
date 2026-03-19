@@ -71,10 +71,10 @@ class CoopCombatUseCases:
 
         # Load player stats
         stats = self.repo.get_combat_stats(user_id)
-        current_hp = stats["current_hp"] or BASE_HP
-        max_hp = stats["max_hp"] or BASE_HP
-        current_stamina = stats["current_stamina"] or BASE_STAMINA
-        max_stamina = stats["max_stamina"] or BASE_STAMINA
+        current_hp = stats["current_hp"] if stats["current_hp"] is not None else BASE_HP
+        max_hp = stats["max_hp"] if stats["max_hp"] is not None else BASE_HP
+        current_stamina = stats["current_stamina"] if stats["current_stamina"] is not None else BASE_STAMINA
+        max_stamina = stats["max_stamina"] if stats["max_stamina"] is not None else BASE_STAMINA
 
         if current_hp <= 0:
             return "You're out of HP! Use `!consume` to recover."

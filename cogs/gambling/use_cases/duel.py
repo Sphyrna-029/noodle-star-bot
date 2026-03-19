@@ -52,15 +52,15 @@ class DuelUseCase(BaseGamblingUseCase):
         p1_stats = self.repo.get_combat_stats(p1_id)
         p2_stats = self.repo.get_combat_stats(p2_id)
 
-        p1_hp = p1_stats["current_hp"] or BASE_HP
-        p1_max_hp = p1_stats["max_hp"] or BASE_HP
-        p1_stamina = p1_stats["current_stamina"] or BASE_STAMINA
-        p1_max_stamina = p1_stats["max_stamina"] or BASE_STAMINA
+        p1_hp = p1_stats["current_hp"] if p1_stats["current_hp"] is not None else BASE_HP
+        p1_max_hp = p1_stats["max_hp"] if p1_stats["max_hp"] is not None else BASE_HP
+        p1_stamina = p1_stats["current_stamina"] if p1_stats["current_stamina"] is not None else BASE_STAMINA
+        p1_max_stamina = p1_stats["max_stamina"] if p1_stats["max_stamina"] is not None else BASE_STAMINA
 
-        p2_hp = p2_stats["current_hp"] or BASE_HP
-        p2_max_hp = p2_stats["max_hp"] or BASE_HP
-        p2_stamina = p2_stats["current_stamina"] or BASE_STAMINA
-        p2_max_stamina = p2_stats["max_stamina"] or BASE_STAMINA
+        p2_hp = p2_stats["current_hp"] if p2_stats["current_hp"] is not None else BASE_HP
+        p2_max_hp = p2_stats["max_hp"] if p2_stats["max_hp"] is not None else BASE_HP
+        p2_stamina = p2_stats["current_stamina"] if p2_stats["current_stamina"] is not None else BASE_STAMINA
+        p2_max_stamina = p2_stats["max_stamina"] if p2_stats["max_stamina"] is not None else BASE_STAMINA
 
         if p1_hp <= 0:
             return None, "You're out of HP! Eat some food with `!eat` to recover."

@@ -164,14 +164,14 @@ class CombatUseCases:
             )
 
         # Check HP
-        current_hp = stats["current_hp"] or BASE_HP
-        max_hp = stats["max_hp"] or BASE_HP
+        current_hp = stats["current_hp"] if stats["current_hp"] is not None else BASE_HP
+        max_hp = stats["max_hp"] if stats["max_hp"] is not None else BASE_HP
         if current_hp <= 0:
             return None, "You're out of HP! Eat some fish with `!eat` to recover."
 
         # Check stamina
-        current_stamina = stats["current_stamina"] or BASE_STAMINA
-        max_stamina = stats["max_stamina"] or BASE_STAMINA
+        current_stamina = stats["current_stamina"] if stats["current_stamina"] is not None else BASE_STAMINA
+        max_stamina = stats["max_stamina"] if stats["max_stamina"] is not None else BASE_STAMINA
         if current_stamina < STAMINA_PER_ATTACK:
             return None, (
                 f"You need at least **{STAMINA_PER_ATTACK} stamina** to fight! "
@@ -236,10 +236,10 @@ class CombatUseCases:
         handler can apply auto-loss penalties.
         """
         stats = self.repo.get_combat_stats(user_id)
-        current_hp = stats["current_hp"] or BASE_HP
-        max_hp = stats["max_hp"] or BASE_HP
-        current_stamina = stats["current_stamina"] or BASE_STAMINA
-        max_stamina = stats["max_stamina"] or BASE_STAMINA
+        current_hp = stats["current_hp"] if stats["current_hp"] is not None else BASE_HP
+        max_hp = stats["max_hp"] if stats["max_hp"] is not None else BASE_HP
+        current_stamina = stats["current_stamina"] if stats["current_stamina"] is not None else BASE_STAMINA
+        max_stamina = stats["max_stamina"] if stats["max_stamina"] is not None else BASE_STAMINA
 
         if current_hp <= 0:
             return None, "You were too weak to fight back!"
