@@ -8,8 +8,9 @@ from cogs.combat.constants import (
     COMBAT_ITEMS, COOP_MAX_PLAYERS, COOP_MOB_DAMAGE_FALLOFF,
     COOP_REWARD_MULTIPLIER, DAMAGE_FLOOR, DEATH_PENALTIES,
     DUNGEON_DROPS, FISHING_AMBUSH_DROPS, MINING_AMBUSH_DROPS,
-    MOBS, SPACE_AMBUSH_DROPS, STAMINA_PER_ATTACK,
-    STAMINA_PER_CONSUME, STAMINA_PER_DEFEND, WINS_PER_COMBAT_LEVEL,
+    MOB_STAMINA_PER_ATTACK, MOBS, SPACE_AMBUSH_DROPS,
+    STAMINA_PER_ATTACK, STAMINA_PER_CONSUME, STAMINA_PER_DEFEND,
+    WINS_PER_COMBAT_LEVEL, calc_defend_stamina_cost,
 )
 from cogs.combat.dto import (
     AmbushContext, BattleState, BattleTurn, CoopBattleState, CoopPlayer,
@@ -192,8 +193,9 @@ class CoopCombatUseCases:
                 )
                 round_turns.append(defeat_turn)
 
-        # Mob loses stamina once per attack cycle
-        state.mob_stamina = max(0, state.mob_stamina - 5)
+        # Mob loses stamina per target hit (scales with player count)
+        targets_hit = len(alive_players)
+        state.mob_stamina = max(0, state.mob_stamina - MOB_STAMINA_PER_ATTACK * targets_hit)
 
         # Check if all players are dead
         if not any(p.alive for p in state.players):
@@ -224,7 +226,8 @@ class CoopCombatUseCases:
         )
 
     def _resolve_player_defend(self, state: CoopBattleState, player: CoopPlayer) -> BattleTurn:
-        player.stamina = max(0, player.stamina - STAMINA_PER_DEFEND)
+        defend_cost = calc_defend_stamina_cost(player.defense, state.mob_attack)
+        player.stamina = max(0, player.stamina - defend_cost)
         player.defending = True
 
         return BattleTurn(

@@ -11,6 +11,7 @@ from cogs.combat.constants import (
     STAMINA_PER_ATTACK,
     STAMINA_PER_DEFEND,
     STAMINA_RECOVERY,
+    calc_defend_stamina_cost,
 )
 from cogs.combat.dto import BattleTurn
 from cogs.combat.use_case.health import HealthUseCases
@@ -203,15 +204,17 @@ class DuelUseCase(BaseGamblingUseCase):
         is_p1 = state.active_player == state.p1_id
 
         if is_p1:
+            defend_cost = calc_defend_stamina_cost(state.p1_defense, state.p2_attack)
             state.p1_defending = True
-            state.p1_stamina = max(0, state.p1_stamina - STAMINA_PER_DEFEND)
+            state.p1_stamina = max(0, state.p1_stamina - defend_cost)
             player_name = state.p1_name
             actor_hp = state.p1_hp
             actor_stamina = state.p1_stamina
             target_hp = state.p2_hp
         else:
+            defend_cost = calc_defend_stamina_cost(state.p2_defense, state.p1_attack)
             state.p2_defending = True
-            state.p2_stamina = max(0, state.p2_stamina - STAMINA_PER_DEFEND)
+            state.p2_stamina = max(0, state.p2_stamina - defend_cost)
             player_name = state.p2_name
             actor_hp = state.p2_hp
             actor_stamina = state.p2_stamina

@@ -12,9 +12,30 @@ BASE_STAMINA: Final[int] = 100
 STAMINA_PER_ATTACK: Final[int] = 8
 STAMINA_PER_DEFEND: Final[int] = 3
 STAMINA_PER_CONSUME: Final[int] = 3
+MOB_STAMINA_PER_ATTACK: Final[int] = 6
 HP_REGEN_PER_MINUTE: Final[int] = 4
 STAMINA_REGEN_PER_MINUTE: Final[int] = 8
 DAMAGE_FLOOR: Final[float] = 0.20  # minimum damage multiplier at 0 stamina
+
+
+def calc_defend_stamina_cost(player_defense: int, incoming_attack: int) -> int:
+    """Calculate stamina cost for defending based on defense-to-attack ratio.
+
+    At 2x defense, 50% reduction. At 3x+, 66% cap (minimum 1 stamina).
+    Below 2x, no reduction (full STAMINA_PER_DEFEND cost).
+    """
+    if incoming_attack <= 0:
+        reduction = 0.66
+    else:
+        ratio = player_defense / incoming_attack
+        if ratio < 2.0:
+            return STAMINA_PER_DEFEND
+        elif ratio >= 3.0:
+            reduction = 0.66
+        else:
+            # Linear from 50% to 66% between 2x and 3x
+            reduction = 0.50 + (ratio - 2.0) * 0.16
+    return max(1, round(STAMINA_PER_DEFEND * (1 - reduction)))
 
 # ---------------------------------------------------------------------------
 # Combat items — 26 total across 5 tiers

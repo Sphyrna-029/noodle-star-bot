@@ -9,8 +9,9 @@ from cogs.combat.constants import (
     COMBAT_ITEMS, COMBAT_LEVEL_UNLOCK,
     DAMAGE_FLOOR, DEATH_PENALTIES, DUNGEON_DROPS, DUNGEON_LEVELS,
     FISHING_AMBUSH_DROPS, MINING_AMBUSH_DROPS, MOBS, MOBS_BY_LEVEL,
-    SPACE_AMBUSH_DROPS, STAMINA_PER_ATTACK, STAMINA_PER_DEFEND,
-    WINS_PER_COMBAT_LEVEL,
+    MOB_STAMINA_PER_ATTACK, SPACE_AMBUSH_DROPS, STAMINA_PER_ATTACK,
+    STAMINA_PER_DEFEND, WINS_PER_COMBAT_LEVEL,
+    calc_defend_stamina_cost,
 )
 from cogs.combat.dto import AmbushContext, BattleResult, BattleState, BattleTurn, DungeonUnlockResult
 from cogs.shop.resources import get_resource
@@ -319,7 +320,8 @@ class CombatUseCases:
     def execute_player_defend(self, battle: BattleState) -> BattleTurn:
         """Player defends (reduced stamina cost, blocks some damage next mob turn)."""
         battle.turn += 1
-        battle.player_stamina = max(0, battle.player_stamina - STAMINA_PER_DEFEND)
+        defend_cost = calc_defend_stamina_cost(battle.player_defense, battle.mob_attack)
+        battle.player_stamina = max(0, battle.player_stamina - defend_cost)
 
         turn = BattleTurn(
             turn_number=battle.turn,
@@ -348,7 +350,7 @@ class CombatUseCases:
             damage = max(1, damage - battle.player_defense)
 
         # Mob loses stamina on attack
-        battle.mob_stamina = max(0, battle.mob_stamina - 5)
+        battle.mob_stamina = max(0, battle.mob_stamina - MOB_STAMINA_PER_ATTACK)
 
         battle.player_hp = max(0, battle.player_hp - damage)
 
