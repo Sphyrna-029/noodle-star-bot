@@ -186,6 +186,116 @@ COMBAT_ITEMS: Final[dict[str, CombatItem]] = {
         slot="weapon", tier=5, attack=40, defense=0, hp_bonus=0,
         stamina_cost=8, description="A scythe forged from pure Dark Matter. Terrifyingly efficient.",
     ),
+
+    # ── Tier 6: Space-tier (Aetherdepths + Moon) ──────────────
+    "spiker": CombatItem(
+        key="spiker", name="Spiker", emoji="📌",
+        slot="weapon", tier=6, attack=58, defense=0, hp_bonus=0,
+        stamina_cost=11, description="A crude but devastating weapon that fires superheated metal spikes.",
+    ),
+    "plasma_pistol": CombatItem(
+        key="plasma_pistol", name="Plasma Pistol", emoji="🔫",
+        slot="weapon", tier=6, attack=52, defense=6, hp_bonus=0,
+        stamina_cost=10, description="A compact sidearm that fires bolts of superheated plasma.",
+    ),
+    "lunar_barrier": CombatItem(
+        key="lunar_barrier", name="Lunar Barrier", emoji="🌙",
+        slot="shield", tier=6, attack=0, defense=46, hp_bonus=25,
+        stamina_cost=0, description="An energy barrier that bends moonlight into a protective shell.",
+    ),
+    "lunar_exosuit": CombatItem(
+        key="lunar_exosuit", name="Lunar Exosuit", emoji="🌑",
+        slot="armor", tier=6, attack=0, defense=40, hp_bonus=100,
+        stamina_cost=0, description="A pressurized exosuit built for lunar combat operations.",
+    ),
+
+    # ── Tier 7: Mars-tier ────────────────────────────────────
+    "plasma_rifle": CombatItem(
+        key="plasma_rifle", name="Plasma Rifle", emoji="🔴",
+        slot="weapon", tier=7, attack=75, defense=0, hp_bonus=0,
+        stamina_cost=12, description="A fully automatic plasma weapon that overheats with sustained fire.",
+    ),
+    "plasma_repeater": CombatItem(
+        key="plasma_repeater", name="Plasma Repeater", emoji="🟣",
+        slot="weapon", tier=7, attack=68, defense=8, hp_bonus=0,
+        stamina_cost=11, description="A rapid-fire plasma weapon with a built-in cooling vent.",
+    ),
+    "thermal_deflector": CombatItem(
+        key="thermal_deflector", name="Thermal Deflector", emoji="🌋",
+        slot="shield", tier=7, attack=0, defense=60, hp_bonus=30,
+        stamina_cost=0, description="A heat-resistant energy shield that absorbs thermal attacks.",
+    ),
+    "crimson_exoplate": CombatItem(
+        key="crimson_exoplate", name="Crimson Exoplate", emoji="🧲",
+        slot="armor", tier=7, attack=0, defense=52, hp_bonus=120,
+        stamina_cost=0, description="Heavy crimson armor plating forged from Martian alloys.",
+    ),
+
+    # ── Tier 8: Saturn-tier ──────────────────────────────────
+    "needler": CombatItem(
+        key="needler", name="Needler", emoji="💜",
+        slot="weapon", tier=8, attack=95, defense=0, hp_bonus=0,
+        stamina_cost=13, description="Fires crystalline needles that track targets and detonate.",
+    ),
+    "fuel_rod_cannon": CombatItem(
+        key="fuel_rod_cannon", name="Fuel Rod Cannon", emoji="☢️",
+        slot="weapon", tier=8, attack=88, defense=10, hp_bonus=0,
+        stamina_cost=12, description="A heavy weapon that launches explosive fuel rod projectiles.",
+    ),
+    "particle_shield": CombatItem(
+        key="particle_shield", name="Particle Shield", emoji="🪐",
+        slot="shield", tier=8, attack=0, defense=75, hp_bonus=40,
+        stamina_cost=0, description="A shield woven from accelerated particles and ring debris.",
+    ),
+    "prismatic_suit": CombatItem(
+        key="prismatic_suit", name="Prismatic Suit", emoji="💎",
+        slot="armor", tier=8, attack=0, defense=65, hp_bonus=145,
+        stamina_cost=0, description="Light-bending armor that refracts incoming energy attacks.",
+    ),
+
+    # ── Tier 9: Uranus-tier ──────────────────────────────────
+    "energy_sword": CombatItem(
+        key="energy_sword", name="Energy Sword", emoji="⚡",
+        slot="weapon", tier=9, attack=115, defense=0, hp_bonus=0,
+        stamina_cost=14, description="A blade of pure plasma contained by magnetic fields. Lethal in close quarters.",
+    ),
+    "beam_rifle": CombatItem(
+        key="beam_rifle", name="Beam Rifle", emoji="🔦",
+        slot="weapon", tier=9, attack=108, defense=12, hp_bonus=0,
+        stamina_cost=13, description="A long-range particle beam weapon of devastating precision.",
+    ),
+    "hardlight_shield": CombatItem(
+        key="hardlight_shield", name="Hardlight Shield", emoji="🛡️",
+        slot="shield", tier=9, attack=0, defense=90, hp_bonus=50,
+        stamina_cost=0, description="A shield of solidified light particles, nearly impervious.",
+    ),
+    "cryo_armor": CombatItem(
+        key="cryo_armor", name="Cryo Armor", emoji="❄️",
+        slot="armor", tier=9, attack=0, defense=78, hp_bonus=170,
+        stamina_cost=0, description="Supercooled armor that flash-freezes projectiles on impact.",
+    ),
+
+    # ── Tier 10: Pluto-tier (endgame) ────────────────────────
+    "gravity_hammer": CombatItem(
+        key="gravity_hammer", name="Gravity Hammer", emoji="🔨",
+        slot="weapon", tier=10, attack=135, defense=0, hp_bonus=0,
+        stamina_cost=15, description="A massive hammer that manipulates gravity to crush all opposition.",
+    ),
+    "prophets_bane": CombatItem(
+        key="prophets_bane", name="Prophet's Bane", emoji="🗡️",
+        slot="weapon", tier=10, attack=128, defense=15, hp_bonus=0,
+        stamina_cost=14, description="A legendary energy blade. Those it marks do not survive.",
+    ),
+    "void_shield": CombatItem(
+        key="void_shield", name="Void Shield", emoji="🌑",
+        slot="shield", tier=10, attack=0, defense=106, hp_bonus=60,
+        stamina_cost=0, description="A shield that opens micro-rifts in space to absorb attacks.",
+    ),
+    "siege_plate": CombatItem(
+        key="siege_plate", name="Siege Plate", emoji="🪐",
+        slot="armor", tier=10, attack=0, defense=90, hp_bonus=200,
+        stamina_cost=0, description="The ultimate armor. Forged from planetary cores for total war.",
+    ),
 }
 
 # ---------------------------------------------------------------------------
@@ -605,6 +715,116 @@ CRAFT_RECIPES: Final[dict[str, CraftRecipe]] = {
         result_key="void_reaper", result_name="Void Reaper", result_emoji="⚛️",
         ingredients=(("dark_matter", 3), ("noodle_gem", 1), ("davy_jones_chest", 1)),
         description="A terrifying scythe forged from Dark Matter and cursed treasure.",
+    ),
+
+    # ── Tier 6: Aetherdepths L1 + Moon ores ────────────────────
+    "spiker": CraftRecipe(
+        result_key="spiker", result_name="Spiker", result_emoji="📌",
+        ingredients=(("hollow_stone", 3), ("aether_shard", 1), ("lunar_quartz", 2)),
+        description="A superheated spike launcher forged from hollow stone and lunar quartz.",
+    ),
+    "plasma_pistol": CraftRecipe(
+        result_key="plasma_pistol", result_name="Plasma Pistol", result_emoji="🔫",
+        ingredients=(("primordial_dust", 3), ("aether_shard", 1), ("helium_3", 2)),
+        description="A compact plasma sidearm powered by helium-3 cells.",
+    ),
+    "lunar_barrier": CraftRecipe(
+        result_key="lunar_barrier", result_name="Lunar Barrier", result_emoji="🌙",
+        ingredients=(("hollow_stone", 4), ("aether_shard", 1), ("selenite", 2)),
+        description="An energy barrier that bends moonlight into a protective shell.",
+    ),
+    "lunar_exosuit": CraftRecipe(
+        result_key="lunar_exosuit", result_name="Lunar Exosuit", result_emoji="🌑",
+        ingredients=(("primordial_dust", 4), ("aether_shard", 1), ("moon_dust", 3)),
+        description="A pressurized exosuit built for lunar combat operations.",
+    ),
+
+    # ── Tier 7: Aetherdepths L2 + Mars ores ──────────────────
+    "plasma_rifle": CraftRecipe(
+        result_key="plasma_rifle", result_name="Plasma Rifle", result_emoji="🔴",
+        ingredients=(("forge_cinder", 3), ("infernal_core", 1), ("olympus_ruby", 2)),
+        description="A fully automatic plasma weapon powered by Olympus ruby cores.",
+    ),
+    "plasma_repeater": CraftRecipe(
+        result_key="plasma_repeater", result_name="Plasma Repeater", result_emoji="🟣",
+        ingredients=(("molten_slag", 3), ("infernal_core", 1), ("martian_iron", 2)),
+        description="A rapid-fire plasma weapon with Martian iron cooling vents.",
+    ),
+    "thermal_deflector": CraftRecipe(
+        result_key="thermal_deflector", result_name="Thermal Deflector", result_emoji="🌋",
+        ingredients=(("forge_cinder", 4), ("infernal_core", 1), ("phobos_shard", 2)),
+        description="A heat-resistant energy shield forged from Phobos shards.",
+    ),
+    "crimson_exoplate": CraftRecipe(
+        result_key="crimson_exoplate", result_name="Crimson Exoplate", result_emoji="🧲",
+        ingredients=(("molten_slag", 4), ("infernal_core", 1), ("red_sand", 3)),
+        description="Heavy crimson armor plating forged from Martian alloys.",
+    ),
+
+    # ── Tier 8: Aetherdepths L3 + Saturn ores ────────────────
+    "needler": CraftRecipe(
+        result_key="needler", result_name="Needler", result_emoji="💜",
+        ingredients=(("crystal_marrow", 3), ("prismatic_lens", 1), ("saturn_sapphire", 2)),
+        description="Fires crystalline needles that track targets and detonate.",
+    ),
+    "fuel_rod_cannon": CraftRecipe(
+        result_key="fuel_rod_cannon", result_name="Fuel Rod Cannon", result_emoji="☢️",
+        ingredients=(("voidcell", 3), ("prismatic_lens", 1), ("titan_ore", 2)),
+        description="A heavy weapon that launches explosive fuel rod projectiles.",
+    ),
+    "particle_shield": CraftRecipe(
+        result_key="particle_shield", result_name="Particle Shield", result_emoji="🪐",
+        ingredients=(("crystal_marrow", 4), ("prismatic_lens", 1), ("ring_fragment", 2)),
+        description="A shield woven from accelerated particles and ring debris.",
+    ),
+    "prismatic_suit": CraftRecipe(
+        result_key="prismatic_suit", result_name="Prismatic Suit", result_emoji="💎",
+        ingredients=(("voidcell", 4), ("prismatic_lens", 1), ("ammonia_ice", 3)),
+        description="Light-bending armor that refracts incoming energy attacks.",
+    ),
+
+    # ── Tier 9: Aetherdepths L4 + Uranus ores ────────────────
+    "energy_sword": CraftRecipe(
+        result_key="energy_sword", result_name="Energy Sword", result_emoji="⚡",
+        ingredients=(("temporal_fragment", 3), ("chrono_crystal", 1), ("uranian_diamond", 2)),
+        description="A blade of pure plasma contained by magnetic fields.",
+    ),
+    "beam_rifle": CraftRecipe(
+        result_key="beam_rifle", result_name="Beam Rifle", result_emoji="🔦",
+        ingredients=(("warden_seal", 3), ("chrono_crystal", 1), ("miranda_stone", 2)),
+        description="A long-range particle beam weapon of devastating precision.",
+    ),
+    "hardlight_shield": CraftRecipe(
+        result_key="hardlight_shield", result_name="Hardlight Shield", result_emoji="🛡️",
+        ingredients=(("temporal_fragment", 4), ("chrono_crystal", 1), ("methane_crystal", 2)),
+        description="A shield of solidified light particles, nearly impervious.",
+    ),
+    "cryo_armor": CraftRecipe(
+        result_key="cryo_armor", result_name="Cryo Armor", result_emoji="❄️",
+        ingredients=(("warden_seal", 4), ("chrono_crystal", 1), ("ice_rock", 3)),
+        description="Supercooled armor that flash-freezes projectiles on impact.",
+    ),
+
+    # ── Tier 10: Aetherdepths L5 + Pluto ores ────────────────
+    "gravity_hammer": CraftRecipe(
+        result_key="gravity_hammer", result_name="Gravity Hammer", result_emoji="🔨",
+        ingredients=(("world_essence", 3), ("heart_of_the_world", 1), ("plutonium_core", 2)),
+        description="A massive hammer that manipulates gravity to crush all opposition.",
+    ),
+    "prophets_bane": CraftRecipe(
+        result_key="prophets_bane", result_name="Prophet's Bane", result_emoji="🗡️",
+        ingredients=(("core_ember", 3), ("heart_of_the_world", 1), ("dark_matter", 2)),
+        description="A legendary energy blade. Those it marks do not survive.",
+    ),
+    "void_shield": CraftRecipe(
+        result_key="void_shield", result_name="Void Shield", result_emoji="🌑",
+        ingredients=(("world_essence", 4), ("heart_of_the_world", 1), ("eternity_gem", 2)),
+        description="A shield that opens micro-rifts in space to absorb attacks.",
+    ),
+    "siege_plate": CraftRecipe(
+        result_key="siege_plate", result_name="Siege Plate", result_emoji="🪐",
+        ingredients=(("core_ember", 4), ("heart_of_the_world", 1), ("frozen_nitrogen", 3)),
+        description="The ultimate armor. Forged from planetary cores for total war.",
     ),
 
     # ── Stamina potions ───────────────────────────────────────

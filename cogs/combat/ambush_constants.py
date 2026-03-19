@@ -76,24 +76,24 @@ FISHING_AMBUSH_MOBS: Final[dict[int, list[Mob]]] = {
 
 SPACE_AMBUSH_MOBS: Final[dict[int, list[Mob]]] = {
     1: [
-        Mob("lunar_drone", "Lunar Drone", "🤖", level=1, hp=100, attack=22, defense=12, stamina=100, star_reward=0, is_boss=False),
-        Mob("moon_stalker", "Moon Stalker", "🌕", level=1, hp=120, attack=26, defense=14, stamina=110, star_reward=0, is_boss=False),
+        Mob("lunar_drone", "Lunar Drone", "🤖", level=1, hp=400, attack=48, defense=28, stamina=190, star_reward=0, is_boss=False),
+        Mob("moon_stalker", "Moon Stalker", "🌕", level=1, hp=480, attack=54, defense=35, stamina=210, star_reward=0, is_boss=False),
     ],
     2: [
-        Mob("mars_raider", "Mars Raider", "👽", level=2, hp=140, attack=28, defense=16, stamina=120, star_reward=0, is_boss=False),
-        Mob("dust_devil", "Dust Devil", "🌪️", level=2, hp=160, attack=32, defense=18, stamina=130, star_reward=0, is_boss=False),
+        Mob("mars_raider", "Mars Raider", "👽", level=2, hp=560, attack=68, defense=40, stamina=230, star_reward=0, is_boss=False),
+        Mob("dust_devil", "Dust Devil", "🌪️", level=2, hp=640, attack=78, defense=48, stamina=245, star_reward=0, is_boss=False),
     ],
     3: [
-        Mob("ring_wraith", "Ring Wraith", "💫", level=3, hp=200, attack=36, defense=22, stamina=140, star_reward=0, is_boss=False),
-        Mob("solar_sentinel", "Solar Sentinel", "☀️", level=3, hp=220, attack=38, defense=24, stamina=150, star_reward=0, is_boss=False),
+        Mob("ring_wraith", "Ring Wraith", "💫", level=3, hp=720, attack=88, defense=48, stamina=260, star_reward=0, is_boss=False),
+        Mob("solar_sentinel", "Solar Sentinel", "☀️", level=3, hp=800, attack=98, defense=55, stamina=275, star_reward=0, is_boss=False),
     ],
     4: [
-        Mob("void_stalker", "Void Stalker", "🔮", level=4, hp=260, attack=42, defense=28, stamina=160, star_reward=0, is_boss=False),
-        Mob("cosmic_dread", "Cosmic Dread", "👁️", level=4, hp=300, attack=46, defense=30, stamina=170, star_reward=0, is_boss=False),
+        Mob("void_stalker", "Void Stalker", "🔮", level=4, hp=880, attack=112, defense=58, stamina=280, star_reward=0, is_boss=False),
+        Mob("cosmic_dread", "Cosmic Dread", "👁️", level=4, hp=980, attack=122, defense=68, stamina=295, star_reward=0, is_boss=False),
     ],
     5: [
-        Mob("dark_matter_beast", "Dark Matter Beast", "⚛️", level=5, hp=350, attack=50, defense=34, stamina=180, star_reward=0, is_boss=False),
-        Mob("void_sovereign", "Void Sovereign", "🌌", level=5, hp=420, attack=56, defense=38, stamina=190, star_reward=0, is_boss=False),
+        Mob("dark_matter_beast", "Dark Matter Beast", "⚛️", level=5, hp=1250, attack=128, defense=82, stamina=320, star_reward=0, is_boss=False),
+        Mob("void_sovereign", "Void Sovereign", "🌌", level=5, hp=1450, attack=138, defense=92, stamina=340, star_reward=0, is_boss=False),
     ],
 }
 

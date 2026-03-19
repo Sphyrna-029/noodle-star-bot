@@ -206,6 +206,28 @@ _r("corn", "Corn", "🌽", "crop")
 _r("tomato", "Tomato", "🍅", "crop")
 _r("melon", "Melon", "🍉", "crop")
 
+# ── Aetherdepths Materials (15) ────────────────────────────
+# Level 1
+_r("hollow_stone", "Hollow Stone", "🪨", "mineral")
+_r("primordial_dust", "Primordial Dust", "✨", "mineral")
+_r("aether_shard", "Aether Shard", "💠", "mineral")
+# Level 2
+_r("forge_cinder", "Forge Cinder", "🔥", "mineral")
+_r("molten_slag", "Molten Slag", "🟠", "mineral")
+_r("infernal_core", "Infernal Core", "🔴", "mineral")
+# Level 3
+_r("voidcell", "Voidcell", "🟣", "mineral")
+_r("crystal_marrow", "Crystal Marrow", "💎", "mineral")
+_r("prismatic_lens", "Prismatic Lens", "🌈", "mineral")
+# Level 4
+_r("warden_seal", "Warden Seal", "🏛️", "mineral")
+_r("temporal_fragment", "Temporal Fragment", "⏳", "mineral")
+_r("chrono_crystal", "Chrono Crystal", "⌛", "mineral")
+# Level 5
+_r("core_ember", "Core Ember", "🌋", "mineral")
+_r("world_essence", "World Essence", "🌍", "mineral")
+_r("heart_of_the_world", "Heart of the World", "❤️‍🔥", "mineral")
+
 # ── Consumables ─────────────────────────────────────────────
 _r("raw_potato", "Raw Potato", "🥔", "consumable")
 _r("golden_mushroom", "Golden Mushroom", "🍄", "consumable")
@@ -214,8 +236,14 @@ _r("bait_worm", "Worm Bait", "🪱", "consumable")
 _r("bait_herring", "Herring Bait", "🐟", "consumable")
 _r("bait_sturgeon", "Sturgeon Bait", "🐋", "consumable")
 _r("stamina_elixir", "Stamina Elixir", "⚗️", "consumable")
+_r("minor_stamina_brew", "Minor Stamina Brew", "🧪", "consumable")
+_r("stamina_tonic", "Stamina Tonic", "🧴", "consumable")
+_r("void_energy_flask", "Void Energy Flask", "⚗️", "consumable")
 _r("fertilizer", "Fertilizer", "🧪", "consumable")
 _r("water", "Water", "💧", "consumable")
+
+# ── Special Equipment ─────────────────────────────────────────
+_r("jackhammer", "Jackhammer", "⛏️", "consumable")
 
 # ── Build alias index ───────────────────────────────────────
 # Maps lowercased alias → item_key

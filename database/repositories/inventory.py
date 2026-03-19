@@ -39,7 +39,33 @@ class InventoryRepository(BaseRepository):
         "leather_vest": "leather_vest",
         "iron_dagger": "iron_dagger",
         "golden_axe": "golden_axe",
+        "jackhammer": "jackhammer",
         "mithril_shield": "mithril_shield",
+        # T6
+        "spiker": "spiker",
+        "plasma_pistol": "plasma_pistol",
+        "lunar_barrier": "lunar_barrier",
+        "lunar_exosuit": "lunar_exosuit",
+        # T7
+        "plasma_rifle": "plasma_rifle",
+        "plasma_repeater": "plasma_repeater",
+        "thermal_deflector": "thermal_deflector",
+        "crimson_exoplate": "crimson_exoplate",
+        # T8
+        "needler": "needler",
+        "fuel_rod_cannon": "fuel_rod_cannon",
+        "particle_shield": "particle_shield",
+        "prismatic_suit": "prismatic_suit",
+        # T9
+        "energy_sword": "energy_sword",
+        "beam_rifle": "beam_rifle",
+        "hardlight_shield": "hardlight_shield",
+        "cryo_armor": "cryo_armor",
+        # T10
+        "gravity_hammer": "gravity_hammer",
+        "prophets_bane": "prophets_bane",
+        "void_shield": "void_shield",
+        "siege_plate": "siege_plate",
     }
 
     _CONSUMABLE_KEYS = {

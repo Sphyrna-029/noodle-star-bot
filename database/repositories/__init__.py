@@ -2,6 +2,7 @@
 
 from database.repositories.base import BaseRepository
 from database.repositories.achievements import AchievementsRepository
+from database.repositories.aetherdepths import AetherdepthsRepository
 from database.repositories.combat import CombatRepository
 from database.repositories.economy import EconomyRepository
 from database.repositories.equipment import EquipmentRepository
@@ -19,6 +20,7 @@ from database.repositories.user_core import UserCoreRepository
 __all__ = [
     "BaseRepository",
     "AchievementsRepository",
+    "AetherdepthsRepository",
     "CombatRepository",
     "UserCoreRepository",
     "EconomyRepository",

@@ -59,6 +59,12 @@ class MiningUseCases:
         active_level = self.repo.get_active_mine_level(user_id)
         stamina_cost = MINING_STAMINA_COST[active_level]
 
+        # Jackhammer halves stamina cost (only if golden pickaxe NOT owned)
+        has_jackhammer = inventory.get("jackhammer", 0) > 0
+        has_gold_pickaxe = inventory["gold_pickaxe"] > 0
+        if has_jackhammer and not has_gold_pickaxe:
+            stamina_cost = max(1, stamina_cost // 2)
+
         # Apply passive regen then check stamina
         from cogs.combat.use_case.health import HealthUseCases
         health_uc = HealthUseCases(self.repo)
@@ -73,8 +79,6 @@ class MiningUseCases:
         # Deduct stamina
         self.repo.update_stamina(user_id, status.current_stamina - stamina_cost)
         level_config = MINE_LEVELS[active_level]
-
-        has_gold_pickaxe = inventory["gold_pickaxe"] > 0
 
         # Select minerals based on pickaxe and level
         mineral_table = MINERAL_TABLES[active_level]

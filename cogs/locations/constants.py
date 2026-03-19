@@ -49,6 +49,12 @@ LOCATIONS: Final[dict[str, Location]] = {
         emoji="🏟️",
         description="Fight mobs in 5 dungeon levels for star rewards.",
     ),
+    "aetherdepths": Location(
+        key="aetherdepths",
+        name="The Aetherdepths",
+        emoji="🕳️",
+        description="A 5-level dungeon beneath the earth. Requires Combat Level 5.",
+    ),
 }
 
 DEFAULT_LOCATION: Final[str] = "noodle_town"

@@ -97,6 +97,11 @@ def _main_embed() -> discord.Embed:
         inline=True,
     )
     embed.add_field(
+        name="🕳️ Aetherdepths",
+        value="5-level dungeon, PvP, T6-T10 gear",
+        inline=True,
+    )
+    embed.add_field(
         name="🎒 Items",
         value="Resource tables, rare items & effects",
         inline=True,
@@ -109,7 +114,7 @@ def _travel_embed() -> discord.Embed:
     embed = discord.Embed(
         title="🗺️ Travel & Locations — How It Works",
         description=(
-            "The world has **5 locations**. Most commands only work "
+            "The world has **7 locations**. Most commands only work "
             "at specific locations, so you need to travel first!"
         ),
         color=discord.Color.teal(),
@@ -125,14 +130,15 @@ def _travel_embed() -> discord.Embed:
         inline=False,
     )
     embed.add_field(
-        name="The 5 Locations",
+        name="The 7 Locations",
         value=(
             "🏘️ **Noodle Town** — Banking, store, trading, gambling\n"
             "⛏️ **Crystal Cave** — Mine for minerals and stars\n"
             "🎣 **Starfish Bay** — Cast your line and catch fish\n"
             "🌾 **Fusilli Farms** — Plant, tend, and harvest crops\n"
             "🚀 **Starport Ziti** — Launch into space and mine planets\n"
-            "🏟️ **Noodle Colosseum** — Fight mobs in 5 dungeon levels"
+            "🏟️ **Noodle Colosseum** — Fight mobs in 5 dungeon levels\n"
+            "🕳️ **The Aetherdepths** — 5-level dungeon (requires Combat Lv5)"
         ),
         inline=False,
     )
@@ -146,7 +152,8 @@ def _travel_embed() -> discord.Embed:
             "**🎣 Starfish Bay** — `!fish` `!pull` `!fishing`\n"
             "**🌾 Fusilli Farms** — `!plant` `!harvest` `!tend`\n"
             "**🚀 Starport Ziti** — `!launch` `!spacemine`\n"
-            "**🏟️ Noodle Colosseum** — `!fight` `!dungeon`"
+            "**🏟️ Noodle Colosseum** — `!fight` `!dungeon`\n"
+            "**🕳️ The Aetherdepths** — `!afight` `!aether` `!aenter` `!advance` `!retreat` `!aexit` `!pvp` `!astash`"
         ),
         inline=False,
     )
@@ -244,6 +251,8 @@ def _mining_embed() -> discord.Embed:
         name="Pro Tips",
         value=(
             "• The Gold Pickaxe (500 stars, one-time buy) makes rare minerals appear more often\n"
+            "• The Jackhammer (25k, Blaze Goblin L4-5) halves stamina cost (not with Gold Pickaxe)\n"
+            "• Rare drops: Rune Fragment (0.5%), Fossilized Noodle (0.5%), Gold Pickaxe (0.2%)\n"
             "• Raw Potatoes (+6 stamina, 2 stars) and Golden Mushrooms (+40 stamina) keep you mining\n"
             "• At Lv4-5, buy Bank Insurance to protect your bank if you lose a fight\n"
             "• Lucky Charm halves your ambush chance!\n"
@@ -738,9 +747,13 @@ def _shop_embed() -> discord.Embed:
             "🥔 Raw Potato (2) — `!consume` restores 6 stamina\n"
             "⚗️ Stamina Elixir (25) — `!consume` restores 18 stamina\n"
             "🍄 Golden Mushroom (farm harvest) — `!consume` restores 40 stamina\n"
+            "🧪 Minor Stamina Brew (craft) — `!consume` restores 50 stamina\n"
+            "🧴 Stamina Tonic (craft) — `!consume` restores 80 stamina\n"
+            "⚗️ Void Energy Flask (craft) — `!consume` restores 100 stamina\n"
             "❤️‍🩹 Health Potion (50) — `!consume` restores 20 HP\n"
             "💸 Bank Insurance (2000) — Protects your bank from 1 defeat\n"
             "📷 Telescope (200) — Warns you of alien ambushes when entering Noodle Town (permanent)\n"
+            "⛏️ Jackhammer (25k, Blaze Goblin) — Halves mining stamina (not with Gold Pickaxe)\n"
             "🪱 Worm (33) / 🐟 Herring (79) / 🐋 Sturgeon (110) — Fishing bait\n"
             "🔫 Ray-Gun (5000, 3 uses) — Fight aliens instead of auto-losing\n"
             "🐾 Pets — Companion category in `!store` (buy with `!buy <pet>`)"
@@ -869,8 +882,10 @@ def _space_embed() -> discord.Embed:
             "• `!deposit all` before space mining — defeat penalties are brutal\n"
             "• Buy Bank Insurance for planets 3+ to protect your bank\n"
             "• Space mining costs more stamina than regular mining — stock up on mushrooms!\n"
+            "• Jackhammer halves space mining stamina cost (not with Gold Pickaxe)\n"
             "• Higher planets = better ores but much tougher enemies\n"
-            "• Lucky Charm halves your ambush chance!"
+            "• Lucky Charm halves your ambush chance!\n"
+            "• Star Magnet works on space mining — 15% chance for a bonus ore"
         ),
         inline=False,
     )
@@ -1170,7 +1185,9 @@ def _items_embed() -> discord.Embed:
             "• Lucky Charm halves ambush chance on mining, fishing, and space mining\n"
             "• Heart of Leviathan protects from ALL defeat penalties (wallet, bank, items, equipment)\n"
             "• Rune Fragment / Fossilized Noodle give +2 stamina/min each (non-self-stacking)\n"
-            "• Telescope warns you of aliens when entering Noodle Town"
+            "• Telescope warns you of aliens when entering Noodle Town\n"
+            "• ⛏️ **Jackhammer** (25,000⭐, Blaze Goblin L4-5) — Halves mining/space stamina cost. "
+            "Doesn't work with Gold Pickaxe equipped"
         ),
         inline=False,
     )
@@ -1285,6 +1302,77 @@ def _combat_embed() -> discord.Embed:
     return embed
 
 
+def _aetherdepths_embed() -> discord.Embed:
+    embed = discord.Embed(
+        title="🕳️ The Aetherdepths — How It Works",
+        description=(
+            "A 5-level dungeon beneath the earth. Requires **Combat Level 5** "
+            "(complete the Noodle Colosseum first). Features PvP on L2+, "
+            "floor hazards, elite mobs, and a Blaze Goblin trader."
+        ),
+        color=discord.Color.dark_purple(),
+    )
+    embed.add_field(
+        name="Getting Started",
+        value=(
+            "**Step 1:** Reach Combat Level 5 in the Noodle Colosseum\n"
+            "**Step 2:** Travel to The Aetherdepths with `!travel`\n"
+            "**Step 3:** Enter Level 1 with `!aenter 1` (costs 15,000 stars)\n"
+            "**Step 4:** Fight mobs with `!afight`\n"
+            "**Step 5:** Advance deeper with `!advance` after getting a kill"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Aetherdepths Commands",
+        value=(
+            "`!aether` (or `!ad`) — View your dungeon status & daily modifier\n"
+            "`!aenter <level>` — Enter/unlock a dungeon level\n"
+            "`!afight` (or `!af`) — Fight a mob on your current level\n"
+            "`!advance` — Move to the next level (requires 1 kill)\n"
+            "`!retreat` — Move back to the previous level\n"
+            "`!aexit` — Leave the dungeon (stashed items returned)\n"
+            "`!pvp @player` — Attack another player (L2+ only)\n"
+            "`!astash` — View your protected item stash"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Dungeon Levels",
+        value=(
+            "🕳️ **L1 The Hollow** — 15,000⭐ — Death: 50% wallet\n"
+            "🔨 **L2 The Sunken Forge** — 25,000⭐ — Death: 75% wallet + 50% items, PvP enabled\n"
+            "🔮 **L3 The Crystal Abyss** — 40,000⭐ — Death: 100% wallet + all items + 1 equip\n"
+            "🏛️ **L4 The Warden's Sanctum** — 60,000⭐ — Death: 100% wallet + all items + 2 equip + 5% bank\n"
+            "🌋 **L5 The Core** — 85,000⭐ — Death: EVERYTHING + all equip + 10% bank"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Special Mechanics",
+        value=(
+            "🔥 **Elite Mobs** — 5% chance, +50% stats, guaranteed material drops + key material chance\n"
+            "⚡ **Floor Hazards** — Random after victories (15-25%): wallet loss, item loss, HP drain, or bonus fights\n"
+            "📅 **Daily Modifiers** — 20%/day: Fortified Foes, Key Surge, Calm Depths, or Goblin Market\n"
+            "🧌 **Blaze Goblin** — Random trader: deposit, buy (`!gbuy`), stash (`!gstash`, max 5)\n"
+            "⛏️ **Jackhammer** — 25,000⭐ from Blaze Goblin (L4-5), halves stamina (not with Gold Pickaxe)\n"
+            "⚔️ **PvP** — L2+ `!pvp @player`, loser gets death penalty, winner gets 25% of lost stars\n"
+            "🚪 **Gate** — Need 5 kills per level to `!advance` deeper"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="T6-T10 Crafting",
+        value=(
+            "Aetherdepths materials + space ores = T6-T10 gear!\n"
+            "Each level drops unique materials. Key materials (rare) are needed for recipes.\n"
+            "Use `!recipes` to see all available crafting recipes."
+        ),
+        inline=False,
+    )
+    return embed
+
+
 def _crafting_embed() -> discord.Embed:
     embed = discord.Embed(
         title="🔨 Crafting — How It Works",
@@ -1319,16 +1407,21 @@ def _crafting_embed() -> discord.Embed:
             "⚔️ **Tier 2** — Craft from Iron, Copper, Silver, Gold\n"
             "✨ **Tier 3** — Craft from Platinum, Emerald, Mithril + rare fish\n"
             "🌟 **Tier 4** — Craft from Star Fragment, Adamantium + legendary fish\n"
-            "🍜 **Tier 5** — Craft from Noodle Gem, Eternity Gem + endgame fish"
+            "🍜 **Tier 5** — Craft from Noodle Gem, Eternity Gem + endgame fish\n"
+            "🌕 **Tier 6** — Aetherdepths L1 materials + Moon ores\n"
+            "🔴 **Tier 7** — Aetherdepths L2 materials + Mars ores\n"
+            "🪐 **Tier 8** — Aetherdepths L3 materials + Saturn ores\n"
+            "🏛️ **Tier 9** — Aetherdepths L4 materials + Uranus ores\n"
+            "🌋 **Tier 10** — Aetherdepths L5 materials + Pluto ores"
         ),
         inline=False,
     )
     embed.add_field(
         name="Stamina Potions",
         value=(
-            "🧪 **Minor Stamina Brew** — 3 Seaweed + 1 Coal → +30 stamina\n"
-            "🧴 **Stamina Tonic** — 2 Bio Jelly + 1 Tin + Golden Seahorse → +50 stamina\n"
-            "⚗️ **Void Energy Flask** — 3 Void Coral + Dark Matter + Coral Golem → +80 stamina"
+            "🧪 **Minor Stamina Brew** — 1 Seaweed + 1 Coal → +50 stamina\n"
+            "🧴 **Stamina Tonic** — 1 Bioluminescent Jelly → +80 stamina\n"
+            "⚗️ **Void Energy Flask** — 1 Void Coral + 1 Coral Golem → +100 stamina"
         ),
         inline=False,
     )
@@ -1355,6 +1448,7 @@ _CATEGORY_HELP_BUILDERS = {
     "treasure hunt": _treasure_embed,
     "items": _items_embed,
     "combat": _combat_embed,
+    "aetherdepths": _aetherdepths_embed,
     "crafting": _crafting_embed,
 }
 
@@ -1462,12 +1556,17 @@ class HelpView(discord.ui.View):
         view = SubHelpView(self.author_id)
         await interaction.response.edit_message(embed=_combat_embed(), view=view)
 
-    @discord.ui.button(label="Crafting", style=discord.ButtonStyle.secondary, emoji="🔨", row=2)
+    @discord.ui.button(label="Aetherdepths", style=discord.ButtonStyle.danger, emoji="🕳️", row=2)
+    async def aetherdepths_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = SubHelpView(self.author_id)
+        await interaction.response.edit_message(embed=_aetherdepths_embed(), view=view)
+
+    @discord.ui.button(label="Crafting", style=discord.ButtonStyle.secondary, emoji="🔨", row=3)
     async def crafting_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = SubHelpView(self.author_id)
         await interaction.response.edit_message(embed=_crafting_embed(), view=view)
 
-    @discord.ui.button(label="Items", style=discord.ButtonStyle.secondary, emoji="🎒", row=2)
+    @discord.ui.button(label="Items", style=discord.ButtonStyle.secondary, emoji="🎒", row=3)
     async def items_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = ItemsHelpView(self.author_id)
         await interaction.response.edit_message(embed=_items_overview_embed(), view=view)
@@ -1557,12 +1656,17 @@ class SubHelpView(discord.ui.View):
         view = SubHelpView(self.author_id)
         await interaction.response.edit_message(embed=_combat_embed(), view=view)
 
+    @discord.ui.button(label="Aetherdepths", style=discord.ButtonStyle.danger, emoji="🕳️", row=3)
+    async def aetherdepths_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = SubHelpView(self.author_id)
+        await interaction.response.edit_message(embed=_aetherdepths_embed(), view=view)
+
     @discord.ui.button(label="Crafting", style=discord.ButtonStyle.secondary, emoji="🔨", row=3)
     async def crafting_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = SubHelpView(self.author_id)
         await interaction.response.edit_message(embed=_crafting_embed(), view=view)
 
-    @discord.ui.button(label="Items", style=discord.ButtonStyle.secondary, emoji="🎒", row=3)
+    @discord.ui.button(label="Items", style=discord.ButtonStyle.secondary, emoji="🎒", row=4)
     async def items_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = ItemsHelpView(self.author_id)
         await interaction.response.edit_message(embed=_items_overview_embed(), view=view)

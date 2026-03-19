@@ -51,6 +51,7 @@ class NoodleStarBot(commands.Bot):
             "cogs.space.handlers",
             "cogs.treasure.handlers",
             "cogs.combat.handlers",
+            "cogs.aetherdepths.handlers",
             "cogs.action.handlers",
         ]
 

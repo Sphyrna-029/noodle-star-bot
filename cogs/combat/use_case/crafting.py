@@ -5,6 +5,12 @@ from cogs.combat.dto import CraftResult, RecipeInfo
 from database.repository import UserRepository
 
 
+def _is_t6_plus(recipe_key: str) -> bool:
+    """Check if a recipe produces T6+ combat gear (requires Aetherdepths)."""
+    item = COMBAT_ITEMS.get(recipe_key)
+    return item is not None and item.tier >= 6
+
+
 class CraftingUseCases:
     """Manages crafting of combat items and consumables."""
 
@@ -19,6 +25,15 @@ class CraftingUseCases:
                 success=False,
                 message=f"Unknown recipe: `{recipe_key}`. Use `!recipes` to see available recipes.",
             )
+
+        # T6+ gear requires Aetherdepths unlock
+        if _is_t6_plus(recipe.result_key):
+            aether = self.repo.get_aether_stats(user_id)
+            if aether["aether_level"] < 1:
+                return CraftResult(
+                    success=False,
+                    message="This recipe requires access to **The Aetherdepths**! Unlock it first.",
+                )
 
         # Check if already owns equipment (non-stackable combat items)
         if recipe.result_key in COMBAT_ITEMS:
@@ -81,7 +96,11 @@ class CraftingUseCases:
         )
 
     def get_recipes(self, user_id: int) -> list[RecipeInfo]:
-        """Get all recipes with availability info."""
+        """Get all recipes with availability info. Hides T6+ if Aetherdepths not unlocked."""
+        # Check aether unlock once for filtering
+        aether = self.repo.get_aether_stats(user_id)
+        has_aether = aether["aether_level"] >= 1
+
         inv_items = self.repo.get_inventory_items(user_id)
         item_counts: dict[str, int] = {}
         for item in inv_items:
@@ -90,6 +109,10 @@ class CraftingUseCases:
 
         recipes = []
         for key, recipe in CRAFT_RECIPES.items():
+            # Hide T6+ recipes until Aetherdepths is unlocked
+            if not has_aether and _is_t6_plus(recipe.result_key):
+                continue
+
             can_craft = True
             for ingredient_key, required_count in recipe.ingredients:
                 if item_counts.get(ingredient_key, 0) < required_count:
@@ -107,10 +130,16 @@ class CraftingUseCases:
         return recipes
 
     def get_recipe(self, recipe_key: str, user_id: int = None) -> RecipeInfo | None:
-        """Get info for a single recipe."""
+        """Get info for a single recipe. Returns None for T6+ if Aetherdepths not unlocked."""
         recipe = CRAFT_RECIPES.get(recipe_key)
         if not recipe:
             return None
+
+        # Hide T6+ until Aetherdepths unlocked
+        if _is_t6_plus(recipe.result_key) and user_id:
+            aether = self.repo.get_aether_stats(user_id)
+            if aether["aether_level"] < 1:
+                return None
 
         can_craft = False
         if user_id:

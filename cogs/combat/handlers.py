@@ -1663,6 +1663,11 @@ class CombatCog(commands.Cog):
             await ctx.send(f"❌ {ctx.author.mention}, you're in a PvP duel! Finish it first.")
             return
 
+        from cogs.aetherdepths.handlers import is_in_aether_dungeon, is_in_aether_battle
+        if is_in_aether_dungeon(ctx.author.id) or is_in_aether_battle(ctx.author.id):
+            await ctx.send(f"❌ {ctx.author.mention}, you're in The Aetherdepths! Use `!aexit` first.")
+            return
+
         # Gear warning
         from cogs.combat.use_case.gear_check import gear_warning
         stats = self.combat_uc.repo.get_combat_stats(ctx.author.id)
@@ -1862,7 +1867,11 @@ class CombatCog(commands.Cog):
 
         # Build recipe data grouped by tier/category
         tiers: dict[str, list[str]] = {}
-        tier_order = ["Tier 2", "Tier 3", "Tier 4", "Tier 5", "Potions"]
+        tier_order = [
+            "Tier 2", "Tier 3", "Tier 4", "Tier 5",
+            "Tier 6", "Tier 7", "Tier 8", "Tier 9", "Tier 10",
+            "Potions",
+        ]
 
         for r in recipe_list:
             key = _find_recipe_key(r.name)

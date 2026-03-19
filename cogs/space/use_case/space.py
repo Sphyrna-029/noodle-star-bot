@@ -89,6 +89,12 @@ class SpaceUseCases:
         active_planet = self.repo.get_active_space_planet(user_id)
         stamina_cost = SPACE_STAMINA_COST[active_planet]
 
+        # Jackhammer halves stamina cost (only if golden pickaxe NOT owned)
+        has_jackhammer = inventory.get("jackhammer", 0) > 0
+        has_gold_pickaxe = inventory["gold_pickaxe"] > 0
+        if has_jackhammer and not has_gold_pickaxe:
+            stamina_cost = max(1, stamina_cost // 2)
+
         # Apply passive regen then check stamina
         from cogs.combat.use_case.health import HealthUseCases
         health_uc = HealthUseCases(self.repo)
@@ -103,8 +109,6 @@ class SpaceUseCases:
         self.repo.update_stamina(user_id, status.current_stamina - stamina_cost)
 
         planet_config = SPACE_PLANETS[active_planet]
-
-        has_gold_pickaxe = inventory["gold_pickaxe"] > 0
 
         # Select minerals based on pickaxe and planet
         mineral_table = SPACE_MINERAL_TABLES[active_planet]

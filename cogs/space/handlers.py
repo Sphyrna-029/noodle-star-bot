@@ -84,6 +84,10 @@ class SpaceCog(commands.Cog):
 
         await ctx.send(message)
 
+        # Send extra messages (Star Magnet activation, etc.)
+        for extra in result.extra_messages:
+            await ctx.send(f"{ctx.author.mention} {extra}")
+
         # Handle ambush encounter
         if result.ambush_mob_key:
             from cogs.combat.ambush_constants import SPACE_AMBUSH_MOBS, AMBUSH_DEFEAT_PENALTIES, AMBUSH_FLEE_LOCKOUT

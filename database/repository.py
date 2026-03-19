@@ -2,6 +2,7 @@
 
 from database.repositories import (
     AchievementsRepository,
+    AetherdepthsRepository,
     CombatRepository,
     EconomyRepository,
     EquipmentRepository,
@@ -20,6 +21,7 @@ from database.repositories import (
 
 class UserRepository(
     AchievementsRepository,
+    AetherdepthsRepository,
     CombatRepository,
     UserCoreRepository,
     EconomyRepository,
