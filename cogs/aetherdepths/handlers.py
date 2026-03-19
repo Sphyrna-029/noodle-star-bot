@@ -584,7 +584,7 @@ class PvPBattleView(discord.ui.View):
         self, state, pvp_uc: PvPUseCases,
         attacker_id: int, defender_id: int,
     ):
-        super().__init__(timeout=300)
+        super().__init__(timeout=600)  # 10 minute time limit
         self.state = state
         self.pvp_uc = pvp_uc
         self.attacker_id = attacker_id
@@ -720,12 +720,35 @@ class PvPBattleView(discord.ui.View):
             traceback.print_exc()
 
     async def on_timeout(self) -> None:
-        self._finish_battle()
-        if self.message:
-            try:
-                await self.message.edit(content="⏰ PvP battle timed out!", view=self)
-            except Exception:
-                pass
+        """Time limit reached — attacker wins automatically."""
+        async with self._finish_lock:
+            if self.state.finished:
+                return
+
+            # Force attacker win
+            self.state.finished = True
+            self.state.winner_id = self.attacker_id
+
+            self._finish_battle()
+
+            winner_name = self.state.attacker_name
+            loser_name = self.state.defender_name
+            result = self.pvp_uc.resolve_pvp(self.state, winner_name, loser_name)
+
+            _gate_kills[self.state.winner_id] = _gate_kills.get(self.state.winner_id, 0) + 1
+
+            embed = self._create_embed()
+            embed.add_field(
+                name="⏰ Time Limit Reached",
+                value=f"**{winner_name}** wins by timeout!\n{result.message}",
+                inline=False,
+            )
+
+            if self.message:
+                try:
+                    await self.message.edit(embed=embed, view=self)
+                except Exception:
+                    pass
 
 
 # ---------------------------------------------------------------------------
@@ -1223,6 +1246,8 @@ class AetherdepthsCog(commands.Cog, name="Aetherdepths"):
 
         now = datetime.utcnow()
         for uid, level in list(_players_in_dungeon.items()):
+            if level < 2:
+                continue  # Blaze Goblin only appears on L2-5
             if uid in _active_aether_battles:
                 continue
 
