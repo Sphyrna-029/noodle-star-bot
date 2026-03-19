@@ -157,7 +157,7 @@ def _travel_embed(has_aether: bool = True) -> discord.Embed:
         "**🏟️ Noodle Colosseum** — `!fight` `!dungeon`"
     )
     if has_aether:
-        works_where += "\n**🕳️ The Aetherdepths** — `!afight` `!aether` `!aenter` `!advance` `!retreat` `!aexit` `!pvp` `!astash`"
+        works_where += "\n**🕳️ The Aetherdepths** — `!afight` `!aether` `!aenter` `!advance` `!retreat` `!pvp` `!astash`"
     embed.add_field(
         name="What Works Where?",
         value=works_where,
@@ -1337,7 +1337,7 @@ def _aetherdepths_embed() -> discord.Embed:
             "`!afight` (or `!af`) — Fight a mob on your current level\n"
             "`!advance` — Move to the next level (requires 1 kill)\n"
             "`!retreat` — Move back to the previous level\n"
-            "`!aexit` — Leave the dungeon (stashed items returned)\n"
+            "`!travel` — Leave the dungeon by traveling anywhere (stashed items returned)\n"
             "`!pvp @player` — Attack another player (L2+ only)\n"
             "`!astash` — View your protected item stash"
         ),

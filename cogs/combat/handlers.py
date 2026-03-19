@@ -1665,7 +1665,7 @@ class CombatCog(commands.Cog):
 
         from cogs.aetherdepths.handlers import is_in_aether_dungeon, is_in_aether_battle
         if is_in_aether_dungeon(ctx.author.id) or is_in_aether_battle(ctx.author.id):
-            await ctx.send(f"❌ {ctx.author.mention}, you're in The Aetherdepths! Use `!aexit` first.")
+            await ctx.send(f"❌ {ctx.author.mention}, you're in The Aetherdepths! Travel somewhere else first.")
             return
 
         # Gear warning

@@ -225,49 +225,119 @@ AMBUSH_DEFEAT_PENALTIES: Final[dict[str, dict[int, dict]]] = {
 AMBUSH_MOB_BONUS_DROPS: Final[dict[str, list[_Drop]]] = {
     # ── Mining mobs ────────────────────────────────────────────
     # L1 — rare: gold, diamond
-    "rock_critter":     [("gold", "mineral", 120, 0.20), ("diamond", "mineral", 300, 0.20)],
-    "tunnel_rat":       [("gold", "mineral", 120, 0.40), ("diamond", "mineral", 300, 0.30)],
+    "rock_critter":     [("gold", "mineral", 120, 0.40), ("diamond", "mineral", 300, 0.40), ("stamina_elixir", "consumable", 25, 0.25)],
+    "tunnel_rat":       [("gold", "mineral", 120, 0.70), ("diamond", "mineral", 300, 0.60), ("health_potion", "consumable", 150, 0.20), ("stamina_elixir", "consumable", 25, 0.30)],
     # L2 — rare: emerald, ruby
-    "cave_bat":         [("emerald", "mineral", 180, 0.20), ("ruby", "mineral", 450, 0.20)],
-    "mine_goblin":      [("emerald", "mineral", 180, 0.40), ("ruby", "mineral", 450, 0.30)],
+    "cave_bat":         [("emerald", "mineral", 180, 0.40), ("ruby", "mineral", 450, 0.40), ("stamina_elixir", "consumable", 25, 0.25)],
+    "mine_goblin":      [("emerald", "mineral", 180, 0.70), ("ruby", "mineral", 450, 0.60), ("health_potion", "consumable", 150, 0.20), ("stamina_elixir", "consumable", 25, 0.30)],
     # L3 — rare: sapphire, amethyst
-    "crystal_golem":    [("sapphire", "mineral", 270, 0.24), ("amethyst", "mineral", 675, 0.20)],
-    "cave_troll":       [("sapphire", "mineral", 270, 0.50), ("amethyst", "mineral", 675, 0.30)],
+    "crystal_golem":    [("sapphire", "mineral", 270, 0.48), ("amethyst", "mineral", 675, 0.40), ("health_potion", "consumable", 150, 0.20), ("stamina_elixir", "consumable", 25, 0.30)],
+    "cave_troll":       [("sapphire", "mineral", 270, 0.85), ("amethyst", "mineral", 675, 0.50), ("health_potion", "consumable", 150, 0.25), ("stamina_elixir", "consumable", 25, 0.35), ("rune_fragment", "equipment", 0, 0.06)],
     # L4 — rare: opal, star fragment
-    "magma_elemental":  [("opal", "mineral", 420, 0.24), ("star_fragment", "mineral", 1050, 0.20)],
-    "lava_worm":        [("opal", "mineral", 420, 0.50), ("star_fragment", "mineral", 1050, 0.30)],
+    "magma_elemental":  [("opal", "mineral", 420, 0.48), ("star_fragment", "mineral", 1050, 0.40), ("health_potion", "consumable", 150, 0.20), ("stamina_elixir", "consumable", 25, 0.30)],
+    "lava_worm":        [("opal", "mineral", 420, 0.85), ("star_fragment", "mineral", 1050, 0.50), ("health_potion", "consumable", 150, 0.25), ("stamina_elixir", "consumable", 25, 0.35), ("rune_fragment", "equipment", 0, 0.07)],
     # L5 — rare: void crystal, noodle gem
-    "shadow_crawler":   [("void_crystal", "mineral", 600, 0.30), ("noodle_gem", "mineral", 1500, 0.20)],
-    "abyss_wraith":     [("void_crystal", "mineral", 600, 0.60), ("noodle_gem", "mineral", 1500, 0.30)],
+    "shadow_crawler":   [("void_crystal", "mineral", 600, 0.60), ("noodle_gem", "mineral", 1500, 0.40), ("health_potion", "consumable", 150, 0.25), ("stamina_elixir", "consumable", 25, 0.35)],
+    "abyss_wraith":     [("void_crystal", "mineral", 600, 0.85), ("noodle_gem", "mineral", 1500, 0.50), ("health_potion", "consumable", 150, 0.30), ("stamina_elixir", "consumable", 25, 0.40), ("rune_fragment", "equipment", 0, 0.08)],
 
     # ── Fishing mobs ───────────────────────────────────────────
     # L2 — rare: river salmon, sturgeon; legendary: platinum trout
-    "snapping_eel":     [("river_salmon", "fish", 675, 0.24), ("sturgeon", "fish", 1125, 0.20)],
-    "river_serpent":    [("sturgeon", "fish", 1125, 0.40), ("platinum_trout", "fish", 8415, 0.20)],
+    "snapping_eel":     [("river_salmon", "fish", 675, 0.48), ("sturgeon", "fish", 1125, 0.40),
+                         ("stamina_elixir", "consumable", 25, 0.30)],
+    "river_serpent":    [("sturgeon", "fish", 1125, 0.70), ("platinum_trout", "fish", 8415, 0.40),
+                         ("health_potion", "consumable", 150, 0.20), ("stamina_elixir", "consumable", 25, 0.30)],
     # L3 — rare: sea turtle, sunken treasure; legendary: golden seahorse
-    "reef_guardian":    [("sea_turtle", "fish", 3840, 0.24), ("sunken_treasure", "fish", 4950, 0.20)],
-    "whirlpool_spirit": [("sunken_treasure", "fish", 4950, 0.40), ("golden_seahorse", "fish", 10995, 0.20)],
+    "reef_guardian":    [("sea_turtle", "fish", 3840, 0.48), ("sunken_treasure", "fish", 4950, 0.40),
+                         ("stamina_elixir", "consumable", 25, 0.35)],
+    "whirlpool_spirit": [("sunken_treasure", "fish", 4950, 0.70), ("golden_seahorse", "fish", 10995, 0.40),
+                         ("health_potion", "consumable", 150, 0.20), ("stamina_elixir", "consumable", 25, 0.35)],
     # L4 — rare: pirate's hoard; legendary: phantom captain, diamond anchor
-    "ghost_captain":    [("pirates_hoard", "fish", 6765, 0.30), ("phantom_captain", "fish", 15630, 0.20)],
-    "kraken_spawn":     [("pirates_hoard", "fish", 6765, 0.50), ("diamond_anchor", "fish", 31260, 0.20)],
+    "ghost_captain":    [("pirates_hoard", "fish", 6765, 0.60), ("phantom_captain", "fish", 15630, 0.40),
+                         ("health_potion", "consumable", 150, 0.25), ("stamina_elixir", "consumable", 25, 0.35)],
+    "kraken_spawn":     [("pirates_hoard", "fish", 6765, 0.85), ("diamond_anchor", "fish", 31260, 0.40),
+                         ("health_potion", "consumable", 150, 0.30), ("stamina_elixir", "consumable", 25, 0.40),
+                         ("bucktail_jig", "equipment", 0, 0.06)],
     # L5 — rare: trench treasure; legendary: leviathan scale, poseidon's eye
-    "siren":            [("trench_treasure", "fish", 11145, 0.30), ("leviathan_scale", "fish", 27840, 0.20)],
-    "leviathan":        [("trench_treasure", "fish", 11145, 0.60), ("poseidons_eye", "fish", 55695, 0.20)],
+    "siren":            [("trench_treasure", "fish", 11145, 0.60), ("leviathan_scale", "fish", 27840, 0.40),
+                         ("health_potion", "consumable", 150, 0.25), ("stamina_elixir", "consumable", 25, 0.35)],
+    "leviathan":        [("trench_treasure", "fish", 11145, 0.85), ("poseidons_eye", "fish", 55695, 0.40),
+                         ("health_potion", "consumable", 150, 0.30), ("stamina_elixir", "consumable", 25, 0.40),
+                         ("bucktail_jig", "equipment", 0, 0.08)],
 
     # ── Space mobs (rare resources + rare effect items) ────────
     # P1 — rare ores + effect items
-    "lunar_drone":      [("cosmic_pearl", "ore", 1875, 0.20), ("rune_fragment", "equipment", 0, 0.20)],
-    "moon_stalker":     [("cosmic_pearl", "ore", 1875, 0.40), ("rune_fragment", "equipment", 0, 0.30)],
+    "lunar_drone": [
+        ("cosmic_pearl", "ore", 1875, 0.40),
+        ("rune_fragment", "equipment", 0, 0.40),
+        ("health_potion", "consumable", 150, 0.20),
+        ("stamina_elixir", "consumable", 25, 0.30),
+    ],
+    "moon_stalker": [
+        ("cosmic_pearl", "ore", 1875, 0.70),
+        ("rune_fragment", "equipment", 0, 0.60),
+        ("health_potion", "consumable", 150, 0.25),
+        ("stamina_elixir", "consumable", 25, 0.35),
+    ],
     # P2
-    "mars_raider":      [("stardust_crystal", "ore", 2690, 0.20), ("fossilized_noodle", "equipment", 0, 0.20)],
-    "dust_devil":       [("stardust_crystal", "ore", 2690, 0.40), ("fossilized_noodle", "equipment", 0, 0.30)],
-    # P3
-    "ring_wraith":      [("nova_core", "ore", 3750, 0.24), ("star_magnet", "equipment", 0, 0.20)],
-    "solar_sentinel":   [("nova_core", "ore", 3750, 0.50), ("star_magnet", "equipment", 0, 0.30)],
-    # P4
-    "void_stalker":     [("nebula_shard", "ore", 5190, 0.24), ("lucky_charm", "equipment", 0, 0.20)],
-    "cosmic_dread":     [("nebula_shard", "ore", 5190, 0.50), ("lucky_charm", "equipment", 0, 0.30)],
-    # P5
-    "dark_matter_beast": [("eternity_gem", "ore", 7190, 0.30), ("bucktail_jig", "equipment", 0, 0.20)],
-    "void_sovereign":    [("eternity_gem", "ore", 7190, 0.70), ("ray_gun", "equipment", 0, 0.20)],
+    "mars_raider": [
+        ("stardust_crystal", "ore", 2690, 0.40),
+        ("fossilized_noodle", "equipment", 0, 0.40),
+        ("health_potion", "consumable", 150, 0.20),
+        ("stamina_elixir", "consumable", 25, 0.30),
+    ],
+    "dust_devil": [
+        ("stardust_crystal", "ore", 2690, 0.70),
+        ("fossilized_noodle", "equipment", 0, 0.60),
+        ("health_potion", "consumable", 150, 0.25),
+        ("stamina_elixir", "consumable", 25, 0.40),
+    ],
+    # P3 (elite — star_magnet added)
+    "ring_wraith": [
+        ("nova_core", "ore", 3750, 0.48),
+        ("star_magnet", "equipment", 0, 0.40),
+        ("health_potion", "consumable", 150, 0.25),
+        ("stamina_elixir", "consumable", 25, 0.35),
+        ("star_magnet", "equipment", 0, 0.06),
+    ],
+    "solar_sentinel": [
+        ("nova_core", "ore", 3750, 0.70),
+        ("star_magnet", "equipment", 0, 0.60),
+        ("health_potion", "consumable", 150, 0.30),
+        ("stamina_elixir", "consumable", 25, 0.45),
+        ("star_magnet", "equipment", 0, 0.08),
+    ],
+    # P4 (boss — lucky_charm + star_magnet added)
+    "void_stalker": [
+        ("nebula_shard", "ore", 5190, 0.48),
+        ("lucky_charm", "equipment", 0, 0.40),
+        ("health_potion", "consumable", 150, 0.25),
+        ("stamina_elixir", "consumable", 25, 0.40),
+        ("star_magnet", "equipment", 0, 0.06),
+        ("lucky_charm", "equipment", 0, 0.05),
+    ],
+    "cosmic_dread": [
+        ("nebula_shard", "ore", 5190, 0.85),
+        ("lucky_charm", "equipment", 0, 0.60),
+        ("health_potion", "consumable", 150, 0.30),
+        ("stamina_elixir", "consumable", 25, 0.45),
+        ("star_magnet", "equipment", 0, 0.08),
+        ("lucky_charm", "equipment", 0, 0.06),
+    ],
+    # P5 (boss — lucky_charm + star_magnet added)
+    "dark_matter_beast": [
+        ("eternity_gem", "ore", 7190, 0.60),
+        ("bucktail_jig", "equipment", 0, 0.40),
+        ("health_potion", "consumable", 150, 0.30),
+        ("stamina_elixir", "consumable", 25, 0.45),
+        ("star_magnet", "equipment", 0, 0.08),
+        ("lucky_charm", "equipment", 0, 0.05),
+    ],
+    "void_sovereign": [
+        ("eternity_gem", "ore", 7190, 0.85),
+        ("ray_gun", "equipment", 0, 0.40),
+        ("health_potion", "consumable", 150, 0.30),
+        ("stamina_elixir", "consumable", 25, 0.45),
+        ("star_magnet", "equipment", 0, 0.08),
+        ("lucky_charm", "equipment", 0, 0.06),
+    ],
 }

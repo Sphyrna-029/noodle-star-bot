@@ -59,6 +59,21 @@ def is_in_aether_dungeon(user_id: int) -> bool:
     return user_id in _players_in_dungeon
 
 
+def exit_aether_cleanup(user_id: int) -> str:
+    """Public helper to exit a player from Aetherdepths (DB + module state).
+
+    Returns the exit message. Safe to call even if not in dungeon.
+    """
+    if user_id not in _players_in_dungeon:
+        return ""
+    uc = AetherdepthsUseCases()
+    msg = uc.exit_dungeon(user_id)
+    _players_in_dungeon.pop(user_id, None)
+    _gate_kills.pop(user_id, None)
+    _player_states.pop(user_id, None)
+    return msg
+
+
 # ---------------------------------------------------------------------------
 # Progress bar helper
 # ---------------------------------------------------------------------------
@@ -916,7 +931,7 @@ class AetherdepthsCog(commands.Cog, name="Aetherdepths"):
                 inline=False,
             )
 
-        embed.set_footer(text="!aenter <level> to enter | !afight to fight | !aexit to leave")
+        embed.set_footer(text="!aenter <level> to enter | !afight to fight | !travel to leave")
         await ctx.send(embed=embed)
 
     # ── !aenter — enter/unlock a level ───────────────────────
@@ -1054,7 +1069,7 @@ class AetherdepthsCog(commands.Cog, name="Aetherdepths"):
 
         current_level = _players_in_dungeon[uid]
         if current_level <= 1:
-            await ctx.send("❌ You're already at Level 1! Use `!aexit` to leave the dungeon.")
+            await ctx.send("❌ You're already at Level 1! Use `!travel` to leave the dungeon.")
             return
 
         target_level = current_level - 1
@@ -1067,26 +1082,6 @@ class AetherdepthsCog(commands.Cog, name="Aetherdepths"):
 
         floor = AETHER_LEVELS[target_level]
         await ctx.send(f"Retreated to **{floor['name']}** {floor['emoji']} (Level {target_level}).")
-
-    # ── !aexit — exit the dungeon ────────────────────────────
-
-    @commands.command(name="aexit")
-    async def aether_exit(self, ctx: commands.Context):
-        """Exit The Aetherdepths."""
-        uid = ctx.author.id
-        if uid not in _players_in_dungeon:
-            await ctx.send("❌ You're not in The Aetherdepths!")
-            return
-
-        if is_in_aether_battle(uid):
-            await ctx.send("❌ You're in combat! Finish your fight first.")
-            return
-
-        msg = self.aether_uc.exit_dungeon(uid)
-        _players_in_dungeon.pop(uid, None)
-        _gate_kills.pop(uid, None)
-        _player_states.pop(uid, None)
-        await ctx.send(msg)
 
     # ── !pvp — attack another player ─────────────────────────
 

@@ -225,11 +225,26 @@ class LocationsCog(commands.Cog):
             )
             return
 
+        # Auto-exit Aetherdepths if the player is inside
+        from cogs.aetherdepths.handlers import (
+            is_in_aether_dungeon, is_in_aether_battle, exit_aether_cleanup,
+        )
+        uid = ctx.author.id
+        if is_in_aether_battle(uid):
+            await ctx.send(f"❌ {ctx.author.mention}, you're in an Aetherdepths battle! Finish your fight first.")
+            return
+        aether_msg = ""
+        if is_in_aether_dungeon(uid):
+            aether_msg = exit_aether_cleanup(uid)
+
         previous = self.locations.get_location(ctx.author.id)
         result = self.locations.travel(ctx.author.id, loc_key)
         if not result.success:
             await ctx.send(f"❌ {ctx.author.mention}, {result.message}")
             return
+
+        if aether_msg:
+            await ctx.send(f"🕳️ {ctx.author.mention} ascended from The Aetherdepths. {aether_msg}")
 
         loc = LOCATIONS[loc_key]
         await ctx.send(f"🚶 {ctx.author.mention} traveled to **{loc.name}** {loc.emoji}")
