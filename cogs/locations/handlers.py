@@ -111,7 +111,7 @@ class TravelButton(discord.ui.Button):
             return
 
         # Rebuild view with updated location
-        new_view = TravelView(view.author_id, self.location_key)
+        new_view = TravelView(view.author_id, self.location_key, has_aether=view.has_aether)
         loc = LOCATIONS[self.location_key]
         embed = discord.Embed(
             title=f"🚶 Traveled to {loc.name} {loc.emoji}",
@@ -134,17 +134,20 @@ class TravelButton(discord.ui.Button):
 class TravelView(discord.ui.View):
     """Button-based travel menu showing all locations."""
 
-    def __init__(self, author_id: int, current_location: str, timeout: float = 60):
+    def __init__(self, author_id: int, current_location: str, has_aether: bool = True, timeout: float = 60):
         super().__init__(timeout=timeout)
         self.author_id = author_id
         self.current_location = current_location
+        self.has_aether = has_aether
 
         for loc_key in LOCATIONS:
+            if loc_key == "aetherdepths" and not has_aether:
+                continue
             is_current = loc_key == current_location
             self.add_item(TravelButton(loc_key, disabled=is_current))
 
 
-def _build_travel_embed(current_location: str) -> discord.Embed:
+def _build_travel_embed(current_location: str, has_aether: bool = True) -> discord.Embed:
     loc = LOCATIONS[current_location]
     embed = discord.Embed(
         title="🗺️ World Map",
@@ -154,6 +157,8 @@ def _build_travel_embed(current_location: str) -> discord.Embed:
 
     lines = []
     for loc_data in LOCATIONS.values():
+        if loc_data.key == "aetherdepths" and not has_aether:
+            continue
         marker = " ◀️ *you are here*" if loc_data.key == current_location else ""
         lines.append(f"{loc_data.emoji} **{loc_data.name}** — {loc_data.description}{marker}")
 
@@ -204,8 +209,11 @@ class LocationsCog(commands.Cog):
         """Travel to a location. Usage: !t <place> or !travel for the menu."""
         if not destination:
             current = self.locations.get_location(ctx.author.id)
-            view = TravelView(ctx.author.id, current)
-            embed = _build_travel_embed(current)
+            repo = UserRepository()
+            stats = repo.get_combat_stats(ctx.author.id)
+            has_aether = stats["combat_level"] >= 5
+            view = TravelView(ctx.author.id, current, has_aether=has_aether)
+            embed = _build_travel_embed(current, has_aether=has_aether)
             await ctx.send(embed=embed, view=view)
             return
 

@@ -121,8 +121,11 @@ class _TravelButton(discord.ui.Button):
             return
         location_uc = LocationUseCases()
         current = location_uc.get_location(interaction.user.id)
-        travel_view = TravelView(interaction.user.id, current)
-        embed = _build_travel_embed(current)
+        repo = UserRepository()
+        stats = repo.get_combat_stats(interaction.user.id)
+        has_aether = stats["combat_level"] >= 5
+        travel_view = TravelView(interaction.user.id, current, has_aether=has_aether)
+        embed = _build_travel_embed(current, has_aether=has_aether)
         await interaction.response.send_message(embed=embed, view=travel_view, ephemeral=False)
 
 

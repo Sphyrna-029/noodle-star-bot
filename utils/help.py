@@ -19,7 +19,7 @@ from database.connection import get_connection
 # Embed builders — one per category, written for non-tech-savvy users
 # ---------------------------------------------------------------------------
 
-def _main_embed() -> discord.Embed:
+def _main_embed(has_aether: bool = True) -> discord.Embed:
     embed = discord.Embed(
         title="✨ Noodle Star Bot — Help Menu",
         description=(
@@ -96,11 +96,12 @@ def _main_embed() -> discord.Embed:
         value="Forge weapons, brew potions",
         inline=True,
     )
-    embed.add_field(
-        name="🕳️ Aetherdepths",
-        value="5-level dungeon, PvP, T6-T10 gear",
-        inline=True,
-    )
+    if has_aether:
+        embed.add_field(
+            name="🕳️ Aetherdepths",
+            value="5-level dungeon, PvP, T6-T10 gear",
+            inline=True,
+        )
     embed.add_field(
         name="🎒 Items",
         value="Resource tables, rare items & effects",
@@ -110,11 +111,12 @@ def _main_embed() -> discord.Embed:
     return embed
 
 
-def _travel_embed() -> discord.Embed:
+def _travel_embed(has_aether: bool = True) -> discord.Embed:
+    loc_count = 7 if has_aether else 6
     embed = discord.Embed(
         title="🗺️ Travel & Locations — How It Works",
         description=(
-            "The world has **7 locations**. Most commands only work "
+            f"The world has **{loc_count} locations**. Most commands only work "
             "at specific locations, so you need to travel first!"
         ),
         color=discord.Color.teal(),
@@ -129,32 +131,36 @@ def _travel_embed() -> discord.Embed:
         ),
         inline=False,
     )
+    locations_list = (
+        "🏘️ **Noodle Town** — Banking, store, trading, gambling\n"
+        "⛏️ **Crystal Cave** — Mine for minerals and stars\n"
+        "🎣 **Starfish Bay** — Cast your line and catch fish\n"
+        "🌾 **Fusilli Farms** — Plant, tend, and harvest crops\n"
+        "🚀 **Starport Ziti** — Launch into space and mine planets\n"
+        "🏟️ **Noodle Colosseum** — Fight mobs in 5 dungeon levels"
+    )
+    if has_aether:
+        locations_list += "\n🕳️ **The Aetherdepths** — 5-level dungeon (requires Combat Lv5)"
     embed.add_field(
-        name="The 7 Locations",
-        value=(
-            "🏘️ **Noodle Town** — Banking, store, trading, gambling\n"
-            "⛏️ **Crystal Cave** — Mine for minerals and stars\n"
-            "🎣 **Starfish Bay** — Cast your line and catch fish\n"
-            "🌾 **Fusilli Farms** — Plant, tend, and harvest crops\n"
-            "🚀 **Starport Ziti** — Launch into space and mine planets\n"
-            "🏟️ **Noodle Colosseum** — Fight mobs in 5 dungeon levels\n"
-            "🕳️ **The Aetherdepths** — 5-level dungeon (requires Combat Lv5)"
-        ),
+        name=f"The {loc_count} Locations",
+        value=locations_list,
         inline=False,
     )
+    works_where = (
+        "**🏘️ Noodle Town**\n"
+        "`!deposit` `!withdraw` `!store` `!buy` `!trade`\n"
+        "`!gamble` `!coinflip` `!blackjack` `!pickpocket` `!duel` `!russian`\n\n"
+        "**⛏️ Crystal Cave** — `!mine` `!minelevel`\n"
+        "**🎣 Starfish Bay** — `!fish` `!pull` `!fishing`\n"
+        "**🌾 Fusilli Farms** — `!plant` `!harvest` `!tend`\n"
+        "**🚀 Starport Ziti** — `!launch` `!spacemine`\n"
+        "**🏟️ Noodle Colosseum** — `!fight` `!dungeon`"
+    )
+    if has_aether:
+        works_where += "\n**🕳️ The Aetherdepths** — `!afight` `!aether` `!aenter` `!advance` `!retreat` `!aexit` `!pvp` `!astash`"
     embed.add_field(
         name="What Works Where?",
-        value=(
-            "**🏘️ Noodle Town**\n"
-            "`!deposit` `!withdraw` `!store` `!buy` `!trade`\n"
-            "`!gamble` `!coinflip` `!blackjack` `!pickpocket` `!duel` `!russian`\n\n"
-            "**⛏️ Crystal Cave** — `!mine` `!minelevel`\n"
-            "**🎣 Starfish Bay** — `!fish` `!pull` `!fishing`\n"
-            "**🌾 Fusilli Farms** — `!plant` `!harvest` `!tend`\n"
-            "**🚀 Starport Ziti** — `!launch` `!spacemine`\n"
-            "**🏟️ Noodle Colosseum** — `!fight` `!dungeon`\n"
-            "**🕳️ The Aetherdepths** — `!afight` `!aether` `!aenter` `!advance` `!retreat` `!aexit` `!pvp` `!astash`"
-        ),
+        value=works_where,
         inline=False,
     )
     embed.add_field(
@@ -1484,9 +1490,12 @@ class _FeedbackModal(discord.ui.Modal, title="Send Feedback"):
 class HelpView(discord.ui.View):
     """Main help menu with category buttons."""
 
-    def __init__(self, author_id: int):
+    def __init__(self, author_id: int, has_aether: bool = True):
         super().__init__(timeout=180)
         self.author_id = author_id
+        self.has_aether = has_aether
+        if not has_aether:
+            self.remove_item(self.aetherdepths_button)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id != self.author_id:
@@ -1503,72 +1512,72 @@ class HelpView(discord.ui.View):
 
     @discord.ui.button(label="Travel", style=discord.ButtonStyle.primary, emoji="🗺️", row=0)
     async def travel_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = SubHelpView(self.author_id)
-        await interaction.response.edit_message(embed=_travel_embed(), view=view)
+        view = SubHelpView(self.author_id, self.has_aether)
+        await interaction.response.edit_message(embed=_travel_embed(self.has_aether), view=view)
 
     @discord.ui.button(label="Mining", style=discord.ButtonStyle.secondary, emoji="⛏️", row=0)
     async def mining_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = SubHelpView(self.author_id)
+        view = SubHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_mining_embed(), view=view)
 
     @discord.ui.button(label="Fishing", style=discord.ButtonStyle.secondary, emoji="🎣", row=0)
     async def fishing_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = SubHelpView(self.author_id)
+        view = SubHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_fishing_embed(), view=view)
 
     @discord.ui.button(label="Farming", style=discord.ButtonStyle.secondary, emoji="🌾", row=0)
     async def farming_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = FarmingHelpView(self.author_id)
+        view = FarmingHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_farming_embed(), view=view)
 
     @discord.ui.button(label="Pets", style=discord.ButtonStyle.secondary, emoji="🐾", row=1)
     async def pets_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = SubHelpView(self.author_id)
+        view = SubHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_pets_embed(), view=view)
 
     @discord.ui.button(label="Storage/Banking", style=discord.ButtonStyle.secondary, emoji="💰", row=1)
     async def economy_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = SubHelpView(self.author_id)
+        view = SubHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_economy_embed(), view=view)
 
     @discord.ui.button(label="Gambling", style=discord.ButtonStyle.secondary, emoji="🎲", row=1)
     async def gambling_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = SubHelpView(self.author_id)
+        view = SubHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_gambling_embed(), view=view)
 
     @discord.ui.button(label="Shop & Trade", style=discord.ButtonStyle.secondary, emoji="🛒", row=1)
     async def shop_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = SubHelpView(self.author_id)
+        view = SubHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_shop_embed(), view=view)
 
     @discord.ui.button(label="Space", style=discord.ButtonStyle.secondary, emoji="🚀", row=2)
     async def space_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = SubHelpView(self.author_id)
+        view = SubHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_space_embed(), view=view)
 
     @discord.ui.button(label="Treasure Hunt", style=discord.ButtonStyle.secondary, emoji="🧰", row=2)
     async def treasure_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = SubHelpView(self.author_id)
+        view = SubHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_treasure_embed(), view=view)
 
     @discord.ui.button(label="Combat", style=discord.ButtonStyle.danger, emoji="⚔️", row=2)
     async def combat_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = SubHelpView(self.author_id)
+        view = SubHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_combat_embed(), view=view)
 
     @discord.ui.button(label="Aetherdepths", style=discord.ButtonStyle.danger, emoji="🕳️", row=2)
     async def aetherdepths_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = SubHelpView(self.author_id)
+        view = SubHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_aetherdepths_embed(), view=view)
 
     @discord.ui.button(label="Crafting", style=discord.ButtonStyle.secondary, emoji="🔨", row=3)
     async def crafting_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = SubHelpView(self.author_id)
+        view = SubHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_crafting_embed(), view=view)
 
     @discord.ui.button(label="Items", style=discord.ButtonStyle.secondary, emoji="🎒", row=3)
     async def items_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = ItemsHelpView(self.author_id)
+        view = ItemsHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_items_overview_embed(), view=view)
 
     @discord.ui.button(label="Send Feedback", style=discord.ButtonStyle.success, emoji="📝", row=3)
@@ -1579,9 +1588,12 @@ class HelpView(discord.ui.View):
 class SubHelpView(discord.ui.View):
     """Sub-page view with Back button and category shortcuts."""
 
-    def __init__(self, author_id: int):
+    def __init__(self, author_id: int, has_aether: bool = True):
         super().__init__(timeout=180)
         self.author_id = author_id
+        self.has_aether = has_aether
+        if not has_aether:
+            self.remove_item(self.aetherdepths_button)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id != self.author_id:
@@ -1598,77 +1610,77 @@ class SubHelpView(discord.ui.View):
 
     @discord.ui.button(label="Back to Menu", style=discord.ButtonStyle.danger, emoji="◀️", row=0)
     async def back_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = HelpView(self.author_id)
-        await interaction.response.edit_message(embed=_main_embed(), view=view)
+        view = HelpView(self.author_id, self.has_aether)
+        await interaction.response.edit_message(embed=_main_embed(self.has_aether), view=view)
 
     @discord.ui.button(label="Travel", style=discord.ButtonStyle.primary, emoji="🗺️", row=1)
     async def travel_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = SubHelpView(self.author_id)
-        await interaction.response.edit_message(embed=_travel_embed(), view=view)
+        view = SubHelpView(self.author_id, self.has_aether)
+        await interaction.response.edit_message(embed=_travel_embed(self.has_aether), view=view)
 
     @discord.ui.button(label="Mining", style=discord.ButtonStyle.secondary, emoji="⛏️", row=1)
     async def mining_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = SubHelpView(self.author_id)
+        view = SubHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_mining_embed(), view=view)
 
     @discord.ui.button(label="Fishing", style=discord.ButtonStyle.secondary, emoji="🎣", row=1)
     async def fishing_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = SubHelpView(self.author_id)
+        view = SubHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_fishing_embed(), view=view)
 
     @discord.ui.button(label="Farming", style=discord.ButtonStyle.secondary, emoji="🌾", row=1)
     async def farming_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = FarmingHelpView(self.author_id)
+        view = FarmingHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_farming_embed(), view=view)
 
     @discord.ui.button(label="Pets", style=discord.ButtonStyle.secondary, emoji="🐾", row=2)
     async def pets_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = SubHelpView(self.author_id)
+        view = SubHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_pets_embed(), view=view)
 
     @discord.ui.button(label="Storage/Banking", style=discord.ButtonStyle.secondary, emoji="💰", row=2)
     async def economy_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = SubHelpView(self.author_id)
+        view = SubHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_economy_embed(), view=view)
 
     @discord.ui.button(label="Gambling", style=discord.ButtonStyle.secondary, emoji="🎲", row=2)
     async def gambling_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = SubHelpView(self.author_id)
+        view = SubHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_gambling_embed(), view=view)
 
     @discord.ui.button(label="Shop & Trade", style=discord.ButtonStyle.secondary, emoji="🛒", row=2)
     async def shop_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = SubHelpView(self.author_id)
+        view = SubHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_shop_embed(), view=view)
 
     @discord.ui.button(label="Space", style=discord.ButtonStyle.secondary, emoji="🚀", row=3)
     async def space_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = SubHelpView(self.author_id)
+        view = SubHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_space_embed(), view=view)
 
     @discord.ui.button(label="Treasure Hunt", style=discord.ButtonStyle.secondary, emoji="🧰", row=3)
     async def treasure_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = SubHelpView(self.author_id)
+        view = SubHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_treasure_embed(), view=view)
 
     @discord.ui.button(label="Combat", style=discord.ButtonStyle.danger, emoji="⚔️", row=3)
     async def combat_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = SubHelpView(self.author_id)
+        view = SubHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_combat_embed(), view=view)
 
     @discord.ui.button(label="Aetherdepths", style=discord.ButtonStyle.danger, emoji="🕳️", row=3)
     async def aetherdepths_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = SubHelpView(self.author_id)
+        view = SubHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_aetherdepths_embed(), view=view)
 
     @discord.ui.button(label="Crafting", style=discord.ButtonStyle.secondary, emoji="🔨", row=3)
     async def crafting_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = SubHelpView(self.author_id)
+        view = SubHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_crafting_embed(), view=view)
 
     @discord.ui.button(label="Items", style=discord.ButtonStyle.secondary, emoji="🎒", row=4)
     async def items_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = ItemsHelpView(self.author_id)
+        view = ItemsHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_items_overview_embed(), view=view)
 
     @discord.ui.button(label="Send Feedback", style=discord.ButtonStyle.success, emoji="📝", row=4)
@@ -1679,9 +1691,10 @@ class SubHelpView(discord.ui.View):
 class FarmingHelpView(discord.ui.View):
     """Dedicated farming help navigation."""
 
-    def __init__(self, author_id: int):
+    def __init__(self, author_id: int, has_aether: bool = True):
         super().__init__(timeout=180)
         self.author_id = author_id
+        self.has_aether = has_aether
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id != self.author_id:
@@ -1698,36 +1711,37 @@ class FarmingHelpView(discord.ui.View):
 
     @discord.ui.button(label="Back to Menu", style=discord.ButtonStyle.danger, emoji="◀️", row=0)
     async def back_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = HelpView(self.author_id)
-        await interaction.response.edit_message(embed=_main_embed(), view=view)
+        view = HelpView(self.author_id, self.has_aether)
+        await interaction.response.edit_message(embed=_main_embed(self.has_aether), view=view)
 
     @discord.ui.button(label="Basics", style=discord.ButtonStyle.success, emoji="🌾", row=1)
     async def basics_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = FarmingHelpView(self.author_id)
+        view = FarmingHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_farming_embed(), view=view)
 
     @discord.ui.button(label="Crops & Soil", style=discord.ButtonStyle.secondary, emoji="🥕", row=1)
     async def crops_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = FarmingHelpView(self.author_id)
+        view = FarmingHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_farming_crops_embed(), view=view)
 
     @discord.ui.button(label="Machinery", style=discord.ButtonStyle.secondary, emoji="⚙️", row=1)
     async def machinery_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = FarmingHelpView(self.author_id)
+        view = FarmingHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_farming_machinery_embed(), view=view)
 
     @discord.ui.button(label="Other Categories", style=discord.ButtonStyle.secondary, emoji="📚", row=2)
     async def categories_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = SubHelpView(self.author_id)
+        view = SubHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_farming_embed(), view=view)
 
 
 class ItemsHelpView(discord.ui.View):
     """Dedicated items help navigation with resource category sub-pages."""
 
-    def __init__(self, author_id: int):
+    def __init__(self, author_id: int, has_aether: bool = True):
         super().__init__(timeout=180)
         self.author_id = author_id
+        self.has_aether = has_aether
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id != self.author_id:
@@ -1744,37 +1758,37 @@ class ItemsHelpView(discord.ui.View):
 
     @discord.ui.button(label="Back to Menu", style=discord.ButtonStyle.danger, emoji="◀️", row=0)
     async def back_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = HelpView(self.author_id)
-        await interaction.response.edit_message(embed=_main_embed(), view=view)
+        view = HelpView(self.author_id, self.has_aether)
+        await interaction.response.edit_message(embed=_main_embed(self.has_aether), view=view)
 
     @discord.ui.button(label="Overview", style=discord.ButtonStyle.success, emoji="🎒", row=1)
     async def overview_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = ItemsHelpView(self.author_id)
+        view = ItemsHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_items_overview_embed(), view=view)
 
     @discord.ui.button(label="Mining", style=discord.ButtonStyle.secondary, emoji="⛏️", row=1)
     async def mining_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = ItemsHelpView(self.author_id)
+        view = ItemsHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_mining_resources_embed(), view=view)
 
     @discord.ui.button(label="Fishing", style=discord.ButtonStyle.secondary, emoji="🎣", row=1)
     async def fishing_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = ItemsHelpView(self.author_id)
+        view = ItemsHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_fishing_resources_embed(), view=view)
 
     @discord.ui.button(label="Farming", style=discord.ButtonStyle.secondary, emoji="🌾", row=1)
     async def farming_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = ItemsHelpView(self.author_id)
+        view = ItemsHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_farming_resources_embed(), view=view)
 
     @discord.ui.button(label="Space", style=discord.ButtonStyle.secondary, emoji="🚀", row=2)
     async def space_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = ItemsHelpView(self.author_id)
+        view = ItemsHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_space_resources_embed(), view=view)
 
     @discord.ui.button(label="Rare Items", style=discord.ButtonStyle.secondary, emoji="✨", row=2)
     async def rare_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = ItemsHelpView(self.author_id)
+        view = ItemsHelpView(self.author_id, self.has_aether)
         await interaction.response.edit_message(embed=_items_embed(), view=view)
 
 
@@ -1893,14 +1907,23 @@ class NoodleHelpCommand(commands.HelpCommand):
         ctx = self.context
         if ctx is None:
             return
-        view = HelpView(ctx.author.id)
+        from database.repository import UserRepository
+        repo = UserRepository()
+        stats = repo.get_combat_stats(ctx.author.id)
+        has_aether = stats["combat_level"] >= 5
+        view = HelpView(ctx.author.id, has_aether)
         await self._safe_send_embed(
-            _main_embed(),
+            _main_embed(has_aether),
             fallback_text="Type `!help <category>` or `!help <command>` for help.",
             view=view,
         )
 
     # --- !help <category_name> -> resolve cog names --------------------------
+
+    def _check_aether(self, user_id: int) -> bool:
+        from database.repository import UserRepository
+        repo = UserRepository()
+        return repo.get_combat_stats(user_id)["combat_level"] >= 5
 
     async def command_callback(self, ctx, /, *, command=None):
         """Resolve cleaned cog names like 'farming' before default lookup."""
@@ -1910,7 +1933,8 @@ class NoodleHelpCommand(commands.HelpCommand):
                 category_builder = _CATEGORY_HELP_BUILDERS.get(normalized.lower())
                 if category_builder is not None:
                     self.context = ctx
-                    view = FarmingHelpView(ctx.author.id) if normalized.lower() == "farming" else None
+                    has_aether = self._check_aether(ctx.author.id)
+                    view = FarmingHelpView(ctx.author.id, has_aether) if normalized.lower() == "farming" else None
                     await self._safe_send_embed(
                         category_builder(),
                         fallback_text=(
@@ -1967,7 +1991,8 @@ class NoodleHelpCommand(commands.HelpCommand):
         cleaned = self._clean_cog_name(cog).lower()
         category_builder = _CATEGORY_HELP_BUILDERS.get(cleaned)
         if category_builder is not None:
-            view = FarmingHelpView(self.context.author.id) if cleaned == "farming" and self.context is not None else None
+            has_aether = self._check_aether(self.context.author.id) if self.context else True
+            view = FarmingHelpView(self.context.author.id, has_aether) if cleaned == "farming" and self.context is not None else None
             await self._safe_send_embed(
                 category_builder(),
                 fallback_text=(
