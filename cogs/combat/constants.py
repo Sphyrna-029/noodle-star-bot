@@ -361,76 +361,76 @@ MOBS: Final[dict[str, Mob]] = {
     "dark_knight": Mob(
         key="dark_knight", name="Dark Knight", emoji="🖤",
         level=3, hp=150, attack=30, defense=22, stamina=125,
-        star_reward=175, is_boss=False,
+        star_reward=425, is_boss=False,
     ),
     "fire_elemental": Mob(
         key="fire_elemental", name="Fire Elemental", emoji="🔥",
         level=3, hp=112, attack=38, defense=12, stamina=112,
-        star_reward=190, is_boss=False,
+        star_reward=475, is_boss=False,
     ),
     "gargoyle": Mob(
         key="gargoyle", name="Stone Gargoyle", emoji="🗿",
         level=3, hp=175, attack=25, defense=32, stamina=150,
-        star_reward=210, is_boss=False,
+        star_reward=500, is_boss=False,
     ),
     "wraith": Mob(
         key="wraith", name="Soul Wraith", emoji="😈",
         level=3, hp=125, attack=35, defense=15, stamina=100,
-        star_reward=200, is_boss=False,
+        star_reward=450, is_boss=False,
     ),
     "lich": Mob(
         key="lich", name="The Lich", emoji="☠️",
         level=3, hp=312, attack=40, defense=25, stamina=175,
-        star_reward=525, is_boss=True,
+        star_reward=1200, is_boss=True,
     ),
 
     # ── Level 4: Infernal Depths ───────────────────────────────
     "demon": Mob(
         key="demon", name="Infernal Demon", emoji="👿",
         level=4, hp=250, attack=45, defense=28, stamina=162,
-        star_reward=350, is_boss=False,
+        star_reward=800, is_boss=False,
     ),
     "golem": Mob(
         key="golem", name="Iron Golem", emoji="🤖",
         level=4, hp=350, attack=35, defense=44, stamina=200,
-        star_reward=385, is_boss=False,
+        star_reward=900, is_boss=False,
     ),
     "hydra": Mob(
         key="hydra", name="Lesser Hydra", emoji="🐍",
         level=4, hp=275, attack=48, defense=22, stamina=150,
-        star_reward=400, is_boss=False,
+        star_reward=950, is_boss=False,
     ),
     "shadow_dragon": Mob(
         key="shadow_dragon", name="Shadow Drake", emoji="🐲",
         level=4, hp=300, attack=42, defense=35, stamina=175,
-        star_reward=440, is_boss=False,
+        star_reward=1000, is_boss=False,
     ),
     "balrog": Mob(
         key="balrog", name="The Balrog", emoji="😤",
         level=4, hp=500, attack=52, defense=38, stamina=225,
-        star_reward=875, is_boss=True,
+        star_reward=2500, is_boss=True,
     ),
 
     # ── Level 5: The Void ──────────────────────────────────────
     "void_sentinel": Mob(
         key="void_sentinel", name="Void Sentinel", emoji="🌌",
         level=5, hp=438, attack=56, defense=44, stamina=212,
-        star_reward=700, is_boss=False,
+        star_reward=1500, is_boss=False,
     ),
     "cosmic_horror": Mob(
         key="cosmic_horror", name="Cosmic Horror", emoji="👁️",
         level=5, hp=375, attack=62, defense=32, stamina=188,
-        star_reward=800, is_boss=False,
+        star_reward=1800, is_boss=False,
     ),
     "noodle_titan": Mob(
         key="noodle_titan", name="Noodle Titan", emoji="🍝",
         level=5, hp=500, attack=52, defense=50, stamina=225,
-        star_reward=875, is_boss=False,
+        star_reward=2000, is_boss=False,
     ),
     "the_void_king": Mob(
         key="the_void_king", name="The Void King", emoji="💀",
         level=5, hp=750, attack=68, defense=50, stamina=250,
-        star_reward=1750, is_boss=True,
+        star_reward=5000, is_boss=True,
     ),
 }
 

@@ -37,85 +37,85 @@ AETHER_MOBS: Final[dict[str, Mob]] = {
     "hollow_wraith": Mob(
         key="hollow_wraith", name="Hollow Wraith", emoji="👻",
         level=1, hp=420, attack=55, defense=30, stamina=200,
-        star_reward=350, is_boss=False,
+        star_reward=1500, is_boss=False,
     ),
     "stone_sentinel": Mob(
         key="stone_sentinel", name="Stone Sentinel", emoji="🗿",
         level=1, hp=500, attack=48, defense=40, stamina=225,
-        star_reward=380, is_boss=False,
+        star_reward=1800, is_boss=False,
     ),
     "hollow_king": Mob(
         key="hollow_king", name="The Hollow King", emoji="👑",
         level=1, hp=800, attack=65, defense=45, stamina=275,
-        star_reward=900, is_boss=True,
+        star_reward=4500, is_boss=True,
     ),
 
     # ── Level 2: The Sunken Forge ────────────────────────────
     "forge_golem": Mob(
         key="forge_golem", name="Forge Golem", emoji="🤖",
         level=2, hp=650, attack=70, defense=50, stamina=250,
-        star_reward=500, is_boss=False,
+        star_reward=2500, is_boss=False,
     ),
     "molten_serpent": Mob(
         key="molten_serpent", name="Molten Serpent", emoji="🐍",
         level=2, hp=580, attack=80, defense=38, stamina=230,
-        star_reward=520, is_boss=False,
+        star_reward=2800, is_boss=False,
     ),
     "forge_master": Mob(
         key="forge_master", name="The Forge Master", emoji="🔥",
         level=2, hp=1100, attack=88, defense=55, stamina=325,
-        star_reward=1200, is_boss=True,
+        star_reward=7000, is_boss=True,
     ),
 
     # ── Level 3: The Crystal Abyss ───────────────────────────
     "crystal_spider": Mob(
         key="crystal_spider", name="Crystal Spider", emoji="🕷️",
         level=3, hp=800, attack=92, defense=55, stamina=275,
-        star_reward=650, is_boss=False,
+        star_reward=3500, is_boss=False,
     ),
     "prism_elemental": Mob(
         key="prism_elemental", name="Prism Elemental", emoji="💎",
         level=3, hp=750, attack=100, defense=48, stamina=260,
-        star_reward=680, is_boss=False,
+        star_reward=4000, is_boss=False,
     ),
     "crystal_queen": Mob(
         key="crystal_queen", name="The Crystal Queen", emoji="👸",
         level=3, hp=1400, attack=110, defense=65, stamina=375,
-        star_reward=1600, is_boss=True,
+        star_reward=10000, is_boss=True,
     ),
 
     # ── Level 4: The Warden's Sanctum ────────────────────────
     "sanctum_knight": Mob(
         key="sanctum_knight", name="Sanctum Knight", emoji="⚔️",
         level=4, hp=1000, attack=115, defense=72, stamina=300,
-        star_reward=850, is_boss=False,
+        star_reward=5000, is_boss=False,
     ),
     "temporal_shade": Mob(
         key="temporal_shade", name="Temporal Shade", emoji="⏳",
         level=4, hp=900, attack=125, defense=58, stamina=280,
-        star_reward=880, is_boss=False,
+        star_reward=5500, is_boss=False,
     ),
     "the_warden": Mob(
         key="the_warden", name="The Warden", emoji="🏛️",
         level=4, hp=1800, attack=135, defense=80, stamina=425,
-        star_reward=2100, is_boss=True,
+        star_reward=14000, is_boss=True,
     ),
 
     # ── Level 5: The Core ────────────────────────────────────
     "core_devourer": Mob(
         key="core_devourer", name="Core Devourer", emoji="🌑",
         level=5, hp=1300, attack=140, defense=85, stamina=325,
-        star_reward=1100, is_boss=False,
+        star_reward=7000, is_boss=False,
     ),
     "magma_titan": Mob(
         key="magma_titan", name="Magma Titan", emoji="🌋",
         level=5, hp=1500, attack=130, defense=95, stamina=350,
-        star_reward=1200, is_boss=False,
+        star_reward=8000, is_boss=False,
     ),
     "world_heart": Mob(
         key="world_heart", name="The World Heart", emoji="💀",
         level=5, hp=2500, attack=160, defense=100, stamina=500,
-        star_reward=3500, is_boss=True,
+        star_reward=20000, is_boss=True,
     ),
 }
 
