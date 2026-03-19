@@ -702,12 +702,28 @@ class JoinFightView(discord.ui.View):
             await interaction.response.send_message("You're in a PvP duel!", ephemeral=True)
             return
 
-        # Check location
+        # Check location — ambush fights allow joining from the activity location
         from cogs.locations.use_case import LocationUseCases
         loc_uc = LocationUseCases()
-        if loc_uc.get_location(user_id) != "noodle_colosseum":
+        user_loc = loc_uc.get_location(user_id)
+
+        if self.coop_state.ambush:
+            _ACTIVITY_LOCATIONS = {
+                "mining": "crystal_cave",
+                "fishing": "starfish_bay",
+                "space": "starport_ziti",
+                "alien": "starport_ziti",
+            }
+            required = _ACTIVITY_LOCATIONS.get(
+                self.coop_state.ambush.activity, "noodle_colosseum",
+            )
+        else:
+            required = "noodle_colosseum"
+
+        if user_loc != required:
+            display = required.replace("_", " ").title()
             await interaction.response.send_message(
-                "You need to be at the **Noodle Colosseum** to join! Use `!travel`.",
+                f"You need to be at the **{display}** to join! Use `!travel`.",
                 ephemeral=True,
             )
             return
