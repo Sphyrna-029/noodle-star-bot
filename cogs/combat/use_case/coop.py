@@ -443,16 +443,18 @@ class CoopCombatUseCases:
         mob = MOBS.get(state.mob_key)
         base_reward = mob.star_reward if mob else 50
         multiplier = COOP_REWARD_MULTIPLIER.get(len(alive_players), 0.40)
-        star_reward = max(1, int(base_reward * multiplier))
+        spoils_value = max(1, int(base_reward * multiplier))
 
         for player in alive_players:
             # Save HP/stamina
             self.repo.update_hp(player.user_id, player.hp)
             self.repo.update_stamina(player.user_id, player.stamina)
 
-            # Award stars
-            current_stars = self.repo.get_user_stars(player.user_id, player.username)
-            self.repo.update_user_stars(player.user_id, player.username, current_stars + star_reward)
+            # Grant sellable spoils item instead of direct stars
+            if self.repo.add_item(player.user_id, "battle_spoils", "consumable", spoils_value):
+                all_drops.setdefault(player.user_id, []).append(
+                    ("battle_spoils", f"Battle Spoils ({spoils_value}⭐)")
+                )
 
             # Combat level progression
             stats = self.repo.get_combat_stats(player.user_id)
@@ -466,10 +468,10 @@ class CoopCombatUseCases:
                 dungeon_level=state.dungeon_level,
                 mob_key=state.mob_key,
                 result="win",
-                stars_change=star_reward,
+                stars_change=spoils_value,
             )
 
-            rewards[player.user_id] = star_reward
+            rewards[player.user_id] = spoils_value
 
         return rewards, all_drops
 

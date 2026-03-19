@@ -242,6 +242,10 @@ _r("void_energy_flask", "Void Energy Flask", "⚗️", "consumable")
 _r("fertilizer", "Fertilizer", "🧪", "consumable")
 _r("water", "Water", "💧", "consumable")
 
+# ── Combat Spoils (sellable mob loot) ─────────────────────────
+_r("battle_spoils", "Battle Spoils", "🏆", "consumable")
+_r("aether_spoils", "Aether Spoils", "🏆", "consumable")
+
 # ── Special Equipment ─────────────────────────────────────────
 _r("jackhammer", "Jackhammer", "⛏️", "consumable")
 

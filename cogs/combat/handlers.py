@@ -1071,11 +1071,11 @@ class CoopBattleView(discord.ui.View):
                     self._finish_coop_battle()
                     embed = self.create_embed()
                     reward_lines = []
-                    for uid, stars in rewards.items():
+                    for uid, spoils in rewards.items():
                         p = self._get_player(uid)
                         name = p.username if p else str(uid)
-                        if stars > 0:
-                            reward_lines.append(f"⭐ **{name}**: +{stars} stars")
+                        if spoils > 0:
+                            reward_lines.append(f"🏆 **{name}**: Battle Spoils ({spoils}⭐)")
                         else:
                             reward_lines.append(f"✅ **{name}**: survived!")
                     embed.add_field(
@@ -1216,11 +1216,11 @@ class CoopBattleView(discord.ui.View):
                     self._finish_coop_battle()
                     embed = self.create_embed()
                     reward_lines = []
-                    for uid, stars in rewards.items():
+                    for uid, spoils in rewards.items():
                         p = self._get_player(uid)
                         name = p.username if p else str(uid)
-                        if stars > 0:
-                            reward_lines.append(f"⭐ **{name}**: +{stars} stars")
+                        if spoils > 0:
+                            reward_lines.append(f"🏆 **{name}**: Battle Spoils ({spoils}⭐)")
                     embed.add_field(
                         name="🏆 VICTORY",
                         value="\n".join(reward_lines) if reward_lines else "No rewards.",

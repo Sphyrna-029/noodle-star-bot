@@ -184,44 +184,44 @@ _Drop = tuple[str, str, int, float]
 
 AETHER_DROPS: Final[dict[int, list[_Drop]]] = {
     1: [
-        ("health_potion", "consumable", 50, 0.30),
-        ("golden_mushroom", "consumable", 25, 0.20),
-        ("hollow_stone", "mineral", 200, 0.35),
-        ("primordial_dust", "mineral", 350, 0.20),
-        ("coal", "mineral", 10, 0.25),
-        ("iron", "mineral", 20, 0.20),
+        ("health_potion", "consumable", 150, 0.30),
+        ("golden_mushroom", "consumable", 75, 0.20),
+        ("hollow_stone", "mineral", 900, 0.35),
+        ("primordial_dust", "mineral", 1500, 0.20),
+        ("coal", "mineral", 50, 0.25),
+        ("iron", "mineral", 100, 0.20),
     ],
     2: [
-        ("health_potion", "consumable", 50, 0.35),
-        ("golden_mushroom", "consumable", 25, 0.25),
-        ("forge_cinder", "mineral", 300, 0.30),
-        ("molten_slag", "mineral", 500, 0.18),
-        ("silver", "mineral", 30, 0.20),
-        ("emerald", "mineral", 60, 0.12),
+        ("health_potion", "consumable", 150, 0.35),
+        ("golden_mushroom", "consumable", 75, 0.25),
+        ("forge_cinder", "mineral", 1300, 0.30),
+        ("molten_slag", "mineral", 2200, 0.18),
+        ("silver", "mineral", 150, 0.20),
+        ("emerald", "mineral", 275, 0.12),
     ],
     3: [
-        ("health_potion", "consumable", 50, 0.40),
-        ("golden_mushroom", "consumable", 25, 0.30),
-        ("voidcell", "mineral", 450, 0.25),
-        ("crystal_marrow", "mineral", 700, 0.15),
-        ("platinum", "mineral", 50, 0.18),
-        ("sapphire", "mineral", 90, 0.10),
+        ("health_potion", "consumable", 150, 0.40),
+        ("golden_mushroom", "consumable", 75, 0.30),
+        ("voidcell", "mineral", 2000, 0.25),
+        ("crystal_marrow", "mineral", 3000, 0.15),
+        ("platinum", "mineral", 225, 0.18),
+        ("sapphire", "mineral", 400, 0.10),
     ],
     4: [
-        ("health_potion", "consumable", 50, 0.45),
-        ("golden_mushroom", "consumable", 25, 0.35),
-        ("warden_seal", "mineral", 600, 0.22),
-        ("temporal_fragment", "mineral", 900, 0.12),
-        ("mithril", "mineral", 80, 0.15),
-        ("opal", "mineral", 140, 0.08),
+        ("health_potion", "consumable", 150, 0.45),
+        ("golden_mushroom", "consumable", 75, 0.35),
+        ("warden_seal", "mineral", 2600, 0.22),
+        ("temporal_fragment", "mineral", 4000, 0.12),
+        ("mithril", "mineral", 350, 0.15),
+        ("opal", "mineral", 625, 0.08),
     ],
     5: [
-        ("health_potion", "consumable", 50, 0.50),
-        ("golden_mushroom", "consumable", 25, 0.40),
-        ("core_ember", "mineral", 800, 0.20),
-        ("world_essence", "mineral", 1200, 0.10),
-        ("dragonstone", "mineral", 120, 0.12),
-        ("void_crystal", "mineral", 200, 0.08),
+        ("health_potion", "consumable", 150, 0.50),
+        ("golden_mushroom", "consumable", 75, 0.40),
+        ("core_ember", "mineral", 3500, 0.20),
+        ("world_essence", "mineral", 5500, 0.10),
+        ("dragonstone", "mineral", 525, 0.12),
+        ("void_crystal", "mineral", 900, 0.08),
     ],
 }
 
@@ -240,25 +240,25 @@ AETHER_BOSS_BONUS_DROPS: Final[list[_Drop]] = [
 
 AETHER_MATERIALS: Final[dict[str, dict]] = {
     # Level 1
-    "hollow_stone": {"name": "Hollow Stone", "emoji": "🪨", "sell": 200, "level": 1},
-    "primordial_dust": {"name": "Primordial Dust", "emoji": "✨", "sell": 350, "level": 1},
-    "aether_shard": {"name": "Aether Shard", "emoji": "💠", "sell": 500, "level": 1},
+    "hollow_stone": {"name": "Hollow Stone", "emoji": "🪨", "sell": 900, "level": 1},
+    "primordial_dust": {"name": "Primordial Dust", "emoji": "✨", "sell": 1500, "level": 1},
+    "aether_shard": {"name": "Aether Shard", "emoji": "💠", "sell": 2500, "level": 1},
     # Level 2
-    "forge_cinder": {"name": "Forge Cinder", "emoji": "🔥", "sell": 300, "level": 2},
-    "molten_slag": {"name": "Molten Slag", "emoji": "🟠", "sell": 500, "level": 2},
-    "infernal_core": {"name": "Infernal Core", "emoji": "🔴", "sell": 750, "level": 2},
+    "forge_cinder": {"name": "Forge Cinder", "emoji": "🔥", "sell": 1300, "level": 2},
+    "molten_slag": {"name": "Molten Slag", "emoji": "🟠", "sell": 2200, "level": 2},
+    "infernal_core": {"name": "Infernal Core", "emoji": "🔴", "sell": 3750, "level": 2},
     # Level 3
-    "voidcell": {"name": "Voidcell", "emoji": "🟣", "sell": 450, "level": 3},
-    "crystal_marrow": {"name": "Crystal Marrow", "emoji": "💎", "sell": 700, "level": 3},
-    "prismatic_lens": {"name": "Prismatic Lens", "emoji": "🌈", "sell": 1000, "level": 3},
+    "voidcell": {"name": "Voidcell", "emoji": "🟣", "sell": 2000, "level": 3},
+    "crystal_marrow": {"name": "Crystal Marrow", "emoji": "💎", "sell": 3000, "level": 3},
+    "prismatic_lens": {"name": "Prismatic Lens", "emoji": "🌈", "sell": 5000, "level": 3},
     # Level 4
-    "warden_seal": {"name": "Warden Seal", "emoji": "🏛️", "sell": 600, "level": 4},
-    "temporal_fragment": {"name": "Temporal Fragment", "emoji": "⏳", "sell": 900, "level": 4},
-    "chrono_crystal": {"name": "Chrono Crystal", "emoji": "⌛", "sell": 1300, "level": 4},
+    "warden_seal": {"name": "Warden Seal", "emoji": "🏛️", "sell": 2600, "level": 4},
+    "temporal_fragment": {"name": "Temporal Fragment", "emoji": "⏳", "sell": 4000, "level": 4},
+    "chrono_crystal": {"name": "Chrono Crystal", "emoji": "⌛", "sell": 6500, "level": 4},
     # Level 5
-    "core_ember": {"name": "Core Ember", "emoji": "🌋", "sell": 800, "level": 5},
-    "world_essence": {"name": "World Essence", "emoji": "🌍", "sell": 1200, "level": 5},
-    "heart_of_the_world": {"name": "Heart of the World", "emoji": "❤️‍🔥", "sell": 2000, "level": 5},
+    "core_ember": {"name": "Core Ember", "emoji": "🌋", "sell": 3500, "level": 5},
+    "world_essence": {"name": "World Essence", "emoji": "🌍", "sell": 5500, "level": 5},
+    "heart_of_the_world": {"name": "Heart of the World", "emoji": "❤️‍🔥", "sell": 10000, "level": 5},
 }
 
 # Key materials — rare drops used in T6-T10 crafting recipes
@@ -269,11 +269,11 @@ AETHER_KEY_MATERIALS: Final[set[str]] = {
 
 # Key material drop chance (added to boss kills and elite bonus)
 KEY_MATERIAL_DROPS: Final[dict[int, list[_Drop]]] = {
-    1: [("aether_shard", "mineral", 500, 0.08)],
-    2: [("infernal_core", "mineral", 750, 0.06)],
-    3: [("prismatic_lens", "mineral", 1000, 0.05)],
-    4: [("chrono_crystal", "mineral", 1300, 0.04)],
-    5: [("heart_of_the_world", "mineral", 2000, 0.03)],
+    1: [("aether_shard", "mineral", 2500, 0.08)],
+    2: [("infernal_core", "mineral", 3750, 0.06)],
+    3: [("prismatic_lens", "mineral", 5000, 0.05)],
+    4: [("chrono_crystal", "mineral", 6500, 0.04)],
+    5: [("heart_of_the_world", "mineral", 10000, 0.03)],
 }
 
 # ---------------------------------------------------------------------------
@@ -416,11 +416,11 @@ BLAZE_GOBLIN_BUY_MARKUP: Final[float] = 1.50  # 150% of normal price
 BLAZE_GOBLIN_MAX_STASH: Final[int] = 5
 
 BLAZE_GOBLIN_STOCK: Final[dict[int, list[tuple[str, int]]]] = {
-    1: [("health_potion", 75), ("golden_mushroom", 40)],
-    2: [("health_potion", 75), ("golden_mushroom", 40), ("stamina_tonic", 120)],
-    3: [("health_potion", 75), ("golden_mushroom", 40), ("stamina_tonic", 120)],
-    4: [("health_potion", 75), ("golden_mushroom", 40), ("stamina_tonic", 120), ("minor_stamina_brew", 60), ("jackhammer", 25000)],
-    5: [("health_potion", 75), ("golden_mushroom", 40), ("stamina_tonic", 120), ("minor_stamina_brew", 60), ("void_energy_flask", 200), ("jackhammer", 25000)],
+    1: [("health_potion", 225), ("golden_mushroom", 120)],
+    2: [("health_potion", 225), ("golden_mushroom", 120), ("stamina_tonic", 360)],
+    3: [("health_potion", 225), ("golden_mushroom", 120), ("stamina_tonic", 360)],
+    4: [("health_potion", 225), ("golden_mushroom", 120), ("stamina_tonic", 360), ("minor_stamina_brew", 180), ("jackhammer", 25000)],
+    5: [("health_potion", 225), ("golden_mushroom", 120), ("stamina_tonic", 360), ("minor_stamina_brew", 180), ("void_energy_flask", 600), ("jackhammer", 25000)],
 }
 
 # ---------------------------------------------------------------------------

@@ -282,15 +282,17 @@ class AetherdepthsUseCases:
         self.repo.update_hp(user_id, battle.player_hp)
         self.repo.update_stamina(user_id, battle.player_stamina)
 
-        # Stars
+        # Spoils (sellable item instead of direct stars)
         mob = AETHER_MOBS.get(battle.mob_key)
-        star_reward = mob.star_reward if mob else 200
-        current_stars = self.repo.get_user_stars(user_id, username)
-        self.repo.update_user_stars(user_id, username, current_stars + star_reward)
+        spoils_value = mob.star_reward if mob else 200
 
         # Drops
         raw_drops = self.roll_drops(battle.dungeon_level, battle.mob_key, is_elite, modifier)
         granted = self.grant_drops(user_id, raw_drops)
+
+        # Grant sellable spoils item
+        if self.repo.add_item(user_id, "aether_spoils", "consumable", spoils_value):
+            granted.append(("aether_spoils", f"Aether Spoils ({spoils_value}⭐)"))
 
         # Log combat
         self.repo.log_combat(
@@ -298,15 +300,15 @@ class AetherdepthsUseCases:
             dungeon_level=battle.dungeon_level,
             mob_key=battle.mob_key,
             result="win",
-            stars_change=star_reward,
+            stars_change=spoils_value,
         )
 
         boss_text = " **BOSS DEFEATED!**" if (mob and mob.is_boss) else ""
         elite_text = " 🔥 **ELITE SLAIN!**" if is_elite else ""
 
         return {
-            "message": f"Victory!{boss_text}{elite_text} You earned **{star_reward}** stars!",
-            "stars_earned": star_reward,
+            "message": f"Victory!{boss_text}{elite_text} Looted **Aether Spoils** worth **{spoils_value}** stars!",
+            "stars_earned": 0,
             "drops": granted,
             "turns": battle.turns,
         }

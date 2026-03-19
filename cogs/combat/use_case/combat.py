@@ -432,12 +432,13 @@ class CombatUseCases:
                 drops=granted,
             )
 
-        # Dungeon victory: award stars and check level up
+        # Dungeon victory: award spoils item and check level up
         mob = MOBS.get(battle.mob_key)
-        star_reward = mob.star_reward if mob else 50
+        spoils_value = mob.star_reward if mob else 50
 
-        current_stars = self.repo.get_user_stars(user_id, username)
-        self.repo.update_user_stars(user_id, username, current_stars + star_reward)
+        # Grant sellable spoils item instead of direct stars
+        if self.repo.add_item(user_id, "battle_spoils", "consumable", spoils_value):
+            granted.append(("battle_spoils", f"Battle Spoils ({spoils_value}⭐)"))
 
         stats = self.repo.get_combat_stats(user_id)
         combat_level = stats["combat_level"]
@@ -455,7 +456,7 @@ class CombatUseCases:
             dungeon_level=battle.dungeon_level,
             mob_key=battle.mob_key,
             result="win",
-            stars_change=star_reward,
+            stars_change=spoils_value,
         )
 
         boss_text = " **BOSS DEFEATED!**" if (mob and mob.is_boss) else ""
@@ -463,10 +464,10 @@ class CombatUseCases:
         return BattleResult(
             success=True,
             won=True,
-            message=f"Victory!{boss_text} You earned **{star_reward}** stars!",
+            message=f"Victory!{boss_text} Looted **Battle Spoils** worth **{spoils_value}** stars!",
             mob_name=battle.mob_name,
             mob_emoji=battle.mob_emoji,
-            stars_earned=star_reward,
+            stars_earned=0,
             combat_level_up=level_up,
             new_combat_level=new_level,
             turns=battle.turns,

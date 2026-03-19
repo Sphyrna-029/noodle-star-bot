@@ -31,83 +31,83 @@ MINING_GOBLIN_LOSS_PERCENT: Final[float] = 0.75
 # ---------------------------------------------------------------------------
 
 MINERALS_NORMAL: Final[tuple[Mineral, ...]] = (
-    Mineral("Stone", "🪨", 5, 40),
-    Mineral("Coal", "⚫", 10, 30),
-    Mineral("Iron", "⚙️", 20, 15),
-    Mineral("Gold", "🟡", 40, 10),
-    Mineral("Diamond", "💎", 100, 5),
+    Mineral("Stone", "🪨", 12, 40),
+    Mineral("Coal", "⚫", 25, 30),
+    Mineral("Iron", "⚙️", 50, 15),
+    Mineral("Gold", "🟡", 100, 10),
+    Mineral("Diamond", "💎", 250, 5),
 )
 
 MINERALS_GOLD_PICKAXE: Final[tuple[Mineral, ...]] = (
-    Mineral("Stone", "🪨", 5, 30),
-    Mineral("Coal", "⚫", 10, 25),
-    Mineral("Iron", "⚙️", 20, 20),
-    Mineral("Gold", "🟡", 40, 15),
-    Mineral("Diamond", "💎", 100, 10),
+    Mineral("Stone", "🪨", 12, 30),
+    Mineral("Coal", "⚫", 25, 25),
+    Mineral("Iron", "⚙️", 50, 20),
+    Mineral("Gold", "🟡", 100, 15),
+    Mineral("Diamond", "💎", 250, 10),
 )
 
 # Level 2 - Caverns
 _L2_NORMAL: Final[tuple[Mineral, ...]] = (
-    Mineral("Sandstone", "🧱", 8, 40),
-    Mineral("Copper", "🟤", 15, 30),
-    Mineral("Silver", "⬜", 30, 15),
-    Mineral("Emerald", "💚", 60, 10),
-    Mineral("Ruby", "❤️", 150, 5),
+    Mineral("Sandstone", "🧱", 20, 40),
+    Mineral("Copper", "🟤", 38, 30),
+    Mineral("Silver", "⬜", 75, 15),
+    Mineral("Emerald", "💚", 150, 10),
+    Mineral("Ruby", "❤️", 375, 5),
 )
 _L2_GOLD: Final[tuple[Mineral, ...]] = (
-    Mineral("Sandstone", "🧱", 8, 30),
-    Mineral("Copper", "🟤", 15, 25),
-    Mineral("Silver", "⬜", 30, 20),
-    Mineral("Emerald", "💚", 60, 15),
-    Mineral("Ruby", "❤️", 150, 10),
+    Mineral("Sandstone", "🧱", 20, 30),
+    Mineral("Copper", "🟤", 38, 25),
+    Mineral("Silver", "⬜", 75, 20),
+    Mineral("Emerald", "💚", 150, 15),
+    Mineral("Ruby", "❤️", 375, 10),
 )
 
 # Level 3 - Deep Tunnels
 _L3_NORMAL: Final[tuple[Mineral, ...]] = (
-    Mineral("Slate", "🪨", 12, 40),
-    Mineral("Tin", "🪙", 25, 30),
-    Mineral("Platinum", "🔘", 50, 15),
-    Mineral("Sapphire", "💙", 90, 10),
-    Mineral("Amethyst", "💜", 225, 5),
+    Mineral("Slate", "🪨", 30, 40),
+    Mineral("Tin", "🪙", 63, 30),
+    Mineral("Platinum", "🔘", 125, 15),
+    Mineral("Sapphire", "💙", 225, 10),
+    Mineral("Amethyst", "💜", 565, 5),
 )
 _L3_GOLD: Final[tuple[Mineral, ...]] = (
-    Mineral("Slate", "🪨", 12, 30),
-    Mineral("Tin", "🪙", 25, 25),
-    Mineral("Platinum", "🔘", 50, 20),
-    Mineral("Sapphire", "💙", 90, 15),
-    Mineral("Amethyst", "💜", 225, 10),
+    Mineral("Slate", "🪨", 30, 30),
+    Mineral("Tin", "🪙", 63, 25),
+    Mineral("Platinum", "🔘", 125, 20),
+    Mineral("Sapphire", "💙", 225, 15),
+    Mineral("Amethyst", "💜", 565, 10),
 )
 
 # Level 4 - Molten Core
 _L4_NORMAL: Final[tuple[Mineral, ...]] = (
-    Mineral("Obsidian", "🖤", 20, 40),
-    Mineral("Titanium", "⚪", 40, 30),
-    Mineral("Mithril", "🔵", 80, 15),
-    Mineral("Opal", "🌈", 140, 10),
-    Mineral("Star Fragment", "🌟", 350, 5),
+    Mineral("Obsidian", "🖤", 50, 40),
+    Mineral("Titanium", "⚪", 100, 30),
+    Mineral("Mithril", "🔵", 200, 15),
+    Mineral("Opal", "🌈", 350, 10),
+    Mineral("Star Fragment", "🌟", 875, 5),
 )
 _L4_GOLD: Final[tuple[Mineral, ...]] = (
-    Mineral("Obsidian", "🖤", 20, 30),
-    Mineral("Titanium", "⚪", 40, 25),
-    Mineral("Mithril", "🔵", 80, 20),
-    Mineral("Opal", "🌈", 140, 15),
-    Mineral("Star Fragment", "🌟", 350, 10),
+    Mineral("Obsidian", "🖤", 50, 30),
+    Mineral("Titanium", "⚪", 100, 25),
+    Mineral("Mithril", "🔵", 200, 20),
+    Mineral("Opal", "🌈", 350, 15),
+    Mineral("Star Fragment", "🌟", 875, 10),
 )
 
 # Level 5 - Abyss
 _L5_NORMAL: Final[tuple[Mineral, ...]] = (
-    Mineral("Darkite", "🌑", 30, 40),
-    Mineral("Adamantium", "⛓️", 60, 30),
-    Mineral("Dragonstone", "🐉", 120, 15),
-    Mineral("Void Crystal", "🔮", 200, 10),
-    Mineral("Noodle Gem", "🍜", 500, 5),
+    Mineral("Darkite", "🌑", 75, 40),
+    Mineral("Adamantium", "⛓️", 150, 30),
+    Mineral("Dragonstone", "🐉", 300, 15),
+    Mineral("Void Crystal", "🔮", 500, 10),
+    Mineral("Noodle Gem", "🍜", 1250, 5),
 )
 _L5_GOLD: Final[tuple[Mineral, ...]] = (
-    Mineral("Darkite", "🌑", 30, 30),
-    Mineral("Adamantium", "⛓️", 60, 25),
-    Mineral("Dragonstone", "🐉", 120, 20),
-    Mineral("Void Crystal", "🔮", 200, 15),
-    Mineral("Noodle Gem", "🍜", 500, 10),
+    Mineral("Darkite", "🌑", 75, 30),
+    Mineral("Adamantium", "⛓️", 150, 25),
+    Mineral("Dragonstone", "🐉", 300, 20),
+    Mineral("Void Crystal", "🔮", 500, 15),
+    Mineral("Noodle Gem", "🍜", 1250, 10),
 )
 
 # ---------------------------------------------------------------------------

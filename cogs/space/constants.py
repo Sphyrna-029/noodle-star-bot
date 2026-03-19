@@ -36,82 +36,82 @@ SPACE_ABDUCTION_CHANCE: Final[dict[int, float]] = {
 
 # Planet 1 - Moon (Tier 6)
 _MOON_NORMAL: Final[tuple[Mineral, ...]] = (
-    Mineral("Moon Dust", "🌕", 45, 40),
-    Mineral("Helium-3", "🫧", 90, 30),
-    Mineral("Lunar Quartz", "🤍", 180, 15),
-    Mineral("Selenite", "🌙", 300, 10),
-    Mineral("Cosmic Pearl", "🦪", 750, 5),
+    Mineral("Moon Dust", "🌕", 90, 40),
+    Mineral("Helium-3", "🫧", 180, 30),
+    Mineral("Lunar Quartz", "🤍", 360, 15),
+    Mineral("Selenite", "🌙", 600, 10),
+    Mineral("Cosmic Pearl", "🦪", 1500, 5),
 )
 _MOON_GOLD: Final[tuple[Mineral, ...]] = (
-    Mineral("Moon Dust", "🌕", 45, 30),
-    Mineral("Helium-3", "🫧", 90, 25),
-    Mineral("Lunar Quartz", "🤍", 180, 20),
-    Mineral("Selenite", "🌙", 300, 15),
-    Mineral("Cosmic Pearl", "🦪", 750, 10),
+    Mineral("Moon Dust", "🌕", 90, 30),
+    Mineral("Helium-3", "🫧", 180, 25),
+    Mineral("Lunar Quartz", "🤍", 360, 20),
+    Mineral("Selenite", "🌙", 600, 15),
+    Mineral("Cosmic Pearl", "🦪", 1500, 10),
 )
 
 # Planet 2 - Mars (Tier 7)
 _MARS_NORMAL: Final[tuple[Mineral, ...]] = (
-    Mineral("Red Sand", "🔴", 65, 40),
-    Mineral("Martian Iron", "🧲", 130, 30),
-    Mineral("Phobos Shard", "💫", 260, 15),
-    Mineral("Olympus Ruby", "🌋", 430, 10),
-    Mineral("Stardust Crystal", "✴️", 1075, 5),
+    Mineral("Red Sand", "🔴", 130, 40),
+    Mineral("Martian Iron", "🧲", 260, 30),
+    Mineral("Phobos Shard", "💫", 520, 15),
+    Mineral("Olympus Ruby", "🌋", 860, 10),
+    Mineral("Stardust Crystal", "✴️", 2150, 5),
 )
 _MARS_GOLD: Final[tuple[Mineral, ...]] = (
-    Mineral("Red Sand", "🔴", 65, 30),
-    Mineral("Martian Iron", "🧲", 130, 25),
-    Mineral("Phobos Shard", "💫", 260, 20),
-    Mineral("Olympus Ruby", "🌋", 430, 15),
-    Mineral("Stardust Crystal", "✴️", 1075, 10),
+    Mineral("Red Sand", "🔴", 130, 30),
+    Mineral("Martian Iron", "🧲", 260, 25),
+    Mineral("Phobos Shard", "💫", 520, 20),
+    Mineral("Olympus Ruby", "🌋", 860, 15),
+    Mineral("Stardust Crystal", "✴️", 2150, 10),
 )
 
 # Planet 3 - Saturn (Tier 8)
 _SATURN_NORMAL: Final[tuple[Mineral, ...]] = (
-    Mineral("Ring Fragment", "🪐", 90, 40),
-    Mineral("Titan Ore", "🟠", 180, 30),
-    Mineral("Ammonia Ice", "🧊", 360, 15),
-    Mineral("Saturn Sapphire", "💍", 600, 10),
-    Mineral("Nova Core", "💥", 1500, 5),
+    Mineral("Ring Fragment", "🪐", 180, 40),
+    Mineral("Titan Ore", "🟠", 360, 30),
+    Mineral("Ammonia Ice", "🧊", 720, 15),
+    Mineral("Saturn Sapphire", "💍", 1200, 10),
+    Mineral("Nova Core", "💥", 3000, 5),
 )
 _SATURN_GOLD: Final[tuple[Mineral, ...]] = (
-    Mineral("Ring Fragment", "🪐", 90, 30),
-    Mineral("Titan Ore", "🟠", 180, 25),
-    Mineral("Ammonia Ice", "🧊", 360, 20),
-    Mineral("Saturn Sapphire", "💍", 600, 15),
-    Mineral("Nova Core", "💥", 1500, 10),
+    Mineral("Ring Fragment", "🪐", 180, 30),
+    Mineral("Titan Ore", "🟠", 360, 25),
+    Mineral("Ammonia Ice", "🧊", 720, 20),
+    Mineral("Saturn Sapphire", "💍", 1200, 15),
+    Mineral("Nova Core", "💥", 3000, 10),
 )
 
 # Planet 4 - Uranus (Tier 9)
 _URANUS_NORMAL: Final[tuple[Mineral, ...]] = (
-    Mineral("Ice Rock", "❄️", 125, 40),
-    Mineral("Methane Crystal", "🟢", 250, 30),
-    Mineral("Miranda Stone", "🌀", 500, 15),
-    Mineral("Uranian Diamond", "💠", 830, 10),
-    Mineral("Nebula Shard", "🌌", 2075, 5),
+    Mineral("Ice Rock", "❄️", 250, 40),
+    Mineral("Methane Crystal", "🟢", 500, 30),
+    Mineral("Miranda Stone", "🌀", 1000, 15),
+    Mineral("Uranian Diamond", "💠", 1660, 10),
+    Mineral("Nebula Shard", "🌌", 4150, 5),
 )
 _URANUS_GOLD: Final[tuple[Mineral, ...]] = (
-    Mineral("Ice Rock", "❄️", 125, 30),
-    Mineral("Methane Crystal", "🟢", 250, 25),
-    Mineral("Miranda Stone", "🌀", 500, 20),
-    Mineral("Uranian Diamond", "💠", 830, 15),
-    Mineral("Nebula Shard", "🌌", 2075, 10),
+    Mineral("Ice Rock", "❄️", 250, 30),
+    Mineral("Methane Crystal", "🟢", 500, 25),
+    Mineral("Miranda Stone", "🌀", 1000, 20),
+    Mineral("Uranian Diamond", "💠", 1660, 15),
+    Mineral("Nebula Shard", "🌌", 4150, 10),
 )
 
 # Planet 5 - Pluto (Tier 10)
 _PLUTO_NORMAL: Final[tuple[Mineral, ...]] = (
-    Mineral("Frozen Nitrogen", "🥶", 175, 40),
-    Mineral("Charon Basalt", "🗿", 350, 30),
-    Mineral("Dark Matter", "⚛️", 700, 15),
-    Mineral("Plutonium Core", "☢️", 1150, 10),
-    Mineral("Eternity Gem", "👑", 2875, 5),
+    Mineral("Frozen Nitrogen", "🥶", 350, 40),
+    Mineral("Charon Basalt", "🗿", 700, 30),
+    Mineral("Dark Matter", "⚛️", 1400, 15),
+    Mineral("Plutonium Core", "☢️", 2300, 10),
+    Mineral("Eternity Gem", "👑", 5750, 5),
 )
 _PLUTO_GOLD: Final[tuple[Mineral, ...]] = (
-    Mineral("Frozen Nitrogen", "🥶", 175, 30),
-    Mineral("Charon Basalt", "🗿", 350, 25),
-    Mineral("Dark Matter", "⚛️", 700, 20),
-    Mineral("Plutonium Core", "☢️", 1150, 15),
-    Mineral("Eternity Gem", "👑", 2875, 10),
+    Mineral("Frozen Nitrogen", "🥶", 350, 30),
+    Mineral("Charon Basalt", "🗿", 700, 25),
+    Mineral("Dark Matter", "⚛️", 1400, 20),
+    Mineral("Plutonium Core", "☢️", 2300, 15),
+    Mineral("Eternity Gem", "👑", 5750, 10),
 )
 
 # ---------------------------------------------------------------------------
