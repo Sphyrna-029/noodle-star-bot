@@ -9,7 +9,7 @@ from cogs.combat.constants import (
     COOP_REWARD_MULTIPLIER, DAMAGE_FLOOR, DEATH_PENALTIES,
     DUNGEON_DROPS, FISHING_AMBUSH_DROPS, MINING_AMBUSH_DROPS,
     MOBS, SPACE_AMBUSH_DROPS, STAMINA_PER_ATTACK,
-    STAMINA_PER_DEFEND, WINS_PER_COMBAT_LEVEL,
+    STAMINA_PER_CONSUME, STAMINA_PER_DEFEND, WINS_PER_COMBAT_LEVEL,
 )
 from cogs.combat.dto import (
     AmbushContext, BattleState, BattleTurn, CoopBattleState, CoopPlayer,
@@ -249,6 +249,8 @@ class CoopCombatUseCases:
                 old_hp = player.hp
                 player.hp = min(player.max_hp, old_hp + heal)
                 actual_hp = player.hp - old_hp
+                # Consuming costs stamina
+                player.stamina = max(0, player.stamina - STAMINA_PER_CONSUME)
                 # Dual-restore: also apply stamina if applicable
                 from cogs.combat.constants import STAMINA_RECOVERY
                 stam_bonus = STAMINA_RECOVERY.get(item_key, 0)
@@ -267,6 +269,8 @@ class CoopCombatUseCases:
             from cogs.combat.constants import STAMINA_RECOVERY
             recovery = STAMINA_RECOVERY.get(item_key, 0)
             if recovery > 0 and self._health_uc._find_and_remove(player.user_id, item_key):
+                # Consuming costs stamina (deduct before recovery)
+                player.stamina = max(0, player.stamina - STAMINA_PER_CONSUME)
                 old_stam = player.stamina
                 player.stamina = min(player.max_stamina, old_stam + recovery)
                 actual = player.stamina - old_stam

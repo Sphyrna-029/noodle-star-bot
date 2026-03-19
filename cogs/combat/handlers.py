@@ -9,7 +9,8 @@ from discord.ext import commands
 from cogs.combat.constants import (
     COMBAT_ITEMS, COOP_JOIN_TIMEOUT, COOP_MAX_PLAYERS, COOP_ROUND_TIMEOUT,
     CRAFT_RECIPES, CROP_HEAL_VALUES, DEATH_PENALTIES,
-    DUNGEON_LEVELS, FISH_HEAL_VALUES, MOBS_BY_LEVEL, STAMINA_RECOVERY,
+    DUNGEON_LEVELS, FISH_HEAL_VALUES, MOBS_BY_LEVEL, STAMINA_PER_CONSUME,
+    STAMINA_RECOVERY,
 )
 from cogs.shop.resources import get_resource
 from cogs.combat.dto import BattleState, BattleTurn, CoopBattleState, CoopPlayer
@@ -324,6 +325,9 @@ class BattleView(discord.ui.View):
                     if actual_stam:
                         msg = f"🍖 You consumed **{display}** and restored **{actual} HP** and **{actual_stam} stamina**!"
 
+                    # Consume costs stamina (like any other action)
+                    self.battle.player_stamina = max(0, self.battle.player_stamina - STAMINA_PER_CONSUME)
+
                     self.battle.turn += 1
                     turn = BattleTurn(
                         turn_number=self.battle.turn,
@@ -357,6 +361,9 @@ class BattleView(discord.ui.View):
                     old_stam = self.battle.player_stamina
                     self.battle.player_stamina = min(self.battle.player_max_stamina, old_stam + recovery)
                     actual = self.battle.player_stamina - old_stam
+
+                    # Consume costs stamina (like any other action)
+                    self.battle.player_stamina = max(0, self.battle.player_stamina - STAMINA_PER_CONSUME)
 
                     self.battle.turn += 1
                     turn = BattleTurn(
