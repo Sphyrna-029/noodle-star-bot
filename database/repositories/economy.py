@@ -98,14 +98,36 @@ class EconomyRepository(BaseRepository):
             )
 
     def get_leaderboard(self, limit: int = 10, ascending: bool = False) -> list[tuple]:
-        """Get leaderboard of users sorted by wallet stars."""
+        """Get leaderboard of users sorted by net worth (wallet + item values)."""
         order = "ASC" if ascending else "DESC"
         with self.db.get_cursor() as cursor:
             cursor.execute(
-                f"SELECT username, stars FROM noodle_stars ORDER BY stars {order} LIMIT ?",
+                f"""
+                SELECT ns.username, ns.stars,
+                       COALESCE(inv.total_value, 0) + COALESCE(stash.total_value, 0) AS item_value,
+                       ns.stars + COALESCE(inv.total_value, 0) + COALESCE(stash.total_value, 0) AS net_worth
+                FROM noodle_stars ns
+                LEFT JOIN (
+                    SELECT user_id, SUM(base_sell_value) AS total_value
+                    FROM user_inventory_items
+                    WHERE base_sell_value > 0
+                    GROUP BY user_id
+                ) inv ON ns.user_id = inv.user_id
+                LEFT JOIN (
+                    SELECT user_id, SUM(base_sell_value) AS total_value
+                    FROM aether_stash
+                    WHERE base_sell_value > 0
+                    GROUP BY user_id
+                ) stash ON ns.user_id = stash.user_id
+                ORDER BY net_worth {order}
+                LIMIT ?
+                """,
                 (limit,),
             )
-            return [(row["username"], row["stars"]) for row in cursor.fetchall()]
+            return [
+                (row["username"], row["stars"], row["item_value"], row["net_worth"])
+                for row in cursor.fetchall()
+            ]
 
     def get_last_deposit(self, user_id: int) -> Optional[datetime]:
         """Get the user's last deposit timestamp."""

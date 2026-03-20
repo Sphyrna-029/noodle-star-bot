@@ -316,9 +316,10 @@ class EconomyCog(commands.Cog):
 
         embed = discord.Embed(title="🌟 Top 5 Good Noodles 🌟", color=discord.Color.gold())
 
-        for i, (username, stars) in enumerate(results, 1):
+        for i, (username, stars, item_value, net_worth) in enumerate(results, 1):
             medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}."
-            embed.add_field(name=f"{medal} {username}", value=f"{stars} stars", inline=False)
+            value = f"**{net_worth:,}** total (💰 {stars:,} + 📦 {item_value:,})"
+            embed.add_field(name=f"{medal} {username}", value=value, inline=False)
 
         await ctx.send(embed=embed)
 
@@ -333,8 +334,9 @@ class EconomyCog(commands.Cog):
 
         embed = discord.Embed(title="📉 Bottom 5 Noodles 📉", color=discord.Color.red())
 
-        for i, (username, stars) in enumerate(results, 1):
-            embed.add_field(name=f"{i}. {username}", value=f"{stars} stars", inline=False)
+        for i, (username, stars, item_value, net_worth) in enumerate(results, 1):
+            value = f"**{net_worth:,}** total (💰 {stars:,} + 📦 {item_value:,})"
+            embed.add_field(name=f"{i}. {username}", value=value, inline=False)
 
         await ctx.send(embed=embed)
 
