@@ -98,14 +98,14 @@ class EconomyRepository(BaseRepository):
             )
 
     def get_leaderboard(self, limit: int = 10, ascending: bool = False) -> list[tuple]:
-        """Get leaderboard of users sorted by net worth (wallet + item values)."""
+        """Get leaderboard of users sorted by net worth (wallet + bank + item values)."""
         order = "ASC" if ascending else "DESC"
         with self.db.get_cursor() as cursor:
             cursor.execute(
                 f"""
-                SELECT ns.username, ns.stars,
+                SELECT ns.username, ns.stars, ns.bank,
                        COALESCE(inv.total_value, 0) + COALESCE(stash.total_value, 0) AS item_value,
-                       ns.stars + COALESCE(inv.total_value, 0) + COALESCE(stash.total_value, 0) AS net_worth
+                       ns.stars + ns.bank + COALESCE(inv.total_value, 0) + COALESCE(stash.total_value, 0) AS net_worth
                 FROM noodle_stars ns
                 LEFT JOIN (
                     SELECT user_id, SUM(base_sell_value) AS total_value
@@ -125,7 +125,7 @@ class EconomyRepository(BaseRepository):
                 (limit,),
             )
             return [
-                (row["username"], row["stars"], row["item_value"], row["net_worth"])
+                (row["username"], row["stars"], row["bank"], row["item_value"], row["net_worth"])
                 for row in cursor.fetchall()
             ]
 
