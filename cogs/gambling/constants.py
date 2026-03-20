@@ -6,6 +6,7 @@ __all__ = [
     "COINFLIP_MIN_BET",
     "DUEL_INVITE_TIMEOUT",
     "DUEL_TURN_TIMEOUT",
+    "DUEL_PLAYER_CLOCK",
     "BLACKJACK_DECKS",
     "BLACKJACK_PAYOUT",
     "BLACKJACK_WIN_MULTIPLIER",
@@ -42,7 +43,8 @@ COINFLIP_MIN_BET: Final[int] = 20
 
 # -- PvP Duel
 DUEL_INVITE_TIMEOUT: Final[int] = 60      # seconds before invite expires
-DUEL_TURN_TIMEOUT: Final[int] = 300       # seconds (5 min) per turn
+DUEL_TURN_TIMEOUT: Final[int] = 600       # seconds — safety net for entire view
+DUEL_PLAYER_CLOCK: Final[int] = 90        # seconds — per-player time bank
 
 # -- BlackJack
 BLACKJACK_DECKS: Final[int] = 2

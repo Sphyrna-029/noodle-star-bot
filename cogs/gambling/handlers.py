@@ -12,7 +12,7 @@ from cogs.combat.dto import BattleTurn
 from cogs.economy.constants import ACHIEVEMENT_DEFS
 from cogs.locations.check import require_location
 from cogs.shop.resources import get_resource
-from cogs.gambling.constants import DUEL_INVITE_TIMEOUT, DUEL_TURN_TIMEOUT
+from cogs.gambling.constants import DUEL_INVITE_TIMEOUT, DUEL_TURN_TIMEOUT, DUEL_PLAYER_CLOCK
 from cogs.gambling.use_cases import (
     GambleUseCase,
     CoinflipUseCase,
@@ -313,6 +313,7 @@ class DuelInviteView(discord.ui.View):
             embed = battle_view._create_embed()
             msg = await interaction.followup.send(embed=embed, view=battle_view)
             battle_view.message = msg
+            battle_view._start_clock()
 
         except Exception:
             traceback.print_exc()
@@ -407,7 +408,65 @@ class DuelBattleView(discord.ui.View):
         self._finish_lock = asyncio.Lock()
         self._consume_selected_item: str | None = None
         self._consume_selected_type: str | None = None
+        # Per-player turn clocks
+        self._clocks: dict[int, float] = {
+            duel.p1_id: float(DUEL_PLAYER_CLOCK),
+            duel.p2_id: float(DUEL_PLAYER_CLOCK),
+        }
+        self._turn_start: float = asyncio.get_event_loop().time()
+        self._clock_task: asyncio.Task | None = None
         self._rebuild_view()
+
+    def _start_clock(self) -> None:
+        """Start the turn timer for the active player."""
+        self._turn_start = asyncio.get_event_loop().time()
+        if self._clock_task and not self._clock_task.done():
+            self._clock_task.cancel()
+        remaining = self._clocks.get(self.duel.active_player, 0)
+        self._clock_task = asyncio.create_task(self._clock_tick(remaining))
+
+    async def _clock_tick(self, remaining: float) -> None:
+        """Wait for the active player's clock to expire, then forfeit."""
+        try:
+            await asyncio.sleep(remaining)
+            async with self._finish_lock:
+                if self.duel.finished:
+                    return
+                # Deduct remaining time
+                self._clocks[self.duel.active_player] = 0
+                result = self.duel_uc.resolve_timeout(self.duel)
+                self._finish_duel()
+
+                if self.message:
+                    embed = self._create_embed()
+                    idle_name = self.duel.p1_name if result.loser_id == self.duel.p1_id else self.duel.p2_name
+                    winner_member = self.p1_member if result.winner_id == self.duel.p1_id else self.p2_member
+                    loser_member = self.p2_member if result.winner_id == self.duel.p1_id else self.p1_member
+
+                    embed.add_field(
+                        name="\u23f0 CLOCK EXPIRED \u2014 FORFEIT",
+                        value=(
+                            f"**{idle_name}** ran out of time and forfeits!\n"
+                            f"\U0001f3c6 {winner_member.mention} wins **{result.amount}** stars.\n"
+                            f"{winner_member.mention} balance: **{result.winner_new_balance}** \u2b50\n"
+                            f"{loser_member.mention} balance: **{result.loser_new_balance}** \u2b50"
+                        ),
+                        inline=False,
+                    )
+                    try:
+                        await self.message.edit(embed=embed, view=self)
+                    except Exception:
+                        pass
+        except asyncio.CancelledError:
+            pass
+
+    def _pause_clock(self) -> None:
+        """Pause the active player's clock (called when they take an action)."""
+        elapsed = asyncio.get_event_loop().time() - self._turn_start
+        pid = self.duel.active_player
+        self._clocks[pid] = max(0, self._clocks.get(pid, 0) - elapsed)
+        if self._clock_task and not self._clock_task.done():
+            self._clock_task.cancel()
 
     def _disable_buttons(self) -> None:
         for item in self.children:
@@ -418,6 +477,8 @@ class DuelBattleView(discord.ui.View):
         _active_duels.discard(self.duel.p1_id)
         _active_duels.discard(self.duel.p2_id)
         self._disable_buttons()
+        if self._clock_task and not self._clock_task.done():
+            self._clock_task.cancel()
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         """Allow either participant through."""
@@ -484,8 +545,13 @@ class DuelBattleView(discord.ui.View):
             )
 
         if not d.finished:
+            p1_clock = int(self._clocks.get(d.p1_id, 0))
+            p2_clock = int(self._clocks.get(d.p2_id, 0))
             embed.set_footer(
-                text=f"{self._active_name()}'s turn | Wager: {d.wager}\u2b50 | \U0001f37d\ufe0f Consume (costs turn)"
+                text=(
+                    f"{self._active_name()}'s turn | Wager: {d.wager}\u2b50 | "
+                    f"\u23f1 {d.p1_name}: {p1_clock}s | {d.p2_name}: {p2_clock}s"
+                )
             )
 
         return embed
@@ -557,6 +623,7 @@ class DuelBattleView(discord.ui.View):
                     self._disable_buttons()
                     await interaction.edit_original_response(view=self)
                     return
+                self._pause_clock()
 
                 item_key = self._consume_selected_item
                 consume_type = self._consume_selected_type
@@ -576,6 +643,7 @@ class DuelBattleView(discord.ui.View):
                 self._rebuild_view()
                 embed = self._create_embed()
                 await interaction.edit_original_response(embed=embed, view=self)
+                self._start_clock()
 
         except Exception:
             traceback.print_exc()
@@ -593,6 +661,7 @@ class DuelBattleView(discord.ui.View):
                     self._disable_buttons()
                     await interaction.edit_original_response(view=self)
                     return
+                self._pause_clock()
 
                 self.duel_uc.execute_attack(self.duel)
 
@@ -630,6 +699,7 @@ class DuelBattleView(discord.ui.View):
                 self._rebuild_view()
                 embed = self._create_embed()
                 await interaction.edit_original_response(embed=embed, view=self)
+                self._start_clock()
 
         except Exception:
             traceback.print_exc()
@@ -647,12 +717,14 @@ class DuelBattleView(discord.ui.View):
                     self._disable_buttons()
                     await interaction.edit_original_response(view=self)
                     return
+                self._pause_clock()
 
                 self.duel_uc.execute_defend(self.duel)
 
                 self._rebuild_view()
                 embed = self._create_embed()
                 await interaction.edit_original_response(embed=embed, view=self)
+                self._start_clock()
 
         except Exception:
             traceback.print_exc()

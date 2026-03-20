@@ -19,6 +19,7 @@ from cogs.aetherdepths.constants import (
     BLAZE_GOBLIN_TIMEOUT,
     DAILY_MODIFIER_CHANCE,
     HAZARD_BASE_CHANCE,
+    PVP_PLAYER_CLOCK,
 )
 from cogs.locations.use_case.locations import LocationUseCases
 from cogs.aetherdepths.dto import AetherState
@@ -593,7 +594,7 @@ class PvPBattleView(discord.ui.View):
         self, state, pvp_uc: PvPUseCases,
         attacker_id: int, defender_id: int,
     ):
-        super().__init__(timeout=600)  # 10 minute time limit
+        super().__init__(timeout=600)  # safety net
         self.state = state
         self.pvp_uc = pvp_uc
         self.attacker_id = attacker_id
@@ -602,6 +603,59 @@ class PvPBattleView(discord.ui.View):
         self._finish_lock = asyncio.Lock()
         _active_aether_battles.add(attacker_id)
         _active_aether_battles.add(defender_id)
+        # Per-player turn clocks
+        self._clocks: dict[int, float] = {
+            attacker_id: float(PVP_PLAYER_CLOCK),
+            defender_id: float(PVP_PLAYER_CLOCK),
+        }
+        self._turn_start: float = asyncio.get_event_loop().time()
+        self._clock_task: asyncio.Task | None = None
+
+    def _start_clock(self) -> None:
+        self._turn_start = asyncio.get_event_loop().time()
+        if self._clock_task and not self._clock_task.done():
+            self._clock_task.cancel()
+        active_id = self._active_player_id()
+        remaining = self._clocks.get(active_id, 0)
+        self._clock_task = asyncio.create_task(self._clock_tick(remaining))
+
+    async def _clock_tick(self, remaining: float) -> None:
+        try:
+            await asyncio.sleep(remaining)
+            async with self._finish_lock:
+                if self.state.finished:
+                    return
+                active_id = self._active_player_id()
+                self._clocks[active_id] = 0
+                # Active player loses
+                self.state.finished = True
+                self.state.winner_id = self.defender_id if active_id == self.attacker_id else self.attacker_id
+                self.state.loser_id = active_id
+                self._finish_battle()
+
+                winner_name = self.state.attacker_name if self.state.winner_id == self.attacker_id else self.state.defender_name
+                loser_name = self.state.defender_name if self.state.winner_id == self.attacker_id else self.state.attacker_name
+                result = self.pvp_uc.resolve_pvp(self.state, winner_name, loser_name)
+                embed = self._create_embed()
+                embed.add_field(
+                    name="⏰ CLOCK EXPIRED — FORFEIT",
+                    value=f"**{loser_name}** ran out of time!\n{result.message}",
+                    inline=False,
+                )
+                if self.message:
+                    try:
+                        await self.message.edit(embed=embed, view=self)
+                    except Exception:
+                        pass
+        except asyncio.CancelledError:
+            pass
+
+    def _pause_clock(self) -> None:
+        elapsed = asyncio.get_event_loop().time() - self._turn_start
+        pid = self._active_player_id()
+        self._clocks[pid] = max(0, self._clocks.get(pid, 0) - elapsed)
+        if self._clock_task and not self._clock_task.done():
+            self._clock_task.cancel()
 
     def _disable_buttons(self):
         for item in self.children:
@@ -611,6 +665,8 @@ class PvPBattleView(discord.ui.View):
         _active_aether_battles.discard(self.attacker_id)
         _active_aether_battles.discard(self.defender_id)
         self._disable_buttons()
+        if self._clock_task and not self._clock_task.done():
+            self._clock_task.cancel()
 
     def _active_player_id(self) -> int:
         return self.attacker_id if self.state.active_player == 0 else self.defender_id
@@ -673,7 +729,11 @@ class PvPBattleView(discord.ui.View):
 
         if not s.finished:
             active_name = s.attacker_name if s.active_player == 0 else s.defender_name
-            embed.set_footer(text=f"⏳ {active_name}'s turn")
+            atk_clock = int(self._clocks.get(self.attacker_id, 0))
+            def_clock = int(self._clocks.get(self.defender_id, 0))
+            embed.set_footer(
+                text=f"⏳ {active_name}'s turn | ⏱ {s.attacker_name}: {atk_clock}s | {s.defender_name}: {def_clock}s"
+            )
 
         return embed
 
@@ -699,6 +759,7 @@ class PvPBattleView(discord.ui.View):
                     self._disable_buttons()
                     await interaction.edit_original_response(view=self)
                     return
+                self._pause_clock()
 
                 self.pvp_uc.execute_attack(self.state)
                 if await self._check_finish(interaction):
@@ -706,6 +767,7 @@ class PvPBattleView(discord.ui.View):
 
                 embed = self._create_embed()
                 await interaction.edit_original_response(embed=embed, view=self)
+                self._start_clock()
         except Exception:
             traceback.print_exc()
 
@@ -718,10 +780,12 @@ class PvPBattleView(discord.ui.View):
                     self._disable_buttons()
                     await interaction.edit_original_response(view=self)
                     return
+                self._pause_clock()
 
                 self.pvp_uc.execute_defend(self.state)
                 embed = self._create_embed()
                 await interaction.edit_original_response(embed=embed, view=self)
+                self._start_clock()
         except Exception:
             traceback.print_exc()
 
@@ -1046,6 +1110,7 @@ class AetherdepthsCog(commands.Cog, name="Aetherdepths"):
             embed=embed, view=view,
         )
         view.message = msg
+        view._start_clock()
 
     # ── !gbuy — buy from Blaze Goblin ────────────────────────
 
