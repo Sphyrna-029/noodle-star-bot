@@ -44,7 +44,7 @@ COINFLIP_MIN_BET: Final[int] = 20
 # -- PvP Duel
 DUEL_INVITE_TIMEOUT: Final[int] = 60      # seconds before invite expires
 DUEL_TURN_TIMEOUT: Final[int] = 600       # seconds — safety net for entire view
-DUEL_PLAYER_CLOCK: Final[int] = 90        # seconds — per-player time bank
+DUEL_PLAYER_CLOCK: Final[int] = 180       # seconds — per-player time bank
 
 # -- BlackJack
 BLACKJACK_DECKS: Final[int] = 2

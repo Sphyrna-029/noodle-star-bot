@@ -425,7 +425,7 @@ ELITE_KEY_MATERIAL_CHANCE: Final[float] = 0.15  # additive to normal drops
 
 PVP_KILL_REWARD_PCT: Final[float] = 0.25
 PVP_COOLDOWN_SECONDS: Final[int] = 300  # 5 minutes
-PVP_PLAYER_CLOCK: Final[int] = 90        # seconds — per-player time bank
+PVP_PLAYER_CLOCK: Final[int] = 180        # seconds — per-player time bank
 
 # ---------------------------------------------------------------------------
 # Blaze Goblin
