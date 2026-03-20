@@ -44,19 +44,23 @@ _active_aether_battles: set[int] = set()
 _player_states: dict[int, AetherState] = {}
 # user_id -> last goblin encounter time
 _last_goblin: dict[int, datetime] = {}
+# users with an active Blaze Goblin encounter (enables banking/stash at aetherdepths)
+_active_goblin: set[int] = set()
 
 
 def is_in_aether_battle(user_id: int) -> bool:
     return user_id in _active_aether_battles
 
 
+def has_active_goblin(user_id: int) -> bool:
+    """True if user has an active Blaze Goblin encounter (unlocks banking/stash)."""
+    return user_id in _active_goblin
+
+
 def return_stash_on_leave(user_id: int) -> str:
-    """Return stashed items when player leaves Aetherdepths. Called by travel."""
+    """Clean up state when player leaves Aetherdepths. Called by travel."""
     _player_states.pop(user_id, None)
-    repo = UserRepository()
-    returned = repo.return_stashed_items(user_id)
-    if returned > 0:
-        return f"**{returned}** stashed item(s) returned to your inventory."
+    _active_goblin.discard(user_id)
     return ""
 
 
@@ -814,23 +818,10 @@ class BlazeGoblinView(discord.ui.View):
         except Exception:
             traceback.print_exc()
 
-    @discord.ui.button(label="Stash Item", style=discord.ButtonStyle.primary, emoji="📦", row=1)
-    async def stash_menu(self, interaction: discord.Interaction, button: discord.ui.Button):
-        try:
-            count = self.goblin_uc.repo.get_stash_count(self.user_id)
-            await interaction.response.send_message(
-                f"📦 **Stash** ({count}/5 slots used)\n"
-                "Stashed items survive death!\n\n"
-                "Type `!gstash <item_name>` to stash an inventory item.\n"
-                "Type `!astash` to view your stash.",
-                ephemeral=True,
-            )
-        except Exception:
-            traceback.print_exc()
-
-    @discord.ui.button(label="Dismiss", style=discord.ButtonStyle.secondary, emoji="❌", row=2)
+    @discord.ui.button(label="Dismiss", style=discord.ButtonStyle.secondary, emoji="❌", row=1)
     async def dismiss(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
+            _active_goblin.discard(self.user_id)
             for child in self.children:
                 child.disabled = True
             await interaction.response.edit_message(
@@ -842,6 +833,7 @@ class BlazeGoblinView(discord.ui.View):
             traceback.print_exc()
 
     async def on_timeout(self) -> None:
+        _active_goblin.discard(self.user_id)
         for child in self.children:
             child.disabled = True
         if self.message:
@@ -1055,33 +1047,6 @@ class AetherdepthsCog(commands.Cog, name="Aetherdepths"):
         )
         view.message = msg
 
-    # ── !astash — view stash ─────────────────────────────────
-
-    @commands.command(name="astash")
-    async def aether_stash(self, ctx: commands.Context):
-        """View your Aetherdepths stash."""
-        uid = ctx.author.id
-        items = self.repo.get_stashed_items(uid)
-
-        if not items:
-            await ctx.send("📦 Your Aether stash is empty.")
-            return
-
-        lines = []
-        for item in items:
-            res = get_resource(item["item_key"])
-            display = res.display_name if res else item["item_key"].replace("_", " ").title()
-            emoji = res.emoji if res else "📦"
-            lines.append(f"{emoji} {display}")
-
-        embed = discord.Embed(
-            title="📦 Aether Stash",
-            description="\n".join(lines),
-            color=discord.Color.dark_purple(),
-        )
-        embed.set_footer(text=f"{len(items)}/5 slots used. Items survive death!")
-        await ctx.send(embed=embed)
-
     # ── !gbuy — buy from Blaze Goblin ────────────────────────
 
     @commands.command(name="gbuy", aliases=["goblinbuy"])
@@ -1114,44 +1079,6 @@ class AetherdepthsCog(commands.Cog, name="Aetherdepths"):
         item_key, display, price = match
         success, msg = self.goblin_uc.buy_item(uid, str(ctx.author), item_key, price)
         prefix = "🧌" if success else "❌"
-        await ctx.send(f"{prefix} {ctx.author.mention}, {msg}")
-
-    # ── !gstash — stash an item via Blaze Goblin ─────────────
-
-    @commands.command(name="gstash", aliases=["goblinstash"])
-    async def goblin_stash(self, ctx: commands.Context, *, item_name: str = ""):
-        """Stash an inventory item (survives death). Requires Blaze Goblin."""
-        if not await require_location(ctx, "aetherdepths"):
-            return
-        uid = ctx.author.id
-        if not item_name:
-            await ctx.send("Usage: `!gstash <item name>` — stash an item to protect it from death.")
-            return
-
-        # Find matching item in user's inventory
-        with self.repo.db.get_cursor() as cursor:
-            cursor.execute(
-                "SELECT id, item_key FROM user_inventory_items WHERE user_id = ? ORDER BY id",
-                (uid,),
-            )
-            rows = cursor.fetchall()
-
-        norm = item_name.strip().lower().replace(" ", "_")
-        match_id = None
-        for row in rows:
-            key = row["item_key"]
-            res = get_resource(key)
-            display = res.display_name.lower().replace(" ", "_") if res else key
-            if norm == key or norm == display or norm == (res.display_name.lower() if res else key):
-                match_id = row["id"]
-                break
-
-        if match_id is None:
-            await ctx.send(f"❌ No item matching **{item_name}** found in your inventory.")
-            return
-
-        success, msg = self.goblin_uc.stash_item(uid, match_id)
-        prefix = "📦" if success else "❌"
         await ctx.send(f"{prefix} {ctx.author.mention}, {msg}")
 
     # ── Background tasks ─────────────────────────────────────
@@ -1200,6 +1127,7 @@ class AetherdepthsCog(commands.Cog, name="Aetherdepths"):
                 if not user:
                     continue
 
+                _active_goblin.add(uid)
                 view = BlazeGoblinView(uid, user.name, level, self.goblin_uc)
                 goblin_msg = await channel.send(
                     f"🧌 {user.mention}, a **Blaze Goblin** appears from the shadows!\n"

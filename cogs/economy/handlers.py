@@ -316,9 +316,9 @@ class EconomyCog(commands.Cog):
 
         embed = discord.Embed(title="🌟 Top 5 Good Noodles 🌟", color=discord.Color.gold())
 
-        for i, (username, stars, bank, item_value, net_worth) in enumerate(results, 1):
+        for i, (username, stars, bank, inv_value, stash_value, net_worth) in enumerate(results, 1):
             medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}."
-            value = f"**{net_worth:,}** total (💰 {stars:,} + 🏦 {bank:,} + 📦 {item_value:,})"
+            value = f"**{net_worth:,}** total (💰 {stars:,} + 🏦 {bank:,} + 🎒 {inv_value:,} + 📦 {stash_value:,})"
             embed.add_field(name=f"{medal} {username}", value=value, inline=False)
 
         await ctx.send(embed=embed)
@@ -334,8 +334,8 @@ class EconomyCog(commands.Cog):
 
         embed = discord.Embed(title="📉 Bottom 5 Noodles 📉", color=discord.Color.red())
 
-        for i, (username, stars, bank, item_value, net_worth) in enumerate(results, 1):
-            value = f"**{net_worth:,}** total (💰 {stars:,} + 🏦 {bank:,} + 📦 {item_value:,})"
+        for i, (username, stars, bank, inv_value, stash_value, net_worth) in enumerate(results, 1):
+            value = f"**{net_worth:,}** total (💰 {stars:,} + 🏦 {bank:,} + 🎒 {inv_value:,} + 📦 {stash_value:,})"
             embed.add_field(name=f"{i}. {username}", value=value, inline=False)
 
         await ctx.send(embed=embed)
@@ -343,7 +343,8 @@ class EconomyCog(commands.Cog):
     @commands.command(name="deposit")
     async def deposit(self, ctx, amount: str = ''):
         """Deposit noodle stars into your bank for safekeeping."""
-        if not await require_location(ctx, "noodle_town"):
+        from cogs.aetherdepths.handlers import has_active_goblin
+        if not has_active_goblin(ctx.author.id) and not await require_location(ctx, "noodle_town"):
             return
         if amount == '':
             await ctx.send(
@@ -368,7 +369,8 @@ class EconomyCog(commands.Cog):
     @commands.command(name="withdraw")
     async def withdraw(self, ctx, amount: str = ''):
         """Withdraw noodle stars from your bank."""
-        if not await require_location(ctx, "noodle_town"):
+        from cogs.aetherdepths.handlers import has_active_goblin
+        if not has_active_goblin(ctx.author.id) and not await require_location(ctx, "noodle_town"):
             return
         if amount == '':
             await ctx.send(
@@ -528,7 +530,8 @@ class EconomyCog(commands.Cog):
     @commands.command(name="stash")
     async def stash(self, ctx, *, item_name: str = ""):
         """Stash items to safe storage. Use !stash for menu or !stash <item> [amount]."""
-        if not await require_location(ctx, "noodle_town"):
+        from cogs.aetherdepths.handlers import has_active_goblin
+        if not has_active_goblin(ctx.author.id) and not await require_location(ctx, "noodle_town"):
             return
 
         # No args — show category dropdown menu
@@ -728,7 +731,8 @@ class EconomyCog(commands.Cog):
     @commands.command(name="unstash")
     async def unstash(self, ctx, *, item_name: str = ""):
         """Withdraw items from storage. Use !unstash for menu or !unstash <item> [amount]."""
-        if not await require_location(ctx, "noodle_town"):
+        from cogs.aetherdepths.handlers import has_active_goblin
+        if not has_active_goblin(ctx.author.id) and not await require_location(ctx, "noodle_town"):
             return
 
         # No args — show category dropdown menu

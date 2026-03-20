@@ -104,7 +104,8 @@ class EconomyRepository(BaseRepository):
             cursor.execute(
                 f"""
                 SELECT ns.username, ns.stars, ns.bank,
-                       COALESCE(inv.total_value, 0) + COALESCE(stash.total_value, 0) AS item_value,
+                       COALESCE(inv.total_value, 0) AS inv_value,
+                       COALESCE(stash.total_value, 0) AS stash_value,
                        ns.stars + ns.bank + COALESCE(inv.total_value, 0) + COALESCE(stash.total_value, 0) AS net_worth
                 FROM noodle_stars ns
                 LEFT JOIN (
@@ -115,7 +116,7 @@ class EconomyRepository(BaseRepository):
                 ) inv ON ns.user_id = inv.user_id
                 LEFT JOIN (
                     SELECT user_id, SUM(base_sell_value) AS total_value
-                    FROM aether_stash
+                    FROM user_storage
                     WHERE base_sell_value > 0
                     GROUP BY user_id
                 ) stash ON ns.user_id = stash.user_id
@@ -125,7 +126,7 @@ class EconomyRepository(BaseRepository):
                 (limit,),
             )
             return [
-                (row["username"], row["stars"], row["bank"], row["item_value"], row["net_worth"])
+                (row["username"], row["stars"], row["bank"], row["inv_value"], row["stash_value"], row["net_worth"])
                 for row in cursor.fetchall()
             ]
 
