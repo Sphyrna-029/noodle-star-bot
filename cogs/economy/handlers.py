@@ -308,13 +308,13 @@ class EconomyCog(commands.Cog):
     @commands.command(name="topstars")
     async def top_stars(self, ctx):
         """Show top 5 users with the most noodle stars."""
-        results = self.economy.get_leaderboard(limit=5, ascending=False)
+        results = self.economy.get_leaderboard(limit=10, ascending=False)
 
         if not results:
             await ctx.send("No noodle stars have been awarded yet!")
             return
 
-        embed = discord.Embed(title="🌟 Top 5 Good Noodles 🌟", color=discord.Color.gold())
+        embed = discord.Embed(title="🌟 Top 10 Good Noodles 🌟", color=discord.Color.gold())
 
         for i, (username, stars, bank, inv_value, stash_value, net_worth) in enumerate(results, 1):
             medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}."
