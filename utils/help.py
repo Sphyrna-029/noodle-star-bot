@@ -1337,6 +1337,8 @@ def _aetherdepths_embed() -> discord.Embed:
             "`!afight` (or `!af`) — Fight a mob on your current level\n"
             "`!pvp @player` — Attack another player (L2+ only)\n"
             "`!astash` — View your protected item stash\n"
+            "`!gbuy <item>` (or `!goblinbuy`) — Buy from Blaze Goblin\n"
+            "`!gstash <item>` (or `!goblinstash`) — Stash item with Blaze Goblin\n"
             "Stashed items are returned when you `!travel` away"
         ),
         inline=False,
@@ -1358,7 +1360,7 @@ def _aetherdepths_embed() -> discord.Embed:
             "🔥 **Elite Mobs** — 5% chance, +50% stats, guaranteed material drops + key material chance\n"
             "⚡ **Floor Hazards** — Random after victories (15-25%): wallet loss, item loss, HP drain, or bonus fights\n"
             "📅 **Daily Modifiers** — 20%/day: Fortified Foes, Key Surge, Calm Depths, or Goblin Market\n"
-            "🧌 **Blaze Goblin** — Random trader: deposit, buy (`!gbuy`), stash (`!gstash`, max 5)\n"
+            "🧌 **Blaze Goblin** — Random trader (L2+): deposit stars, buy supplies, stash items (max 5)\n"
             "⛏️ **Jackhammer** — 25,000⭐ from Blaze Goblin (L4-5), halves stamina (not with Gold Pickaxe)\n"
             "⚔️ **PvP** — L2+ `!pvp @player`, loser gets death penalty, winner gets 25% of lost stars"
         ),

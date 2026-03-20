@@ -276,6 +276,17 @@ class EconomyCog(commands.Cog):
             ),
             inline=False,
         )
+        # Aetherdepths progression
+        aether = self.economy.repo.get_aether_stats(member.id)
+        aether_level = aether.get("aether_level", 0) if aether else 0
+        if aether_level > 0:
+            active = aether.get("active_aether_level", aether_level) or aether_level
+            embed.add_field(
+                name="🕳️ Aetherdepths",
+                value=f"Unlocked: **Level {aether_level}/5** | Active: **Level {active}**",
+                inline=False,
+            )
+
         embed.add_field(
             name="🏆 Achievements",
             value=f"Unlocked: **{result.unlocked_achievements}/{result.total_achievements}**",

@@ -78,6 +78,7 @@ class _AetherDeathConfirmView(discord.ui.View):
         super().__init__(timeout=30)
         self.author_id = author_id
         self.confirmed = False
+        self.message = None
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id != self.author_id:
@@ -99,6 +100,17 @@ class _AetherDeathConfirmView(discord.ui.View):
         for child in self.children:
             child.disabled = True
         await interaction.response.edit_message(content="🏃 Wisely retreated.", view=self)
+        self.stop()
+
+    async def on_timeout(self) -> None:
+        self.confirmed = False
+        for child in self.children:
+            child.disabled = True
+        if self.message:
+            try:
+                await self.message.edit(content="⏰ Timed out — retreated safely.", view=self)
+            except Exception:
+                pass
         self.stop()
 
 
@@ -555,6 +567,9 @@ class AetherBattleView(discord.ui.View):
             traceback.print_exc()
 
     async def on_timeout(self) -> None:
+        # Save player state before cleaning up
+        self.combat_uc.repo.update_hp(self.author_id, self.battle.player_hp)
+        self.combat_uc.repo.update_stamina(self.author_id, self.battle.player_stamina)
         self._finish_battle()
         if self.message:
             try:
@@ -749,6 +764,7 @@ class BlazeGoblinView(discord.ui.View):
         self.username = username
         self.level = level
         self.goblin_uc = goblin_uc
+        self.message = None
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id != self.user_id:
@@ -758,53 +774,84 @@ class BlazeGoblinView(discord.ui.View):
 
     @discord.ui.button(label="Deposit 1000", style=discord.ButtonStyle.success, emoji="🏦", row=0)
     async def deposit_1k(self, interaction: discord.Interaction, button: discord.ui.Button):
-        success, msg = self.goblin_uc.deposit_stars(self.user_id, self.username, 1000)
-        await interaction.response.send_message(msg, ephemeral=True)
+        try:
+            success, msg = self.goblin_uc.deposit_stars(self.user_id, self.username, 1000)
+            await interaction.response.send_message(msg, ephemeral=True)
+        except Exception:
+            traceback.print_exc()
 
     @discord.ui.button(label="Deposit 5000", style=discord.ButtonStyle.success, emoji="🏦", row=0)
     async def deposit_5k(self, interaction: discord.Interaction, button: discord.ui.Button):
-        success, msg = self.goblin_uc.deposit_stars(self.user_id, self.username, 5000)
-        await interaction.response.send_message(msg, ephemeral=True)
+        try:
+            success, msg = self.goblin_uc.deposit_stars(self.user_id, self.username, 5000)
+            await interaction.response.send_message(msg, ephemeral=True)
+        except Exception:
+            traceback.print_exc()
 
     @discord.ui.button(label="Deposit All", style=discord.ButtonStyle.success, emoji="🏦", row=0)
     async def deposit_all(self, interaction: discord.Interaction, button: discord.ui.Button):
-        repo = self.goblin_uc.repo
-        current = repo.get_user_stars(self.user_id, self.username)
-        if current <= 0:
-            await interaction.response.send_message("No stars to deposit!", ephemeral=True)
-            return
-        success, msg = self.goblin_uc.deposit_stars(self.user_id, self.username, current)
-        await interaction.response.send_message(msg, ephemeral=True)
+        try:
+            repo = self.goblin_uc.repo
+            current = repo.get_user_stars(self.user_id, self.username)
+            if current <= 0:
+                await interaction.response.send_message("No stars to deposit!", ephemeral=True)
+                return
+            success, msg = self.goblin_uc.deposit_stars(self.user_id, self.username, current)
+            await interaction.response.send_message(msg, ephemeral=True)
+        except Exception:
+            traceback.print_exc()
 
     @discord.ui.button(label="Buy Menu", style=discord.ButtonStyle.primary, emoji="🛒", row=1)
     async def buy_menu(self, interaction: discord.Interaction, button: discord.ui.Button):
-        stock = self.goblin_uc.get_stock(self.level)
-        lines = [f"**{name}** — {price} ⭐" for _, name, price in stock]
-        await interaction.response.send_message(
-            "🧌 **Blaze Goblin's Wares:**\n" + "\n".join(lines) +
-            "\n\nType `!gbuy <item>` to purchase.",
-            ephemeral=True,
-        )
+        try:
+            stock = self.goblin_uc.get_stock(self.level)
+            lines = [f"**{name}** — {price} ⭐" for _, name, price in stock]
+            await interaction.response.send_message(
+                "🧌 **Blaze Goblin's Wares:**\n" + "\n".join(lines) +
+                "\n\nType `!gbuy <item>` to purchase.",
+                ephemeral=True,
+            )
+        except Exception:
+            traceback.print_exc()
 
     @discord.ui.button(label="Stash Item", style=discord.ButtonStyle.primary, emoji="📦", row=1)
     async def stash_menu(self, interaction: discord.Interaction, button: discord.ui.Button):
-        count = self.goblin_uc.repo.get_stash_count(self.user_id)
-        await interaction.response.send_message(
-            f"📦 **Stash** ({count}/5 slots used)\n"
-            "Stashed items survive death!\n\n"
-            "Type `!gstash <item_name>` to stash an inventory item.\n"
-            "Type `!astash` to view your stash.",
-            ephemeral=True,
-        )
+        try:
+            count = self.goblin_uc.repo.get_stash_count(self.user_id)
+            await interaction.response.send_message(
+                f"📦 **Stash** ({count}/5 slots used)\n"
+                "Stashed items survive death!\n\n"
+                "Type `!gstash <item_name>` to stash an inventory item.\n"
+                "Type `!astash` to view your stash.",
+                ephemeral=True,
+            )
+        except Exception:
+            traceback.print_exc()
 
     @discord.ui.button(label="Dismiss", style=discord.ButtonStyle.secondary, emoji="❌", row=2)
     async def dismiss(self, interaction: discord.Interaction, button: discord.ui.Button):
+        try:
+            for child in self.children:
+                child.disabled = True
+            await interaction.response.edit_message(
+                content="🧌 The Blaze Goblin vanishes into the shadows...",
+                view=self,
+            )
+            self.stop()
+        except Exception:
+            traceback.print_exc()
+
+    async def on_timeout(self) -> None:
         for child in self.children:
             child.disabled = True
-        await interaction.response.edit_message(
-            content="🧌 The Blaze Goblin vanishes into the shadows...",
-            view=self,
-        )
+        if self.message:
+            try:
+                await self.message.edit(
+                    content="🧌 The Blaze Goblin got bored and vanished...",
+                    view=self,
+                )
+            except Exception:
+                pass
         self.stop()
 
 
@@ -852,6 +899,8 @@ class AetherdepthsCog(commands.Cog, name="Aetherdepths"):
                 await ctx.send("❌ You're currently in combat!")
                 return
             success, msg = self.aether_uc.enter_dungeon(uid, ctx.author.name, level)
+            if success:
+                _player_states.pop(uid, None)  # Clear hazard state on level switch
             await ctx.send(msg)
             return
 
@@ -926,6 +975,7 @@ class AetherdepthsCog(commands.Cog, name="Aetherdepths"):
                 f"⚠️ **Level {level}** death penalty: {penalty['description']}\nProceed?",
                 view=view,
             )
+            view.message = msg
             await view.wait()
             if not view.confirmed:
                 return
@@ -1151,11 +1201,12 @@ class AetherdepthsCog(commands.Cog, name="Aetherdepths"):
                     continue
 
                 view = BlazeGoblinView(uid, user.name, level, self.goblin_uc)
-                await channel.send(
+                goblin_msg = await channel.send(
                     f"🧌 {user.mention}, a **Blaze Goblin** appears from the shadows!\n"
                     "Quick — deposit your stars, buy supplies, or stash items before it vanishes!",
                     view=view,
                 )
+                view.message = goblin_msg
             except Exception as e:
                 print(f"Blaze Goblin error for user {uid}: {e}")
 

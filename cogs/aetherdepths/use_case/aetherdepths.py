@@ -274,6 +274,13 @@ class AetherdepthsUseCases:
         mob = AETHER_MOBS.get(battle.mob_key)
         spoils_value = mob.star_reward if mob else 200
 
+        # Star Magnet bonus (+15%)
+        inv = self.repo.get_user_inventory(user_id)
+        magnet_uses = inv.get("star_magnet", 0)
+        if magnet_uses > 0:
+            spoils_value = int(spoils_value * 1.15)
+            self.repo.update_user_inventory(user_id, "star_magnet", magnet_uses - 1)
+
         # Drops
         raw_drops = self.roll_drops(battle.dungeon_level, battle.mob_key, is_elite, modifier)
         granted = self.grant_drops(user_id, raw_drops)
@@ -313,7 +320,11 @@ class AetherdepthsUseCases:
         if modifier and modifier.get("harsher_penalty"):
             effective_level = min(5, level + 1)
 
-        penalty = AETHER_DEATH_PENALTIES.get(effective_level, AETHER_DEATH_PENALTIES[1])
+        penalty = dict(AETHER_DEATH_PENALTIES.get(effective_level, AETHER_DEATH_PENALTIES[1]))
+
+        # On L5 the +1 caps at 5 (no-op), so boost bank loss instead
+        if modifier and modifier.get("harsher_penalty") and level == 5:
+            penalty["bank_loss_pct"] = min(1.0, penalty.get("bank_loss_pct", 0) + 0.05)
 
         stars_lost = 0
         items_lost = []
