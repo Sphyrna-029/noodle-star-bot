@@ -38,6 +38,8 @@ class NoodleStarBot(commands.Bot):
             "cogs.locations.handlers",
             "cogs.events.alien_abduction",
             "cogs.events.farming_weather",
+            "cogs.events.roaming_trader",
+            "cogs.events.alien_trader",
             "cogs.economy.handlers",
             "cogs.gambling.handlers",
             "cogs.mining.handlers",
