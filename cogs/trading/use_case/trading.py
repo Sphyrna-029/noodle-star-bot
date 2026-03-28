@@ -158,7 +158,6 @@ class TradeUseCases:
                         "VALUES (?, ?, 0, 0) ON CONFLICT(user_id) DO NOTHING",
                         (uid, uname),
                     )
-                    self.repo._ensure_inventory_row(cursor, uid)
 
                 self._transfer_stars(
                     cursor, proposer_id, proposer_name,
