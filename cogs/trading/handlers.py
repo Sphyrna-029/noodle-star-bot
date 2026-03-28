@@ -59,9 +59,10 @@ class _TradeItemSelect(discord.ui.Select):
         items = self.trade_view._get_items(self.owner_id)
         items.append(item_key)
 
+        await interaction.response.defer()
         self.trade_view._rebuild()
         embed = self.trade_view.build_embed()
-        await interaction.response.edit_message(embed=embed, view=self.trade_view)
+        await interaction.edit_original_response(embed=embed, view=self.trade_view)
 
 
 # ---------------------------------------------------------------------------
@@ -389,9 +390,10 @@ class TradeView(discord.ui.View):
             return
 
         self.phase = "editing"
+        await interaction.response.defer()
         self._rebuild()
         embed = self.build_embed()
-        await interaction.response.edit_message(embed=embed, view=self)
+        await interaction.edit_original_response(embed=embed, view=self)
 
     async def _decline_cb(self, interaction: discord.Interaction):
         uid = interaction.user.id
@@ -450,9 +452,10 @@ class TradeView(discord.ui.View):
             return
 
         my_items.pop()
+        await interaction.response.defer()
         self._rebuild()
         embed = self.build_embed()
-        await interaction.response.edit_message(embed=embed, view=self)
+        await interaction.edit_original_response(embed=embed, view=self)
 
     async def _lock_cb(self, interaction: discord.Interaction):
         uid = interaction.user.id
@@ -472,9 +475,10 @@ class TradeView(discord.ui.View):
                 self.phase = "review"
                 self.review_started_at = datetime.now(timezone.utc)
 
+        await interaction.response.defer()
         self._rebuild()
         embed = self.build_embed()
-        await interaction.response.edit_message(embed=embed, view=self)
+        await interaction.edit_original_response(embed=embed, view=self)
 
     # ---- callbacks: review phase ----
 
@@ -492,9 +496,10 @@ class TradeView(discord.ui.View):
         self.proposer_confirmed = False
         self.opponent_confirmed = False
         self.review_started_at = None
+        await interaction.response.defer()
         self._rebuild()
         embed = self.build_embed()
-        await interaction.response.edit_message(embed=embed, view=self)
+        await interaction.edit_original_response(embed=embed, view=self)
 
     async def _confirm_cb(self, interaction: discord.Interaction):
         uid = interaction.user.id
@@ -521,6 +526,8 @@ class TradeView(discord.ui.View):
             self.proposer_confirmed = True
         else:
             self.opponent_confirmed = True
+
+        await interaction.response.defer()
 
         if self.proposer_confirmed and self.opponent_confirmed:
             p_offer = TradeOffer(
@@ -555,13 +562,13 @@ class TradeView(discord.ui.View):
                 )
 
             self.clear_items()
-            await interaction.response.edit_message(embed=embed, view=self)
+            await interaction.edit_original_response(embed=embed, view=self)
             self.stop()
             return
 
         self._rebuild()
         embed = self.build_embed()
-        await interaction.response.edit_message(embed=embed, view=self)
+        await interaction.edit_original_response(embed=embed, view=self)
 
     # ---- shared callbacks ----
 
