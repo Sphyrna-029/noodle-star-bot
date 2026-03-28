@@ -13,7 +13,7 @@ from cogs.trading.dto import TradeOffer, TradeResult
 from cogs.trading.use_case import MAX_TRADE_ITEMS, TradeUseCases
 
 REVIEW_WAIT_SECONDS = 5
-TRADE_VIEW_TIMEOUT = 120  # seconds of inactivity before auto-cancel
+TRADE_VIEW_TIMEOUT = 1800  # seconds of inactivity before auto-cancel
 
 
 # ---------------------------------------------------------------------------
