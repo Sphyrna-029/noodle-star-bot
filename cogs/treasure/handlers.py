@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import calendar
 import random
 import traceback
 from datetime import datetime, timedelta
@@ -296,7 +297,7 @@ class TreasureCog(commands.Cog):
         self.treasure = TreasureUseCases()
         self.treasure.set_event_callback(self._on_chest_event)
         self._next_spawn_at: datetime | None = None
-        self._daily_spawn_times: list[datetime] = []
+        self._monthly_spawn_times: list[datetime] = []
         self._chest_view: ChestView | None = None
         self._chest_message: discord.Message | None = None
         self._schedule_next_spawn()
@@ -324,32 +325,30 @@ class TreasureCog(commands.Cog):
 
     def _schedule_next_spawn(self) -> None:
         now = datetime.now()
-        if not self._daily_spawn_times or all(
-            target <= now for target in self._daily_spawn_times
+        if not self._monthly_spawn_times or all(
+            target <= now for target in self._monthly_spawn_times
         ):
-            target_day = now.date()
-            self._daily_spawn_times = self._generate_daily_spawn_times(target_day)
-            if all(target <= now for target in self._daily_spawn_times):
-                target_day = (now + timedelta(days=1)).date()
-                self._daily_spawn_times = self._generate_daily_spawn_times(target_day)
+            self._monthly_spawn_times = self._generate_monthly_spawn_times(now.year, now.month)
+            if all(target <= now for target in self._monthly_spawn_times):
+                next_year, next_month = (now.year + 1, 1) if now.month == 12 else (now.year, now.month + 1)
+                self._monthly_spawn_times = self._generate_monthly_spawn_times(next_year, next_month)
         self._next_spawn_at = next(
-            (target for target in self._daily_spawn_times if target > now), None,
+            (target for target in self._monthly_spawn_times if target > now), None,
         )
 
-    def _generate_daily_spawn_times(self, target_day) -> list[datetime]:
-        times = [
+    def _generate_monthly_spawn_times(self, year: int, month: int) -> list[datetime]:
+        last_day = calendar.monthrange(year, month)[1]
+        return [
             datetime(
-                year=target_day.year, month=target_day.month, day=target_day.day,
+                year=year, month=month, day=random.randint(1, last_day),
                 hour=random.randint(0, 23), minute=random.randint(0, 59),
                 second=random.randint(0, 59),
             )
-            for _ in range(2)
         ]
-        return sorted(times)
 
     def _advance_spawn_schedule(self) -> None:
         now = datetime.now()
-        self._daily_spawn_times = [t for t in self._daily_spawn_times if t > now]
+        self._monthly_spawn_times = [t for t in self._monthly_spawn_times if t > now]
         self._schedule_next_spawn()
 
     # ------------------------------------------------------------------ #
